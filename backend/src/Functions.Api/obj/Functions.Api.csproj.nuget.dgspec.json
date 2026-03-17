@@ -222,6 +222,10 @@
             "Microsoft.Azure.Functions.Worker.Extensions.Http": {
               "target": "Package",
               "version": "[3.2.0, )"
+            },
+            "Microsoft.Azure.Functions.Worker.Sdk": {
+              "target": "Package",
+              "version": "[1.17.2, )"
             }
           },
           "imports": [

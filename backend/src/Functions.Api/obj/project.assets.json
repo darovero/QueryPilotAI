@@ -399,6 +399,23 @@
           }
         }
       },
+      "Microsoft.Azure.Functions.Worker.Sdk/1.17.2": {
+        "type": "package",
+        "dependencies": {
+          "Microsoft.Azure.Functions.Worker.Sdk.Analyzers": "1.2.1",
+          "Microsoft.Azure.Functions.Worker.Sdk.Generators": "1.2.1"
+        },
+        "build": {
+          "build/Microsoft.Azure.Functions.Worker.Sdk.props": {},
+          "build/Microsoft.Azure.Functions.Worker.Sdk.targets": {}
+        }
+      },
+      "Microsoft.Azure.Functions.Worker.Sdk.Analyzers/1.2.1": {
+        "type": "package"
+      },
+      "Microsoft.Azure.Functions.Worker.Sdk.Generators/1.2.1": {
+        "type": "package"
+      },
       "Microsoft.Bcl.AsyncInterfaces/6.0.0": {
         "type": "package",
         "compile": {
@@ -2290,6 +2307,140 @@
         "lib/netstandard2.0/Microsoft.Azure.Functions.Worker.Grpc.xml",
         "microsoft.azure.functions.worker.grpc.1.16.0.nupkg.sha512",
         "microsoft.azure.functions.worker.grpc.nuspec"
+      ]
+    },
+    "Microsoft.Azure.Functions.Worker.Sdk/1.17.2": {
+      "sha512": "MlS1aVc1CEQrb8yQtCshOCP0m8tysyBsZYg7pRbXiar5hF5F08BBruCErWYkk+mIj19js+p1jHo31tZsJY59mQ==",
+      "type": "package",
+      "path": "microsoft.azure.functions.worker.sdk/1.17.2",
+      "hasTools": true,
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "build/Microsoft.Azure.Functions.Worker.Sdk.Publish.ZipDeploy.targets",
+        "build/Microsoft.Azure.Functions.Worker.Sdk.Publish.props",
+        "build/Microsoft.Azure.Functions.Worker.Sdk.Publish.targets",
+        "build/Microsoft.Azure.Functions.Worker.Sdk.props",
+        "build/Microsoft.Azure.Functions.Worker.Sdk.targets",
+        "icon.png",
+        "microsoft.azure.functions.worker.sdk.1.17.2.nupkg.sha512",
+        "microsoft.azure.functions.worker.sdk.nuspec",
+        "tools/net472/Humanizer.dll",
+        "tools/net472/ICSharpCode.SharpZipLib.dll",
+        "tools/net472/Microsoft.Azure.Functions.Worker.Sdk.Analyzers.dll",
+        "tools/net472/Microsoft.Azure.Functions.Worker.Sdk.Generators.dll",
+        "tools/net472/Microsoft.Azure.Functions.Worker.Sdk.dll",
+        "tools/net472/Microsoft.Bcl.AsyncInterfaces.dll",
+        "tools/net472/Microsoft.Build.Framework.dll",
+        "tools/net472/Microsoft.Build.Utilities.Core.dll",
+        "tools/net472/Microsoft.CodeAnalysis.CSharp.Workspaces.dll",
+        "tools/net472/Microsoft.CodeAnalysis.CSharp.dll",
+        "tools/net472/Microsoft.CodeAnalysis.Workspaces.dll",
+        "tools/net472/Microsoft.CodeAnalysis.dll",
+        "tools/net472/Microsoft.VisualStudio.Setup.Configuration.Interop.dll",
+        "tools/net472/Mono.Cecil.Mdb.dll",
+        "tools/net472/Mono.Cecil.Pdb.dll",
+        "tools/net472/Mono.Cecil.Rocks.dll",
+        "tools/net472/Mono.Cecil.dll",
+        "tools/net472/System.Buffers.dll",
+        "tools/net472/System.Collections.Immutable.dll",
+        "tools/net472/System.Composition.AttributedModel.dll",
+        "tools/net472/System.Composition.Convention.dll",
+        "tools/net472/System.Composition.Hosting.dll",
+        "tools/net472/System.Composition.Runtime.dll",
+        "tools/net472/System.Composition.TypedParts.dll",
+        "tools/net472/System.IO.Pipelines.dll",
+        "tools/net472/System.Memory.dll",
+        "tools/net472/System.Numerics.Vectors.dll",
+        "tools/net472/System.Reflection.Metadata.dll",
+        "tools/net472/System.Runtime.CompilerServices.Unsafe.dll",
+        "tools/net472/System.Text.Encoding.CodePages.dll",
+        "tools/net472/System.Text.Encodings.Web.dll",
+        "tools/net472/System.Text.Json.dll",
+        "tools/net472/System.Threading.Tasks.Extensions.dll",
+        "tools/net472/System.ValueTuple.dll",
+        "tools/netstandard2.0/Humanizer.dll",
+        "tools/netstandard2.0/ICSharpCode.SharpZipLib.dll",
+        "tools/netstandard2.0/Microsoft.Azure.Functions.Worker.Sdk.Analyzers.dll",
+        "tools/netstandard2.0/Microsoft.Azure.Functions.Worker.Sdk.Generators.dll",
+        "tools/netstandard2.0/Microsoft.Azure.Functions.Worker.Sdk.dll",
+        "tools/netstandard2.0/Microsoft.Azure.WebJobs.Extensions.FunctionMetadataLoader.dll",
+        "tools/netstandard2.0/Microsoft.Bcl.AsyncInterfaces.dll",
+        "tools/netstandard2.0/Microsoft.Build.Framework.dll",
+        "tools/netstandard2.0/Microsoft.Build.Utilities.Core.dll",
+        "tools/netstandard2.0/Microsoft.CodeAnalysis.CSharp.Workspaces.dll",
+        "tools/netstandard2.0/Microsoft.CodeAnalysis.CSharp.dll",
+        "tools/netstandard2.0/Microsoft.CodeAnalysis.Workspaces.dll",
+        "tools/netstandard2.0/Microsoft.CodeAnalysis.dll",
+        "tools/netstandard2.0/Mono.Cecil.Mdb.dll",
+        "tools/netstandard2.0/Mono.Cecil.Pdb.dll",
+        "tools/netstandard2.0/Mono.Cecil.Rocks.dll",
+        "tools/netstandard2.0/Mono.Cecil.dll",
+        "tools/netstandard2.0/System.Buffers.dll",
+        "tools/netstandard2.0/System.Collections.Concurrent.dll",
+        "tools/netstandard2.0/System.Collections.Immutable.dll",
+        "tools/netstandard2.0/System.Composition.AttributedModel.dll",
+        "tools/netstandard2.0/System.Composition.Convention.dll",
+        "tools/netstandard2.0/System.Composition.Hosting.dll",
+        "tools/netstandard2.0/System.Composition.Runtime.dll",
+        "tools/netstandard2.0/System.Composition.TypedParts.dll",
+        "tools/netstandard2.0/System.Diagnostics.DiagnosticSource.dll",
+        "tools/netstandard2.0/System.IO.FileSystem.Primitives.dll",
+        "tools/netstandard2.0/System.IO.Pipelines.dll",
+        "tools/netstandard2.0/System.Linq.Expressions.dll",
+        "tools/netstandard2.0/System.Linq.dll",
+        "tools/netstandard2.0/System.Numerics.Vectors.dll",
+        "tools/netstandard2.0/System.ObjectModel.dll",
+        "tools/netstandard2.0/System.Reflection.Emit.ILGeneration.dll",
+        "tools/netstandard2.0/System.Reflection.Emit.Lightweight.dll",
+        "tools/netstandard2.0/System.Reflection.Emit.dll",
+        "tools/netstandard2.0/System.Reflection.Metadata.dll",
+        "tools/netstandard2.0/System.Reflection.TypeExtensions.dll",
+        "tools/netstandard2.0/System.Runtime.CompilerServices.Unsafe.dll",
+        "tools/netstandard2.0/System.Runtime.Numerics.dll",
+        "tools/netstandard2.0/System.Security.AccessControl.dll",
+        "tools/netstandard2.0/System.Security.Cryptography.OpenSsl.dll",
+        "tools/netstandard2.0/System.Security.Cryptography.Primitives.dll",
+        "tools/netstandard2.0/System.Security.Permissions.dll",
+        "tools/netstandard2.0/System.Security.Principal.Windows.dll",
+        "tools/netstandard2.0/System.Text.Encoding.CodePages.dll",
+        "tools/netstandard2.0/System.Text.Encodings.Web.dll",
+        "tools/netstandard2.0/System.Text.Json.dll",
+        "tools/netstandard2.0/System.Threading.Tasks.Extensions.dll",
+        "tools/netstandard2.0/System.Threading.dll",
+        "tools/worker.config.json"
+      ]
+    },
+    "Microsoft.Azure.Functions.Worker.Sdk.Analyzers/1.2.1": {
+      "sha512": "EOZqyNc718vKJAg4/cgmDqnQg3wYoNKE14NjskBrDAINMBKfujQqHRn4McSFfSHgCXUE0F/Yc4+sh7i6HhbPbg==",
+      "type": "package",
+      "path": "microsoft.azure.functions.worker.sdk.analyzers/1.2.1",
+      "hasTools": true,
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "analyzers/dotnet/cs/Microsoft.Azure.Functions.Worker.Sdk.Analyzers.dll",
+        "icon.png",
+        "microsoft.azure.functions.worker.sdk.analyzers.1.2.1.nupkg.sha512",
+        "microsoft.azure.functions.worker.sdk.analyzers.nuspec",
+        "tools/install.ps1",
+        "tools/uninstall.ps1"
+      ]
+    },
+    "Microsoft.Azure.Functions.Worker.Sdk.Generators/1.2.1": {
+      "sha512": "kSNn3YAMQNqcU9Pcs14xkYWk5pce8atK5mb/Yr9Pk1Gr53QWBNmrLrVhs9Y63t0rKTqRF1O/4Kg6sNcO8nf2zA==",
+      "type": "package",
+      "path": "microsoft.azure.functions.worker.sdk.generators/1.2.1",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "analyzers/dotnet/cs/Microsoft.Azure.Functions.Worker.Sdk.Generators.dll",
+        "analyzers/dotnet/cs/Microsoft.Bcl.AsyncInterfaces.dll",
+        "analyzers/dotnet/cs/System.Text.Encodings.Web.dll",
+        "analyzers/dotnet/cs/System.Text.Json.dll",
+        "icon.png",
+        "microsoft.azure.functions.worker.sdk.generators.1.2.1.nupkg.sha512",
+        "microsoft.azure.functions.worker.sdk.generators.nuspec"
       ]
     },
     "Microsoft.Bcl.AsyncInterfaces/6.0.0": {
@@ -4798,7 +4949,8 @@
       "Microsoft.Azure.Functions.Worker >= 1.21.0",
       "Microsoft.Azure.Functions.Worker.ApplicationInsights >= 1.2.0",
       "Microsoft.Azure.Functions.Worker.Extensions.DurableTask >= 1.2.2",
-      "Microsoft.Azure.Functions.Worker.Extensions.Http >= 3.2.0"
+      "Microsoft.Azure.Functions.Worker.Extensions.Http >= 3.2.0",
+      "Microsoft.Azure.Functions.Worker.Sdk >= 1.17.2"
     ]
   },
   "packageFolders": {
@@ -4889,6 +5041,10 @@
           "Microsoft.Azure.Functions.Worker.Extensions.Http": {
             "target": "Package",
             "version": "[3.2.0, )"
+          },
+          "Microsoft.Azure.Functions.Worker.Sdk": {
+            "target": "Package",
+            "version": "[1.17.2, )"
           }
         },
         "imports": [

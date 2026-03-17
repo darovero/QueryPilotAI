@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "O0haYY9aX+w=",
+  "dgSpecHash": "CxwiEf36G3E=",
   "success": true,
   "projectFilePath": "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Functions.Api\\Functions.Api.csproj",
   "expectedPackageFiles": [
@@ -26,6 +26,9 @@
     "C:\\Users\\Jessy\\.nuget\\packages\\microsoft.azure.functions.worker.extensions.durabletask\\1.2.2\\microsoft.azure.functions.worker.extensions.durabletask.1.2.2.nupkg.sha512",
     "C:\\Users\\Jessy\\.nuget\\packages\\microsoft.azure.functions.worker.extensions.http\\3.2.0\\microsoft.azure.functions.worker.extensions.http.3.2.0.nupkg.sha512",
     "C:\\Users\\Jessy\\.nuget\\packages\\microsoft.azure.functions.worker.grpc\\1.16.0\\microsoft.azure.functions.worker.grpc.1.16.0.nupkg.sha512",
+    "C:\\Users\\Jessy\\.nuget\\packages\\microsoft.azure.functions.worker.sdk\\1.17.2\\microsoft.azure.functions.worker.sdk.1.17.2.nupkg.sha512",
+    "C:\\Users\\Jessy\\.nuget\\packages\\microsoft.azure.functions.worker.sdk.analyzers\\1.2.1\\microsoft.azure.functions.worker.sdk.analyzers.1.2.1.nupkg.sha512",
+    "C:\\Users\\Jessy\\.nuget\\packages\\microsoft.azure.functions.worker.sdk.generators\\1.2.1\\microsoft.azure.functions.worker.sdk.generators.1.2.1.nupkg.sha512",
     "C:\\Users\\Jessy\\.nuget\\packages\\microsoft.bcl.asyncinterfaces\\6.0.0\\microsoft.bcl.asyncinterfaces.6.0.0.nupkg.sha512",
     "C:\\Users\\Jessy\\.nuget\\packages\\microsoft.durabletask.abstractions\\1.4.0\\microsoft.durabletask.abstractions.1.4.0.nupkg.sha512",
     "C:\\Users\\Jessy\\.nuget\\packages\\microsoft.durabletask.client\\1.4.0\\microsoft.durabletask.client.1.4.0.nupkg.sha512",
