@@ -1,23 +1,26 @@
 using Microsoft.Azure.Functions.Worker;
-using Microsoft.Azure.Functions.Worker.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
-var builder = FunctionsApplication.CreateBuilder(args);
+var host = new HostBuilder()
+    .ConfigureFunctionsWorkerDefaults()
+    .ConfigureServices(services =>
+    {
+        services
+            .AddApplicationInsightsTelemetryWorkerService()
+            .ConfigureFunctionsApplicationInsights();
 
-builder.Services
-    .AddApplicationInsightsTelemetryWorkerService()
-    .ConfigureFunctionsApplicationInsights();
+        services.AddLogging();
+        services.AddHttpClient();
 
-builder.Services.AddLogging();
-builder.Services.AddHttpClient();
+        services.AddSingleton<Core.Application.Services.IClock, Core.Application.Services.SystemClock>();
+        services.AddSingleton<Core.Domain.Policies.ISqlPolicyEngine, Infrastructure.Security.SqlPolicyEngine>();
+        services.AddSingleton<Infrastructure.Sql.ISqlExecutionService, Infrastructure.Sql.SqlExecutionService>();
+        services.AddSingleton<Infrastructure.AzureOpenAI.IIntentService, Infrastructure.AzureOpenAI.IntentService>();
+        services.AddSingleton<Infrastructure.AzureOpenAI.ISqlGenerationService, Infrastructure.AzureOpenAI.SqlGenerationService>();
+        services.AddSingleton<Infrastructure.AzureOpenAI.ISummaryService, Infrastructure.AzureOpenAI.SummaryService>();
+        services.AddSingleton<Infrastructure.Security.IPromptSafetyService, Infrastructure.Security.PromptSafetyService>();
+    })
+    .Build();
 
-builder.Services.AddSingleton<Core.Application.Services.IClock, Core.Application.Services.SystemClock>();
-builder.Services.AddSingleton<Core.Domain.Policies.ISqlPolicyEngine, Infrastructure.Security.SqlPolicyEngine>();
-builder.Services.AddSingleton<Infrastructure.Sql.ISqlExecutionService, Infrastructure.Sql.SqlExecutionService>();
-builder.Services.AddSingleton<Infrastructure.AzureOpenAI.IIntentService, Infrastructure.AzureOpenAI.IntentService>();
-builder.Services.AddSingleton<Infrastructure.AzureOpenAI.ISqlGenerationService, Infrastructure.AzureOpenAI.SqlGenerationService>();
-builder.Services.AddSingleton<Infrastructure.AzureOpenAI.ISummaryService, Infrastructure.AzureOpenAI.SummaryService>();
-builder.Services.AddSingleton<Infrastructure.Security.IPromptSafetyService, Infrastructure.Security.PromptSafetyService>();
-
-builder.Build().Run();
+host.Run();

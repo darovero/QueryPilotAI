@@ -18,13 +18,6 @@ public sealed record AnalyticalIntent(
 
 public sealed record TimeWindow(string Current, string Baseline);
 
-public sealed record SqlValidationResult(
-    bool IsValid,
-    string RiskLevel,
-    bool RequiresApproval,
-    string[] Reasons,
-    string NormalizedSql);
-
 public sealed record SummaryInput(string Question, string Sql, List<Dictionary<string, object?>> Rows);
 
 public sealed record AuditMetadata(string RiskLevel, string? ApprovedBy);

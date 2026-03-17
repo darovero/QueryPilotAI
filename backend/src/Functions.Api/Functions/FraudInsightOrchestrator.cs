@@ -1,4 +1,5 @@
 using Core.Application.Contracts;
+using Core.Domain.Policies;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.DurableTask;
 
@@ -22,7 +23,7 @@ public class FraudInsightOrchestrator
                 new[] { safety.Reason },
                 string.Empty,
                 Array.Empty<string>(),
-                Array.Empty<Dictionary<string, object?>>(),
+                new List<Dictionary<string, object?>>(),
                 new AuditMetadata("Critical", null));
         }
 
@@ -39,7 +40,7 @@ public class FraudInsightOrchestrator
                 validation.Reasons,
                 sqlDraft,
                 Array.Empty<string>(),
-                Array.Empty<Dictionary<string, object?>>(),
+                new List<Dictionary<string, object?>>(),
                 new AuditMetadata(validation.RiskLevel, null));
         }
 
@@ -53,7 +54,7 @@ public class FraudInsightOrchestrator
                 validation.Reasons,
                 validation.NormalizedSql,
                 Array.Empty<string>(),
-                Array.Empty<Dictionary<string, object?>>(),
+                new List<Dictionary<string, object?>>(),
                 new AuditMetadata(validation.RiskLevel, null));
         }
 

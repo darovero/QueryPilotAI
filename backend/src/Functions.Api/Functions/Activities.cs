@@ -1,4 +1,5 @@
 using Core.Application.Contracts;
+using Core.Domain.Policies;
 using Microsoft.Azure.Functions.Worker;
 
 namespace Functions.Api.Functions;
