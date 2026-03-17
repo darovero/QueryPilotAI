@@ -1,0 +1,5 @@
+Write-Host "1. Provision Azure with infra/deploy.ps1"
+Write-Host "2. Run SQL scripts in database/"
+Write-Host "3. Copy backend/local.settings.example.json to local.settings.json"
+Write-Host "4. Copy .env.example values"
+Write-Host "5. Start backend and frontend"
