@@ -2,4 +2,8 @@
   <ItemGroup>
     <ProjectReference Include="..\Core.Application\Core.Application.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Azure.Identity" Version="1.13.2" />
+  </ItemGroup>
 </Project>
