@@ -5735,14 +5735,14 @@
         "net8.0": {
           "targetAlias": "net8.0",
           "projectReferences": {
-            "c:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Core.Application\\Core.Application.csproj": {
-              "projectPath": "c:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Core.Application\\Core.Application.csproj"
+            "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Core.Application\\Core.Application.csproj": {
+              "projectPath": "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Core.Application\\Core.Application.csproj"
             },
             "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Core.Domain\\Core.Domain.csproj": {
               "projectPath": "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Core.Domain\\Core.Domain.csproj"
             },
-            "c:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Infrastructure.AzureOpenAI\\Infrastructure.AzureOpenAI.csproj": {
-              "projectPath": "c:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Infrastructure.AzureOpenAI\\Infrastructure.AzureOpenAI.csproj"
+            "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Infrastructure.AzureOpenAI\\Infrastructure.AzureOpenAI.csproj": {
+              "projectPath": "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Infrastructure.AzureOpenAI\\Infrastructure.AzureOpenAI.csproj"
             },
             "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Infrastructure.Observability\\Infrastructure.Observability.csproj": {
               "projectPath": "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Infrastructure.Observability\\Infrastructure.Observability.csproj"
@@ -5750,8 +5750,8 @@
             "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Infrastructure.Security\\Infrastructure.Security.csproj": {
               "projectPath": "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Infrastructure.Security\\Infrastructure.Security.csproj"
             },
-            "c:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Infrastructure.Sql\\Infrastructure.Sql.csproj": {
-              "projectPath": "c:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Infrastructure.Sql\\Infrastructure.Sql.csproj"
+            "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Infrastructure.Sql\\Infrastructure.Sql.csproj": {
+              "projectPath": "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Infrastructure.Sql\\Infrastructure.Sql.csproj"
             }
           }
         }

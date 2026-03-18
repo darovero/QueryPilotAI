@@ -1,5 +1,5 @@
-import { OnboardingStepOne } from "../components/OnboardingStepOne";
+import { redirect } from 'next/navigation';
 
 export default function HomePage() {
-  return <OnboardingStepOne />;
+  redirect('/dashboard');
 }
