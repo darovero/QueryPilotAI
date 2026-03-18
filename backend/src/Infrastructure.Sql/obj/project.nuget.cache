@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "WFvFSE2aj0A=",
+  "dgSpecHash": "+GsijFBnS+E=",
   "success": true,
-  "projectFilePath": "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Infrastructure.Sql\\Infrastructure.Sql.csproj",
+  "projectFilePath": "c:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Infrastructure.Sql\\Infrastructure.Sql.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\Jessy\\.nuget\\packages\\azure.core\\1.38.0\\azure.core.1.38.0.nupkg.sha512",
     "C:\\Users\\Jessy\\.nuget\\packages\\azure.identity\\1.11.4\\azure.identity.1.11.4.nupkg.sha512",

@@ -59,3 +59,12 @@ public class SummarizeInsightActivity(Infrastructure.AzureOpenAI.ISummaryService
     public Task<string> Run([ActivityTrigger] SummaryInput input) =>
         summaryService.SummarizeAsync(input.Question, input.Sql, input.Rows);
 }
+
+public class SaveAuditTrailActivity(Infrastructure.Sql.ISqlExecutionService sqlExecutionService)
+{
+    [Function(nameof(SaveAuditTrailActivity))]
+    public async Task Run([ActivityTrigger] AuditTrailRecord audit)
+    {
+        await sqlExecutionService.SaveAuditAsync(audit);
+    }
+}

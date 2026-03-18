@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "yr0XYStOIf4=",
+  "dgSpecHash": "Kk4+jmFZkII=",
   "success": true,
-  "projectFilePath": "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Infrastructure.AzureOpenAI\\Infrastructure.AzureOpenAI.csproj",
+  "projectFilePath": "c:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Infrastructure.AzureOpenAI\\Infrastructure.AzureOpenAI.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\Jessy\\.nuget\\packages\\azure.core\\1.44.1\\azure.core.1.44.1.nupkg.sha512",
     "C:\\Users\\Jessy\\.nuget\\packages\\azure.identity\\1.13.2\\azure.identity.1.13.2.nupkg.sha512",

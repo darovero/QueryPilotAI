@@ -1,11 +1,11 @@
 {
   "IsEncrypted": false,
   "Values": {
-    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "AzureWebJobsStorage": "DefaultEndpointsProtocol=https;EndpointSuffix=core.windows.net;AccountName=insightforge86253st;AccountKey=366/8yDmZ8guF1grgblIv0dkY1WGYVQPA5y8hRWW4tN9Bdy1q8bAsap2FLVKUfdKnvyOExPaIgYr+AStQ6XaJQ==;BlobEndpoint=https://insightforge86253st.blob.core.windows.net/;FileEndpoint=https://insightforge86253st.file.core.windows.net/;QueueEndpoint=https://insightforge86253st.queue.core.windows.net/;TableEndpoint=https://insightforge86253st.table.core.windows.net/",
     "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
-    "SqlConnectionString": "Server=tcp:<server>.database.windows.net,1433;Initial Catalog=<db>;Encrypt=True;TrustServerCertificate=False;Authentication=Active Directory Default;",
-    "AzureOpenAI__Endpoint": "https://<resource>.openai.azure.com/",
-    "AzureOpenAI__Deployment": "<deployment-name>",
-    "ContentSafety__Endpoint": "https://<resource>.cognitiveservices.azure.com/"
+    "SqlConnectionString": "Server=tcp:insightforge-sql3-86253.database.windows.net,1433;Initial Catalog=insightforge-sqldb;Encrypt=True;TrustServerCertificate=False;Authentication=Active Directory Default;",
+    "AzureOpenAI__Endpoint": "https://eastus.api.cognitive.microsoft.com/",
+    "AzureOpenAI__Deployment": "gpt41mini-std",
+    "ContentSafety__Endpoint": "https://eastus.api.cognitive.microsoft.com/"
   }
 }

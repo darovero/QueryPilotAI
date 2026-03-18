@@ -79,16 +79,87 @@ public class OrchestrationStatusFunction
             }
         }
 
+        // Parse custom status for pipeline steps
+        object? customStatus = null;
+        if (!string.IsNullOrWhiteSpace(metadata.SerializedCustomStatus))
+        {
+            try
+            {
+                customStatus = JsonSerializer.Deserialize<object>(metadata.SerializedCustomStatus);
+            }
+            catch
+            {
+                customStatus = metadata.SerializedCustomStatus;
+            }
+        }
+
         await ok.WriteAsJsonAsync(new
         {
             instanceId = metadata.InstanceId,
             runtimeStatus = metadata.RuntimeStatus.ToString(),
             createdAt = metadata.CreatedAt,
             lastUpdatedAt = metadata.LastUpdatedAt,
+            customStatus,
             output,
             outputRaw
         });
 
+        return ok;
+    }
+}
+
+public class ApprovalFunction
+{
+    [Function(nameof(ApprovalFunction))]
+    public async Task<HttpResponseData> Run(
+        [HttpTrigger(AuthorizationLevel.Function, "post", Route = "orchestrations/{instanceId}/approve")] HttpRequestData req,
+        string instanceId,
+        [DurableClient] DurableTaskClient durableClient)
+    {
+        var decision = await JsonSerializer.DeserializeAsync<ApprovalDecision>(req.Body, new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        });
+
+        if (decision is null || string.IsNullOrWhiteSpace(decision.Decision))
+        {
+            var bad = req.CreateResponse(HttpStatusCode.BadRequest);
+            await bad.WriteStringAsync("Invalid approval payload. Required: decision, approverUserId.");
+            return bad;
+        }
+
+        var metadata = await durableClient.GetInstanceAsync(instanceId);
+        if (metadata is null)
+        {
+            var notFound = req.CreateResponse(HttpStatusCode.NotFound);
+            await notFound.WriteAsJsonAsync(new { error = "Orchestration not found.", instanceId });
+            return notFound;
+        }
+
+        await durableClient.RaiseEventAsync(instanceId, "ApprovalEvent", decision);
+
+        var ok = req.CreateResponse(HttpStatusCode.OK);
+        await ok.WriteAsJsonAsync(new
+        {
+            instanceId,
+            decision = decision.Decision,
+            approver = decision.ApproverUserId,
+            message = $"Approval event sent to orchestration {instanceId}."
+        });
+
+        return ok;
+    }
+}
+
+public class AuditHistoryFunction(Infrastructure.Sql.ISqlExecutionService sqlExecutionService)
+{
+    [Function(nameof(AuditHistoryFunction))]
+    public async Task<HttpResponseData> Run(
+        [HttpTrigger(AuthorizationLevel.Function, "get", Route = "history")] HttpRequestData req)
+    {
+        var audits = await sqlExecutionService.GetRecentAuditsAsync(50);
+        var ok = req.CreateResponse(HttpStatusCode.OK);
+        await ok.WriteAsJsonAsync(audits);
         return ok;
     }
 }

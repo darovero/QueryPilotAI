@@ -77,8 +77,8 @@
         "net8.0": {
           "targetAlias": "net8.0",
           "projectReferences": {
-            "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Core.Application\\Core.Application.csproj": {
-              "projectPath": "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Core.Application\\Core.Application.csproj"
+            "c:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Core.Application\\Core.Application.csproj": {
+              "projectPath": "c:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Core.Application\\Core.Application.csproj"
             },
             "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Core.Domain\\Core.Domain.csproj": {
               "projectPath": "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Core.Domain\\Core.Domain.csproj"

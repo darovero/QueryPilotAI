@@ -760,11 +760,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Infrastructure.AzureOpenAI\\Infrastructure.AzureOpenAI.csproj",
+      "projectUniqueName": "c:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Infrastructure.AzureOpenAI\\Infrastructure.AzureOpenAI.csproj",
       "projectName": "Infrastructure.AzureOpenAI",
-      "projectPath": "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Infrastructure.AzureOpenAI\\Infrastructure.AzureOpenAI.csproj",
+      "projectPath": "c:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Infrastructure.AzureOpenAI\\Infrastructure.AzureOpenAI.csproj",
       "packagesPath": "C:\\Users\\Jessy\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Infrastructure.AzureOpenAI\\obj\\",
+      "outputPath": "c:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Infrastructure.AzureOpenAI\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -785,8 +785,8 @@
         "net8.0": {
           "targetAlias": "net8.0",
           "projectReferences": {
-            "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Core.Application\\Core.Application.csproj": {
-              "projectPath": "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Core.Application\\Core.Application.csproj"
+            "c:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Core.Application\\Core.Application.csproj": {
+              "projectPath": "c:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Core.Application\\Core.Application.csproj"
             }
           }
         }

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { QueryComposer } from "../../components/QueryComposer";
 import { InsightPanel } from "../../components/InsightPanel";
 import { TracePanel } from "../../components/TracePanel";
+import { ApprovalPanel } from "../../components/ApprovalPanel";
 import { readOnboardingState } from "../../lib/onboardingState";
 
 type AuditMetadata = {
@@ -22,11 +23,19 @@ type InsightResponse = {
   audit: AuditMetadata;
 };
 
+type PipelineStepData = {
+  step: string;
+  label: string;
+  status: string;
+  timestamp: string;
+};
+
 type OrchestrationStatusResponse = {
   instanceId: string;
   runtimeStatus: string;
   createdAt: string;
   lastUpdatedAt: string;
+  customStatus: PipelineStepData | null;
   output: InsightResponse | string | null;
 };
 
@@ -44,6 +53,7 @@ type ConnectionSnapshot = {
 };
 
 const FINAL_STATUSES = new Set(["Completed", "Failed", "Terminated"]);
+const APPROVAL_STATUSES = new Set(["PendingApproval"]);
 
 function asString(value: unknown, fallback = ""): string {
   return typeof value === "string" ? value : fallback;
@@ -98,22 +108,38 @@ function parseOutput(output: InsightResponse | string | null | undefined): Insig
   }
 }
 
+function parseCustomStatus(raw: unknown): PipelineStepData | null {
+  if (!raw || typeof raw !== "object") return null;
+  const cs = raw as Record<string, unknown>;
+  if (typeof cs.step !== "string") return null;
+  return {
+    step: cs.step as string,
+    label: (cs.label as string) ?? "",
+    status: (cs.status as string) ?? "Active",
+    timestamp: (cs.timestamp as string) ?? "",
+  };
+}
+
 export default function DashboardPage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<OrchestrationStatusResponse | null>(null);
-  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([
-    {
-      role: "assistant",
-      content: "Hola, soy tu asistente analítico. Pregúntame en lenguaje natural y orquestaré el análisis sobre tus datos.",
-      timestamp: new Date().toLocaleTimeString()
-    }
-  ]);
+  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const [connectionSnapshot, setConnectionSnapshot] = useState<ConnectionSnapshot>({});
   const [sessionId, setSessionId] = useState<string>("");
+  const [approvalSent, setApprovalSent] = useState(false);
 
   useEffect(() => {
+    // Inicializar mensaje de bienvenida solo en el cliente para evitar Hydration Error
+    setChatHistory([
+      {
+        role: "assistant",
+        content: "Hola, soy tu asistente analítico. Pregúntame en lenguaje natural y orquestaré el análisis sobre tus datos.",
+        timestamp: new Date().toLocaleTimeString()
+      }
+    ]);
+
     const state = readOnboardingState();
     setConnectionSnapshot({
       organizationName: state.organizationName,
@@ -153,6 +179,7 @@ export default function DashboardPage() {
     setIsSubmitting(true);
     setError(null);
     setStatus(null);
+    setApprovalSent(false);
 
     const userMessage: ChatMessage = {
       role: "user",
@@ -184,7 +211,7 @@ export default function DashboardPage() {
       let attempts = 0;
       let lastParsedOutput: InsightResponse | null = null;
 
-      while (attempts < 30) {
+      while (attempts < 60) {
         const current = await fetchStatus(intake.instanceId);
         setStatus(current);
         
@@ -193,6 +220,7 @@ export default function DashboardPage() {
           lastParsedOutput = currentParsed;
         }
 
+        // Stop polling if completed or needs approval
         if (FINAL_STATUSES.has(current.runtimeStatus)) {
           if (lastParsedOutput) {
             const assistantMessage: ChatMessage = {
@@ -202,6 +230,17 @@ export default function DashboardPage() {
             };
             setChatHistory(prev => [...prev, assistantMessage]);
           }
+          break;
+        }
+
+        // If orchestrator is waiting for approval, stop polling (user must approve)
+        const parsedStatus = parseOutput(current.output);
+        if (parsedStatus && APPROVAL_STATUSES.has(parsedStatus.status)) {
+          setChatHistory(prev => [...prev, {
+            role: "assistant",
+            content: "⚠️ Esta consulta requiere aprobación humana porque accede a datos sensibles. Revisa el panel de aprobación.",
+            timestamp: new Date().toLocaleTimeString()
+          }]);
           break;
         }
 
@@ -221,7 +260,46 @@ export default function DashboardPage() {
     }
   }
 
+  // Resume polling after approval is sent
+  useEffect(() => {
+    if (!approvalSent || !status?.instanceId) return;
+
+    let cancelled = false;
+
+    async function pollAfterApproval() {
+      let attempts = 0;
+      while (!cancelled && attempts < 40) {
+        try {
+          const current = await fetchStatus(status!.instanceId);
+          setStatus(current);
+
+          if (FINAL_STATUSES.has(current.runtimeStatus)) {
+            const parsed = parseOutput(current.output);
+            if (parsed?.executiveSummary) {
+              setChatHistory(prev => [...prev, {
+                role: "assistant",
+                content: parsed.executiveSummary,
+                timestamp: new Date().toLocaleTimeString()
+              }]);
+            }
+            break;
+          }
+        } catch {
+          // Ignore polling errors
+        }
+        attempts++;
+        await new Promise(r => setTimeout(r, 1500));
+      }
+    }
+
+    void pollAfterApproval();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [approvalSent]);
+
   const parsedOutput = parseOutput(status?.output);
+  const customStatus = parseCustomStatus(status?.customStatus);
+  const isPendingApproval = parsedOutput?.status === "PendingApproval";
 
   return (
     <div className={`dashboard-layout ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
@@ -342,12 +420,25 @@ export default function DashboardPage() {
                 error={error}
                 chatHistory={chatHistory}
               />
+              
+              {/* Approval Panel */}
+              {isPendingApproval && status?.instanceId && (
+                <ApprovalPanel
+                  instanceId={status.instanceId}
+                  sql={parsedOutput?.sql ?? ""}
+                  riskLevel={parsedOutput?.audit?.riskLevel ?? "High"}
+                  reasons={parsedOutput?.keyFindings ?? []}
+                  onApprovalSent={() => setApprovalSent(true)}
+                />
+              )}
+
               <TracePanel
                 instanceId={status?.instanceId ?? null}
                 runtimeStatus={status?.runtimeStatus ?? "NotStarted"}
                 createdAt={status?.createdAt ?? null}
                 lastUpdatedAt={status?.lastUpdatedAt ?? null}
                 sql={parsedOutput?.sql ?? null}
+                customStatus={customStatus}
               />
             </div>
             <div style={{ position: "sticky", top: "100px" }}>

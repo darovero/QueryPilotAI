@@ -53,3 +53,31 @@ public sealed record InsightResponse(
     string[] Warnings,
     List<Dictionary<string, object?>> ResultPreview,
     AuditMetadata Audit);
+
+// --- Approval Flow ---
+public sealed record ApprovalDecision(string Decision, string ApproverUserId, string? Comments);
+
+public sealed record ApprovalRequest(
+    Guid RequestId,
+    string InstanceId,
+    string UserId,
+    string Question,
+    string Sql,
+    string RiskLevel,
+    string[] Reasons);
+
+// --- Audit Trail ---
+public sealed record AuditTrailRecord(
+    Guid RequestId,
+    string UserId,
+    string RoleName,
+    string OriginalQuestion,
+    string? AnalyticalIntent,
+    string? GeneratedSql,
+    string? ValidationResult,
+    string Status,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset? CompletedAt);
+
+// --- Pipeline Step Tracking ---
+public sealed record PipelineStep(string Step, string Label, string Status, DateTimeOffset Timestamp);

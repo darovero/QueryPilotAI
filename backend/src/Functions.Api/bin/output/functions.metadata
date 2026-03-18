@@ -26,7 +26,41 @@
     },
     "bindings": [
       {
+        "name": "input",
+        "direction": "In",
+        "type": "activityTrigger",
+        "properties": {}
+      }
+    ]
+  },
+  {
+    "name": "GetConversationContextActivity",
+    "scriptFile": "Functions.Api.dll",
+    "entryPoint": "Functions.Api.Functions.GetConversationContextActivity.Run",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
         "name": "request",
+        "direction": "In",
+        "type": "activityTrigger",
+        "properties": {}
+      }
+    ]
+  },
+  {
+    "name": "SaveConversationTurnActivity",
+    "scriptFile": "Functions.Api.dll",
+    "entryPoint": "Functions.Api.Functions.SaveConversationTurnActivity.Run",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "turn",
         "direction": "In",
         "type": "activityTrigger",
         "properties": {}
@@ -97,6 +131,23 @@
     "bindings": [
       {
         "name": "input",
+        "direction": "In",
+        "type": "activityTrigger",
+        "properties": {}
+      }
+    ]
+  },
+  {
+    "name": "SaveAuditTrailActivity",
+    "scriptFile": "Functions.Api.dll",
+    "entryPoint": "Functions.Api.Functions.SaveAuditTrailActivity.Run",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "audit",
         "direction": "In",
         "type": "activityTrigger",
         "properties": {}
@@ -177,6 +228,66 @@
         "name": "durableClient",
         "direction": "In",
         "type": "durableClient",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "ApprovalFunction",
+    "scriptFile": "Functions.Api.dll",
+    "entryPoint": "Functions.Api.Functions.ApprovalFunction.Run",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Function",
+        "methods": [
+          "post"
+        ],
+        "route": "orchestrations/{instanceId}/approve",
+        "properties": {}
+      },
+      {
+        "name": "durableClient",
+        "direction": "In",
+        "type": "durableClient",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "AuditHistoryFunction",
+    "scriptFile": "Functions.Api.dll",
+    "entryPoint": "Functions.Api.Functions.AuditHistoryFunction.Run",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Function",
+        "methods": [
+          "get"
+        ],
+        "route": "history",
         "properties": {}
       },
       {
