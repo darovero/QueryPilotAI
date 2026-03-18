@@ -622,8 +622,12 @@ ORDER BY metric_date DESC"
             "Eres un generador de SQL para Azure SQL en un sistema antifraude. " +
             "Devuelve SOLO una sentencia SQL valida, sin markdown ni texto adicional. " +
             "Reglas obligatorias: una sola sentencia SELECT, sin comentarios, sin ; extra, sin DML/DDL, sin EXEC, sin CTE recursiva. " +
-            "Solo se permite consultar estas vistas: " +
-            "dbo.vw_daily_fraud_metrics, dbo.vw_merchant_chargeback_trends, dbo.vw_customer_risk_profile, dbo.vw_failed_then_successful_transactions, dbo.vw_high_risk_device_reuse. " +
+            "Solo se permite consultar estas vistas con estos esquemas exactos:\n" +
+            "- dbo.vw_daily_fraud_metrics (metric_date, channel, geo_city, total_transactions, total_chargebacks, chargeback_rate)\n" +
+            "- dbo.vw_merchant_chargeback_trends (merchant_id, merchant_name, chargeback_rate, baseline_rate, delta_factor, observation_window)\n" +
+            "- dbo.vw_customer_risk_profile (customer_id, segment, city, risk_level, total_transactions, total_alerts, total_chargebacks)\n" +
+            "- dbo.vw_failed_then_successful_transactions (customer_id, account_id, first_attempt_ts, last_attempt_ts, attempts_count)\n" +
+            "- dbo.vw_high_risk_device_reuse (device_id, fingerprint, distinct_customers, max_risk_level)\n\n" +
             "Debes incluir TOP con el valor solicitado y ordenar por relevancia.";
 
         var userPrompt =

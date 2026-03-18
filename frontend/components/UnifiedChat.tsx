@@ -25,14 +25,18 @@ export function UnifiedChat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-  const [terminalLogs, setTerminalLogs] = useState<LogEntry[]>([
-    { id: "1", timestamp: new Date().toISOString(), level: "INFO", message: "Connecting to Azure OpenAI and SQL engines..." },
-    { id: "2", timestamp: new Date().toISOString(), level: "SUCCESS", message: "System idling. Listening for incoming queries." }
-  ]);
+  const [terminalLogs, setTerminalLogs] = useState<LogEntry[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const terminalEndRef = useRef<HTMLDivElement>(null);
 
   const [activePoll, setActivePoll] = useState<string | null>(null);
+
+  useEffect(() => {
+    setTerminalLogs([
+      { id: "1", timestamp: new Date().toISOString(), level: "INFO", message: "Connecting to Azure OpenAI and SQL engines..." },
+      { id: "2", timestamp: new Date().toISOString(), level: "SUCCESS", message: "System idling. Listening for incoming queries." }
+    ]);
+  }, []);
 
   const addLog = (level: LogEntry["level"], msg: string) => {
     setTerminalLogs((prev) => [
@@ -394,7 +398,7 @@ export function UnifiedChat() {
             <div className="flex-1 overflow-y-auto p-3 font-mono text-[11px] space-y-1">
               {terminalLogs.map((log) => (
                   <div key={log.id} className="flex gap-4">
-                      <span className="text-secondary/30">[{new Date(log.timestamp).toLocaleTimeString()}]</span>
+                      <span className="text-secondary/30" suppressHydrationWarning>[{new Date(log.timestamp).toLocaleTimeString()}]</span>
                       <span className={`w-16 font-bold ${log.level === 'ERROR' ? 'text-error' : log.level === 'WARN' ? 'text-error' : log.level === 'SUCCESS' ? 'text-primary' : 'text-tertiary'}`}>
                           {log.level}
                       </span>
