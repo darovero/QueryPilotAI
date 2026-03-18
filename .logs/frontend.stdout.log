@@ -6,23 +6,44 @@
   - Local:        http://localhost:3000
 
  ✓ Starting...
- ✓ Ready in 1707ms
+ ✓ Ready in 3.2s
  ○ Compiling / ...
- ✓ Compiled / in 4.4s
- GET / 200 in 284ms
- ✓ Compiled /api/query in 411ms
- POST /api/query 200 in 1482ms
- ✓ Compiled /api/query/[instanceId] in 137ms
- GET /api/query/862f56e84b164f31a4722d31f4740f8f 200 in 1325ms
- GET /api/query/862f56e84b164f31a4722d31f4740f8f 200 in 253ms
- ✓ Compiled /dashboard in 278ms
- GET /dashboard 200 in 608ms
- POST /api/query 200 in 418ms
- GET /api/query/ff7d9d41dc3a4fd2ae52fe408a213640 200 in 402ms
- GET /api/query/ff7d9d41dc3a4fd2ae52fe408a213640 200 in 340ms
- GET /api/query/ff7d9d41dc3a4fd2ae52fe408a213640 200 in 316ms
- GET /api/query/ff7d9d41dc3a4fd2ae52fe408a213640 200 in 219ms
- GET / 200 in 173ms
- GET / 200 in 177ms
- GET / 200 in 196ms
- GET / 200 in 251ms
+ ✓ Compiled / in 4.9s
+ GET / 200 in 273ms
+ GET / 200 in 238ms
+ GET / 200 in 3261ms
+ ○ Compiling /onboarding/step-2 ...
+ ✓ Compiled /onboarding/step-2 in 991ms
+ GET /onboarding/step-2 200 in 1227ms
+ ○ Compiling /onboarding/step-3 ...
+ ✓ Compiled /onboarding/step-3 in 550ms
+ GET /onboarding/step-3 200 in 684ms
+ ✓ Compiled /onboarding/step-4 in 381ms
+ GET /onboarding/step-4 200 in 491ms
+ ○ Compiling /dashboard ...
+ ✓ Compiled /dashboard in 1364ms
+ GET /dashboard 200 in 1716ms
+ ○ Compiling /api/query ...
+ ✓ Compiled /api/query in 822ms
+ POST /api/query 200 in 2605ms
+ ○ Compiling /api/query/[instanceId] ...
+ ✓ Compiled /api/query/[instanceId] in 507ms
+ GET /api/query/cdfffc5857de4a84aba000e4a728e13d 200 in 1912ms
+ GET /api/query/cdfffc5857de4a84aba000e4a728e13d 200 in 495ms
+ GET /api/query/cdfffc5857de4a84aba000e4a728e13d 200 in 375ms
+ GET /api/query/cdfffc5857de4a84aba000e4a728e13d 200 in 291ms
+ GET /api/query/cdfffc5857de4a84aba000e4a728e13d 200 in 611ms
+ POST /api/query 200 in 516ms
+ GET /api/query/7dee28bd20074ccd9ba1accf68486c46 200 in 248ms
+ GET /api/query/7dee28bd20074ccd9ba1accf68486c46 200 in 277ms
+ GET /api/query/7dee28bd20074ccd9ba1accf68486c46 200 in 220ms
+ GET /api/query/7dee28bd20074ccd9ba1accf68486c46 200 in 239ms
+ GET /api/query/7dee28bd20074ccd9ba1accf68486c46 200 in 329ms
+ POST /api/query 200 in 430ms
+ GET /api/query/7f7f3287e40c45669f66203b6d37dd8a 200 in 269ms
+ GET /api/query/7f7f3287e40c45669f66203b6d37dd8a 200 in 255ms
+ GET /api/query/7f7f3287e40c45669f66203b6d37dd8a 200 in 259ms
+ POST /api/query 200 in 399ms
+ GET /api/query/f854e5ec7a7a469a9ebc5f4ed2eb4c5c 200 in 262ms
+ GET /api/query/f854e5ec7a7a469a9ebc5f4ed2eb4c5c 200 in 284ms
+ GET /api/query/f854e5ec7a7a469a9ebc5f4ed2eb4c5c 200 in 274ms

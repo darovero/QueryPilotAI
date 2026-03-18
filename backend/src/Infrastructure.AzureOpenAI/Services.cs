@@ -1,4 +1,5 @@
 using Core.Application.Contracts;
+using System.Collections.Concurrent;
 using System.Globalization;
 using System.Text.RegularExpressions;
 
@@ -6,7 +7,13 @@ namespace Infrastructure.AzureOpenAI;
 
 public interface IIntentService
 {
-    Task<AnalyticalIntent> ParseIntentAsync(QueryRequest request);
+    Task<AnalyticalIntent> ParseIntentAsync(QueryRequest request, List<ConversationTurn> conversationContext);
+}
+
+public interface IConversationMemoryService
+{
+    Task<List<ConversationTurn>> GetRecentTurnsAsync(string userId, string? sessionId, int maxTurns);
+    Task AppendTurnAsync(ConversationTurnUpsert turn);
 }
 
 public interface ISqlGenerationService
@@ -19,23 +26,104 @@ public interface ISummaryService
     Task<string> SummarizeAsync(string question, string sql, List<Dictionary<string, object?>> rows);
 }
 
+public sealed class ConversationMemoryService : IConversationMemoryService
+{
+    private const int MaxTurnsPerSession = 20;
+    private readonly ConcurrentDictionary<string, ConcurrentQueue<ConversationTurn>> _memory = new(StringComparer.OrdinalIgnoreCase);
+
+    public Task<List<ConversationTurn>> GetRecentTurnsAsync(string userId, string? sessionId, int maxTurns)
+    {
+        var key = BuildSessionKey(userId, sessionId);
+        if (!_memory.TryGetValue(key, out var queue))
+        {
+            return Task.FromResult(new List<ConversationTurn>());
+        }
+
+        var turns = queue.ToArray().TakeLast(Math.Max(maxTurns, 1)).ToList();
+        return Task.FromResult(turns);
+    }
+
+    public Task AppendTurnAsync(ConversationTurnUpsert turn)
+    {
+        var key = BuildSessionKey(turn.UserId, turn.SessionId);
+        var queue = _memory.GetOrAdd(key, _ => new ConcurrentQueue<ConversationTurn>());
+
+        queue.Enqueue(new ConversationTurn(
+            turn.Question,
+            turn.ExecutiveSummary,
+            turn.Sql,
+            turn.IntentType,
+            turn.Metric,
+            turn.Timestamp));
+
+        while (queue.Count > MaxTurnsPerSession)
+        {
+            queue.TryDequeue(out _);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private static string BuildSessionKey(string userId, string? sessionId)
+    {
+        if (!string.IsNullOrWhiteSpace(sessionId))
+        {
+            return $"session:{sessionId.Trim()}";
+        }
+
+        return $"user:{userId.Trim()}";
+    }
+}
+
 public sealed class IntentService : IIntentService
 {
-    public Task<AnalyticalIntent> ParseIntentAsync(QueryRequest request)
+    public Task<AnalyticalIntent> ParseIntentAsync(QueryRequest request, List<ConversationTurn> conversationContext)
     {
         var question = request.Question.Trim();
         var questionLower = question.ToLowerInvariant();
+        var latestTurn = conversationContext.LastOrDefault();
+        var followUp = IsFollowUpQuestion(questionLower);
 
         var intentType = InferIntentType(questionLower);
         var metric = InferMetric(questionLower);
         var dimensions = InferDimensions(questionLower);
         var window = InferWindow(questionLower);
+
+        if (followUp && latestTurn is not null)
+        {
+            if (IsGenericIntent(intentType))
+            {
+                intentType = latestTurn.IntentType;
+            }
+
+            if (metric == "fraud_rate")
+            {
+                metric = InferMetricFromSql(latestTurn.Sql);
+            }
+
+            if (dimensions.SequenceEqual(["time"]))
+            {
+                dimensions = InferDimensionsFromSql(latestTurn.Sql);
+            }
+
+            if (window.Current == "last_7_days")
+            {
+                window = InferWindowFromSql(latestTurn.Sql);
+            }
+        }
+
         var sensitivity = InferSensitivity(request.Role, questionLower);
 
         var filters = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             ["question"] = question
         };
+
+        if (latestTurn is not null)
+        {
+            filters["previous_question"] = latestTurn.Question;
+            filters["conversation_turns"] = conversationContext.Count.ToString(CultureInfo.InvariantCulture);
+        }
 
         if (TryExtractTop(questionLower, out var top))
         {
@@ -76,6 +164,9 @@ public sealed class IntentService : IIntentService
 
         return "overview";
     }
+
+    private static bool IsGenericIntent(string intentType) =>
+        intentType is "overview";
 
     private static string InferMetric(string questionLower)
     {
@@ -129,6 +220,28 @@ public sealed class IntentService : IIntentService
         return dimensions.ToArray();
     }
 
+    private static string[] InferDimensionsFromSql(string sql)
+    {
+        var normalized = sql.ToLowerInvariant();
+
+        if (normalized.Contains("merchant_"))
+        {
+            return ["merchant"];
+        }
+
+        if (normalized.Contains("customer_"))
+        {
+            return ["customer"];
+        }
+
+        if (normalized.Contains("device_") || normalized.Contains("fingerprint"))
+        {
+            return ["device"];
+        }
+
+        return ["time"];
+    }
+
     private static TimeWindow InferWindow(string questionLower)
     {
         if (questionLower.Contains("30") || questionLower.Contains("mes") || questionLower.Contains("month"))
@@ -142,6 +255,61 @@ public sealed class IntentService : IIntentService
         }
 
         return new TimeWindow("last_7_days", "previous_7_days");
+    }
+
+    private static TimeWindow InferWindowFromSql(string sql)
+    {
+        var normalized = sql.ToLowerInvariant();
+        if (normalized.Contains("last_90_days"))
+        {
+            return new TimeWindow("last_90_days", "previous_90_days");
+        }
+
+        if (normalized.Contains("last_30_days"))
+        {
+            return new TimeWindow("last_30_days", "previous_30_days");
+        }
+
+        return new TimeWindow("last_7_days", "previous_7_days");
+    }
+
+    private static string InferMetricFromSql(string sql)
+    {
+        var normalized = sql.ToLowerInvariant();
+
+        if (normalized.Contains("vw_merchant_chargeback_trends"))
+        {
+            return "chargeback_rate";
+        }
+
+        if (normalized.Contains("vw_high_risk_device_reuse"))
+        {
+            return "device_reuse_risk";
+        }
+
+        if (normalized.Contains("vw_failed_then_successful_transactions"))
+        {
+            return "failed_then_successful";
+        }
+
+        if (normalized.Contains("vw_customer_risk_profile"))
+        {
+            return "customer_risk_score";
+        }
+
+        return "fraud_rate";
+    }
+
+    private static bool IsFollowUpQuestion(string questionLower)
+    {
+        return questionLower.Contains("y ahora") ||
+            questionLower.Contains("ahora") ||
+            questionLower.Contains("tambien") ||
+            questionLower.Contains("mismo") ||
+            questionLower.Contains("eso") ||
+            questionLower.Contains("those") ||
+            questionLower.Contains("same") ||
+            questionLower.Contains("also");
     }
 
     private static string InferSensitivity(string role, string questionLower)

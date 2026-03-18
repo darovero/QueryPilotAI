@@ -14,8 +14,22 @@ public class AnalyzePromptSafetyActivity(Infrastructure.Security.IPromptSafetySe
 public class DecomposeIntentActivity(Infrastructure.AzureOpenAI.IIntentService intentService)
 {
     [Function(nameof(DecomposeIntentActivity))]
-    public Task<AnalyticalIntent> Run([ActivityTrigger] QueryRequest request) =>
-        intentService.ParseIntentAsync(request);
+    public Task<AnalyticalIntent> Run([ActivityTrigger] IntentParsingInput input) =>
+        intentService.ParseIntentAsync(input.Request, input.ConversationContext);
+}
+
+public class GetConversationContextActivity(Infrastructure.AzureOpenAI.IConversationMemoryService conversationMemoryService)
+{
+    [Function(nameof(GetConversationContextActivity))]
+    public Task<List<ConversationTurn>> Run([ActivityTrigger] ConversationContextRequest request) =>
+        conversationMemoryService.GetRecentTurnsAsync(request.UserId, request.SessionId, request.MaxTurns);
+}
+
+public class SaveConversationTurnActivity(Infrastructure.AzureOpenAI.IConversationMemoryService conversationMemoryService)
+{
+    [Function(nameof(SaveConversationTurnActivity))]
+    public Task Run([ActivityTrigger] ConversationTurnUpsert turn) =>
+        conversationMemoryService.AppendTurnAsync(turn);
 }
 
 public class GenerateSqlActivity(Infrastructure.AzureOpenAI.ISqlGenerationService sqlService)

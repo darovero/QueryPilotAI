@@ -1,6 +1,12 @@
+"use client";
+
 import Link from "next/link";
+import { useMemo } from "react";
+import { readOnboardingState } from "../lib/onboardingState";
 
 export function OnboardingStepFour() {
+  const onboarding = useMemo(() => readOnboardingState(), []);
+
   return (
     <main className="flow-shell">
       <header className="flow-header">
@@ -29,6 +35,17 @@ export function OnboardingStepFour() {
           </div>
 
           <h1>Ensure safe and trusted analytics</h1>
+
+          {onboarding.connection ? (
+            <div style={{ marginBottom: "16px", padding: "10px 12px", borderRadius: "8px", background: "#F4F5F7", color: "#42526E", fontSize: "13px" }}>
+              Connected source: <strong>{onboarding.connection.dbLabel}</strong>
+              {onboarding.connection.host ? ` (${onboarding.connection.host})` : ""}
+            </div>
+          ) : (
+            <div style={{ marginBottom: "16px", padding: "10px 12px", borderRadius: "8px", background: "#FFEBE6", color: "#BF2600", fontSize: "13px" }}>
+              No database connection was saved in the previous step.
+            </div>
+          )}
 
           <div className="toggle-row">
             <div className="toggle-icon">

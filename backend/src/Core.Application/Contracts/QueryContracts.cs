@@ -1,6 +1,28 @@
 namespace Core.Application.Contracts;
 
-public sealed record QueryRequest(string Question, string UserId, string Role, string? CorrelationId = null);
+public sealed record QueryRequest(string Question, string UserId, string Role, string? CorrelationId = null, string? SessionId = null);
+
+public sealed record ConversationTurn(
+    string Question,
+    string ExecutiveSummary,
+    string Sql,
+    string IntentType,
+    string Metric,
+    DateTimeOffset Timestamp);
+
+public sealed record ConversationContextRequest(string UserId, string? SessionId, int MaxTurns = 5);
+
+public sealed record ConversationTurnUpsert(
+    string UserId,
+    string? SessionId,
+    string Question,
+    string ExecutiveSummary,
+    string Sql,
+    string IntentType,
+    string Metric,
+    DateTimeOffset Timestamp);
+
+public sealed record IntentParsingInput(QueryRequest Request, List<ConversationTurn> ConversationContext);
 
 public sealed record PromptSafetyResult(bool IsSafe, string Reason);
 

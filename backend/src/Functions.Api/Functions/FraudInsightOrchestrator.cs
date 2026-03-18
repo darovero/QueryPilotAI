@@ -27,7 +27,14 @@ public class FraudInsightOrchestrator
                 new AuditMetadata("Critical", null));
         }
 
-        var intent = await context.CallActivityAsync<AnalyticalIntent>(nameof(DecomposeIntentActivity), request);
+        var conversationContext = await context.CallActivityAsync<List<ConversationTurn>>(
+            nameof(GetConversationContextActivity),
+            new ConversationContextRequest(request.UserId, request.SessionId, 6));
+
+        var intent = await context.CallActivityAsync<AnalyticalIntent>(
+            nameof(DecomposeIntentActivity),
+            new IntentParsingInput(request, conversationContext));
+
         var sqlDraft = await context.CallActivityAsync<string>(nameof(GenerateSqlActivity), intent);
         var validation = await context.CallActivityAsync<SqlValidationResult>(nameof(ValidateSqlPolicyActivity), sqlDraft);
 
@@ -60,6 +67,18 @@ public class FraudInsightOrchestrator
 
         var rows = await context.CallActivityAsync<List<Dictionary<string, object?>>>(nameof(ExecuteSqlActivity), validation.NormalizedSql);
         var summary = await context.CallActivityAsync<string>(nameof(SummarizeInsightActivity), new SummaryInput(request.Question, validation.NormalizedSql, rows));
+
+        await context.CallActivityAsync(
+            nameof(SaveConversationTurnActivity),
+            new ConversationTurnUpsert(
+                request.UserId,
+                request.SessionId,
+                request.Question,
+                summary,
+                validation.NormalizedSql,
+                intent.IntentType,
+                intent.Metric,
+                DateTimeOffset.UtcNow));
 
         return new InsightResponse(
             context.InstanceId,

@@ -26,7 +26,41 @@
     },
     "bindings": [
       {
+        "name": "input",
+        "direction": "In",
+        "type": "activityTrigger",
+        "properties": {}
+      }
+    ]
+  },
+  {
+    "name": "GetConversationContextActivity",
+    "scriptFile": "Functions.Api.dll",
+    "entryPoint": "Functions.Api.Functions.GetConversationContextActivity.Run",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
         "name": "request",
+        "direction": "In",
+        "type": "activityTrigger",
+        "properties": {}
+      }
+    ]
+  },
+  {
+    "name": "SaveConversationTurnActivity",
+    "scriptFile": "Functions.Api.dll",
+    "entryPoint": "Functions.Api.Functions.SaveConversationTurnActivity.Run",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "turn",
         "direction": "In",
         "type": "activityTrigger",
         "properties": {}
