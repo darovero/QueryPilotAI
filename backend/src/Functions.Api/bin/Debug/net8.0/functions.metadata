@@ -152,5 +152,38 @@
         "direction": "Out"
       }
     ]
+  },
+  {
+    "name": "OrchestrationStatusFunction",
+    "scriptFile": "Functions.Api.dll",
+    "entryPoint": "Functions.Api.Functions.OrchestrationStatusFunction.Run",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Function",
+        "methods": [
+          "get"
+        ],
+        "route": "orchestrations/{instanceId}",
+        "properties": {}
+      },
+      {
+        "name": "durableClient",
+        "direction": "In",
+        "type": "durableClient",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
   }
 ]

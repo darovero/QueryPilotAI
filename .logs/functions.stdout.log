@@ -1,0 +1,107 @@
+
+
+Azure Functions Core Tools
+Core Tools Version:       4.8.0+ec58eb7110992ea02aa19e9c060e45ac8882cc02 (64-bit)
+Function Runtime Version: 4.1046.100.25610
+
+[2026-03-18T02:50:36.774Z] Found C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Functions.Api\Functions.Api.csproj. Using for user secrets file configuration.
+Skipping 'AzureWebJobsStorage' from local settings as it's already defined in current environment variables.
+Skipping 'FUNCTIONS_WORKER_RUNTIME' from local settings as it's already defined in current environment variables.
+Skipping 'SqlConnectionString' from local settings as it's already defined in current environment variables.
+Skipping 'AzureOpenAI__Endpoint' from local settings as it's already defined in current environment variables.
+Skipping 'AzureOpenAI__Deployment' from local settings as it's already defined in current environment variables.
+Skipping 'ContentSafety__Endpoint' from local settings as it's already defined in current environment variables.
+[2026-03-18T02:50:41.658Z] Worker process started and initialized.
+
+Functions:
+
+	OrchestrationStatusFunction: [GET] http://localhost:7071/api/orchestrations/{instanceId}
+
+	QueryIntakeFunction: [POST] http://localhost:7071/api/query
+
+	AnalyzePromptSafetyActivity: activityTrigger
+
+	DecomposeIntentActivity: activityTrigger
+
+	ExecuteSqlActivity: activityTrigger
+
+	FraudInsightOrchestrator: orchestrationTrigger
+
+	GenerateSqlActivity: activityTrigger
+
+	SummarizeInsightActivity: activityTrigger
+
+	ValidateSqlPolicyActivity: activityTrigger
+
+For detailed output, run func with --verbose flag.
+[2026-03-18T02:50:47.042Z] Host lock lease acquired by instance ID '0000000000000000000000005575C180'.
+[2026-03-18T02:50:56.721Z] Executing 'Functions.QueryIntakeFunction' (Reason='This function was programmatically called via the host APIs.', Id=5f0dcd6f-a837-4158-8ae6-f8560b8042c0)
+[2026-03-18T02:50:56.981Z] Scheduling new FraudInsightOrchestrator orchestration with instance ID '862f56e84b164f31a4722d31f4740f8f' and 118 bytes of input data.
+[2026-03-18T02:50:57.522Z] Executed 'Functions.QueryIntakeFunction' (Succeeded, Id=5f0dcd6f-a837-4158-8ae6-f8560b8042c0, Duration=855ms)
+[2026-03-18T02:50:57.755Z] Executing 'Functions.FraudInsightOrchestrator' (Reason='(null)', Id=86f83f32-157f-40fb-9873-e1128ea58606)
+[2026-03-18T02:50:57.891Z] Executed 'Functions.FraudInsightOrchestrator' (Succeeded, Id=86f83f32-157f-40fb-9873-e1128ea58606, Duration=158ms)
+[2026-03-18T02:50:58.126Z] Executing 'Functions.AnalyzePromptSafetyActivity' (Reason='(null)', Id=b632c504-84c4-4222-9a76-22f531118d44)
+[2026-03-18T02:50:58.155Z] Executed 'Functions.AnalyzePromptSafetyActivity' (Succeeded, Id=b632c504-84c4-4222-9a76-22f531118d44, Duration=41ms)
+[2026-03-18T02:50:58.630Z] Executing 'Functions.FraudInsightOrchestrator' (Reason='(null)', Id=b8d02fe0-9c3e-4c70-9c7f-50322f4abec2)
+[2026-03-18T02:50:58.650Z] Executed 'Functions.FraudInsightOrchestrator' (Succeeded, Id=b8d02fe0-9c3e-4c70-9c7f-50322f4abec2, Duration=22ms)
+[2026-03-18T02:50:58.829Z] Executing 'Functions.DecomposeIntentActivity' (Reason='(null)', Id=61b44d59-8cbc-4094-ac0e-7e1142a2deea)
+[2026-03-18T02:50:58.865Z] Executed 'Functions.DecomposeIntentActivity' (Succeeded, Id=61b44d59-8cbc-4094-ac0e-7e1142a2deea, Duration=36ms)
+[2026-03-18T02:50:59.189Z] Executing 'Functions.FraudInsightOrchestrator' (Reason='(null)', Id=25996532-5961-4dde-a674-d27da2210cc3)
+[2026-03-18T02:50:59.200Z] Executed 'Functions.FraudInsightOrchestrator' (Succeeded, Id=25996532-5961-4dde-a674-d27da2210cc3, Duration=12ms)
+[2026-03-18T02:50:59.316Z] Executing 'Functions.GenerateSqlActivity' (Reason='(null)', Id=4581870e-4f5d-4d8c-bc6c-b4d3c4406d4a)
+[2026-03-18T02:50:59.324Z] Executed 'Functions.GenerateSqlActivity' (Succeeded, Id=4581870e-4f5d-4d8c-bc6c-b4d3c4406d4a, Duration=8ms)
+[2026-03-18T02:50:59.749Z] Executing 'Functions.FraudInsightOrchestrator' (Reason='(null)', Id=96a18a87-72af-4671-a2b5-b7e05540d854)
+[2026-03-18T02:50:59.813Z] Executed 'Functions.FraudInsightOrchestrator' (Succeeded, Id=96a18a87-72af-4671-a2b5-b7e05540d854, Duration=64ms)
+[2026-03-18T02:51:00.028Z] Executing 'Functions.ValidateSqlPolicyActivity' (Reason='(null)', Id=d67dd5f8-1bfb-4c7c-8473-f76881377a33)
+[2026-03-18T02:51:00.195Z] Executed 'Functions.ValidateSqlPolicyActivity' (Succeeded, Id=d67dd5f8-1bfb-4c7c-8473-f76881377a33, Duration=149ms)
+[2026-03-18T02:51:00.575Z] Executing 'Functions.FraudInsightOrchestrator' (Reason='(null)', Id=03dc5406-0c17-42c8-8e4f-9a529183d5f0)
+[2026-03-18T02:51:00.672Z] Executed 'Functions.FraudInsightOrchestrator' (Succeeded, Id=03dc5406-0c17-42c8-8e4f-9a529183d5f0, Duration=97ms)
+[2026-03-18T02:51:00.775Z] Executing 'Functions.OrchestrationStatusFunction' (Reason='This function was programmatically called via the host APIs.', Id=a8d4fd03-3270-47f5-bd7f-538130a8fa9b)
+[2026-03-18T02:51:00.875Z] Executing 'Functions.ExecuteSqlActivity' (Reason='(null)', Id=69ca31b9-99fd-4b93-af91-986ffaeff8f4)
+[2026-03-18T02:51:00.912Z] Executed 'Functions.OrchestrationStatusFunction' (Succeeded, Id=a8d4fd03-3270-47f5-bd7f-538130a8fa9b, Duration=138ms)
+[2026-03-18T02:51:01.905Z] Executed 'Functions.ExecuteSqlActivity' (Succeeded, Id=69ca31b9-99fd-4b93-af91-986ffaeff8f4, Duration=1030ms)
+[2026-03-18T02:51:02.244Z] Executing 'Functions.FraudInsightOrchestrator' (Reason='(null)', Id=438c9a3e-91b0-4670-b62c-7567279631ec)
+[2026-03-18T02:51:02.252Z] Executed 'Functions.FraudInsightOrchestrator' (Succeeded, Id=438c9a3e-91b0-4670-b62c-7567279631ec, Duration=8ms)
+[2026-03-18T02:51:02.423Z] Executing 'Functions.SummarizeInsightActivity' (Reason='(null)', Id=cb3b96c8-09f4-4ab9-8957-9deaa769933a)
+[2026-03-18T02:51:02.429Z] Executed 'Functions.SummarizeInsightActivity' (Succeeded, Id=cb3b96c8-09f4-4ab9-8957-9deaa769933a, Duration=6ms)
+[2026-03-18T02:51:02.756Z] Executing 'Functions.FraudInsightOrchestrator' (Reason='(null)', Id=e64b8f91-5abb-490d-841d-6a8d00b79f3e)
+[2026-03-18T02:51:02.772Z] Executed 'Functions.FraudInsightOrchestrator' (Succeeded, Id=e64b8f91-5abb-490d-841d-6a8d00b79f3e, Duration=16ms)
+[2026-03-18T02:51:03.078Z] Executing 'Functions.OrchestrationStatusFunction' (Reason='This function was programmatically called via the host APIs.', Id=5e21ac30-9a6f-4917-a5c6-f5149df71b18)
+[2026-03-18T02:51:03.201Z] Executed 'Functions.OrchestrationStatusFunction' (Succeeded, Id=5e21ac30-9a6f-4917-a5c6-f5149df71b18, Duration=123ms)
+[2026-03-18T02:51:40.822Z] Executing 'Functions.QueryIntakeFunction' (Reason='This function was programmatically called via the host APIs.', Id=d0346c70-908e-430a-b08e-23e19ff349ce)
+[2026-03-18T02:51:40.831Z] Scheduling new FraudInsightOrchestrator orchestration with instance ID 'ff7d9d41dc3a4fd2ae52fe408a213640' and 178 bytes of input data.
+[2026-03-18T02:51:41.082Z] Executed 'Functions.QueryIntakeFunction' (Succeeded, Id=d0346c70-908e-430a-b08e-23e19ff349ce, Duration=261ms)
+[2026-03-18T02:51:41.254Z] Executing 'Functions.FraudInsightOrchestrator' (Reason='(null)', Id=0bb44755-8697-421c-b1a6-de4fc004fffd)
+[2026-03-18T02:51:41.285Z] Executed 'Functions.FraudInsightOrchestrator' (Succeeded, Id=0bb44755-8697-421c-b1a6-de4fc004fffd, Duration=30ms)
+[2026-03-18T02:51:41.356Z] Executing 'Functions.OrchestrationStatusFunction' (Reason='This function was programmatically called via the host APIs.', Id=477f8962-46d6-47f0-8bba-36da2c9fda0f)
+[2026-03-18T02:51:41.457Z] Executed 'Functions.OrchestrationStatusFunction' (Succeeded, Id=477f8962-46d6-47f0-8bba-36da2c9fda0f, Duration=102ms)
+[2026-03-18T02:51:41.463Z] Executing 'Functions.AnalyzePromptSafetyActivity' (Reason='(null)', Id=e7eef153-f9b9-4fce-b3b4-7532c9a8e744)
+[2026-03-18T02:51:41.516Z] Executed 'Functions.AnalyzePromptSafetyActivity' (Succeeded, Id=e7eef153-f9b9-4fce-b3b4-7532c9a8e744, Duration=52ms)
+[2026-03-18T02:51:41.881Z] Executing 'Functions.FraudInsightOrchestrator' (Reason='(null)', Id=960d01f9-a245-4f62-b5f6-6c5c21dabbc7)
+[2026-03-18T02:51:41.899Z] Executed 'Functions.FraudInsightOrchestrator' (Succeeded, Id=960d01f9-a245-4f62-b5f6-6c5c21dabbc7, Duration=17ms)
+[2026-03-18T02:51:42.093Z] Executing 'Functions.DecomposeIntentActivity' (Reason='(null)', Id=5c23a226-6ccf-43e9-807e-72defb821584)
+[2026-03-18T02:51:42.117Z] Executed 'Functions.DecomposeIntentActivity' (Succeeded, Id=5c23a226-6ccf-43e9-807e-72defb821584, Duration=23ms)
+[2026-03-18T02:51:42.460Z] Executing 'Functions.FraudInsightOrchestrator' (Reason='(null)', Id=44f24ec5-a56d-48d7-b425-f2db25f4ad9d)
+[2026-03-18T02:51:42.467Z] Executed 'Functions.FraudInsightOrchestrator' (Succeeded, Id=44f24ec5-a56d-48d7-b425-f2db25f4ad9d, Duration=6ms)
+[2026-03-18T02:51:42.579Z] Executing 'Functions.GenerateSqlActivity' (Reason='(null)', Id=f5c1dba6-c2d0-43f4-ab86-d1de809d00bf)
+[2026-03-18T02:51:42.641Z] Executed 'Functions.GenerateSqlActivity' (Succeeded, Id=f5c1dba6-c2d0-43f4-ab86-d1de809d00bf, Duration=61ms)
+[2026-03-18T02:51:43.076Z] Executing 'Functions.FraudInsightOrchestrator' (Reason='(null)', Id=cb9c8bc6-cb82-48bc-ba9a-cf6f3096d0e0)
+[2026-03-18T02:51:43.107Z] Executed 'Functions.FraudInsightOrchestrator' (Succeeded, Id=cb9c8bc6-cb82-48bc-ba9a-cf6f3096d0e0, Duration=30ms)
+[2026-03-18T02:51:43.226Z] Executing 'Functions.OrchestrationStatusFunction' (Reason='This function was programmatically called via the host APIs.', Id=2b3922af-36c9-4e05-9e4b-ae2888684e31)
+[2026-03-18T02:51:43.296Z] Executing 'Functions.ValidateSqlPolicyActivity' (Reason='(null)', Id=ab8ad591-2484-47e3-a531-7ac18594f995)
+[2026-03-18T02:51:43.310Z] Executed 'Functions.ValidateSqlPolicyActivity' (Succeeded, Id=ab8ad591-2484-47e3-a531-7ac18594f995, Duration=14ms)
+[2026-03-18T02:51:43.323Z] Executed 'Functions.OrchestrationStatusFunction' (Succeeded, Id=2b3922af-36c9-4e05-9e4b-ae2888684e31, Duration=97ms)
+[2026-03-18T02:51:43.687Z] Executing 'Functions.FraudInsightOrchestrator' (Reason='(null)', Id=a5882c07-2ff3-4869-8aef-a5e9b83f30f0)
+[2026-03-18T02:51:43.706Z] Executed 'Functions.FraudInsightOrchestrator' (Succeeded, Id=a5882c07-2ff3-4869-8aef-a5e9b83f30f0, Duration=18ms)
+[2026-03-18T02:51:43.907Z] Executing 'Functions.ExecuteSqlActivity' (Reason='(null)', Id=ea051580-0033-4b6d-b351-e775daf1be10)
+[2026-03-18T02:51:44.052Z] Executed 'Functions.ExecuteSqlActivity' (Succeeded, Id=ea051580-0033-4b6d-b351-e775daf1be10, Duration=145ms)
+[2026-03-18T02:51:44.387Z] Executing 'Functions.FraudInsightOrchestrator' (Reason='(null)', Id=e112862a-b620-4b80-826e-e7a9c983ecf3)
+[2026-03-18T02:51:44.393Z] Executed 'Functions.FraudInsightOrchestrator' (Succeeded, Id=e112862a-b620-4b80-826e-e7a9c983ecf3, Duration=6ms)
+[2026-03-18T02:51:44.646Z] Executing 'Functions.SummarizeInsightActivity' (Reason='(null)', Id=6ce3af49-73ad-40fe-8530-d995d5ed9267)
+[2026-03-18T02:51:44.657Z] Executed 'Functions.SummarizeInsightActivity' (Succeeded, Id=6ce3af49-73ad-40fe-8530-d995d5ed9267, Duration=11ms)
+[2026-03-18T02:51:45.034Z] Executing 'Functions.FraudInsightOrchestrator' (Reason='(null)', Id=1886dad1-4edf-4384-993d-940afbd0c04f)
+[2026-03-18T02:51:45.046Z] Executed 'Functions.FraudInsightOrchestrator' (Succeeded, Id=1886dad1-4edf-4384-993d-940afbd0c04f, Duration=13ms)
+[2026-03-18T02:51:45.083Z] Executing 'Functions.OrchestrationStatusFunction' (Reason='This function was programmatically called via the host APIs.', Id=30a539cd-5ff8-4010-90cc-9566787c83b5)
+[2026-03-18T02:51:45.181Z] Executed 'Functions.OrchestrationStatusFunction' (Succeeded, Id=30a539cd-5ff8-4010-90cc-9566787c83b5, Duration=98ms)
+[2026-03-18T02:51:46.827Z] Executing 'Functions.OrchestrationStatusFunction' (Reason='This function was programmatically called via the host APIs.', Id=abca0d2e-d998-40eb-a86d-441c5c4a641c)
+[2026-03-18T02:51:46.924Z] Executed 'Functions.OrchestrationStatusFunction' (Succeeded, Id=abca0d2e-d998-40eb-a86d-441c5c4a641c, Duration=97ms)

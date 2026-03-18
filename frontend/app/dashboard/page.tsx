@@ -5,8 +5,149 @@ import { QueryComposer } from "../../components/QueryComposer";
 import { InsightPanel } from "../../components/InsightPanel";
 import { TracePanel } from "../../components/TracePanel";
 
+type AuditMetadata = {
+  riskLevel: string;
+  approvedBy: string | null;
+};
+
+type InsightResponse = {
+  requestId: string;
+  status: string;
+  executiveSummary: string;
+  keyFindings: string[];
+  sql: string;
+  warnings: string[];
+  resultPreview: Array<Record<string, unknown>>;
+  audit: AuditMetadata;
+};
+
+type OrchestrationStatusResponse = {
+  instanceId: string;
+  runtimeStatus: string;
+  createdAt: string;
+  lastUpdatedAt: string;
+  output: InsightResponse | string | null;
+};
+
+const FINAL_STATUSES = new Set(["Completed", "Failed", "Terminated"]);
+
+function asString(value: unknown, fallback = ""): string {
+  return typeof value === "string" ? value : fallback;
+}
+
+function asStringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.map((item) => String(item)) : [];
+}
+
+function asRowArray(value: unknown): Array<Record<string, unknown>> {
+  return Array.isArray(value) ? (value as Array<Record<string, unknown>>) : [];
+}
+
+function normalizeInsightResponse(input: unknown): InsightResponse | null {
+  if (!input || typeof input !== "object") {
+    return null;
+  }
+
+  const record = input as Record<string, unknown>;
+  const auditRaw = (record.audit ?? record.Audit) as Record<string, unknown> | undefined;
+
+  return {
+    requestId: asString(record.requestId ?? record.RequestId, ""),
+    status: asString(record.status ?? record.Status, "Pending"),
+    executiveSummary: asString(record.executiveSummary ?? record.ExecutiveSummary, ""),
+    keyFindings: asStringArray(record.keyFindings ?? record.KeyFindings),
+    sql: asString(record.sql ?? record.Sql, ""),
+    warnings: asStringArray(record.warnings ?? record.Warnings),
+    resultPreview: asRowArray(record.resultPreview ?? record.ResultPreview),
+    audit: {
+      riskLevel: asString(auditRaw?.riskLevel ?? auditRaw?.RiskLevel, "N/A"),
+      approvedBy: typeof (auditRaw?.approvedBy ?? auditRaw?.ApprovedBy) === "string"
+        ? String(auditRaw?.approvedBy ?? auditRaw?.ApprovedBy)
+        : null
+    }
+  };
+}
+
+function parseOutput(output: InsightResponse | string | null | undefined): InsightResponse | null {
+  if (!output) {
+    return null;
+  }
+
+  if (typeof output !== "string") {
+    return normalizeInsightResponse(output);
+  }
+
+  try {
+    return normalizeInsightResponse(JSON.parse(output));
+  } catch {
+    return null;
+  }
+}
+
 export default function DashboardPage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<OrchestrationStatusResponse | null>(null);
+
+  async function fetchStatus(instanceId: string) {
+    const response = await fetch(`/api/query/${instanceId}`, {
+      method: "GET",
+      cache: "no-store"
+    });
+
+    if (!response.ok) {
+      throw new Error(`No se pudo consultar estado. HTTP ${response.status}`);
+    }
+
+    return (await response.json()) as OrchestrationStatusResponse;
+  }
+
+  async function submitQuery(question: string) {
+    setIsSubmitting(true);
+    setError(null);
+    setStatus(null);
+
+    try {
+      const response = await fetch("/api/query", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          question,
+          userId: "jessy@demo.com",
+          role: "FraudAnalyst",
+          correlationId: `ui-${Date.now()}`
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error enviando consulta. HTTP ${response.status}`);
+      }
+
+      const intake = (await response.json()) as { instanceId: string };
+      let attempts = 0;
+
+      while (attempts < 30) {
+        const current = await fetchStatus(intake.instanceId);
+        setStatus(current);
+
+        if (FINAL_STATUSES.has(current.runtimeStatus)) {
+          break;
+        }
+
+        attempts += 1;
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+      }
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Error no controlado al consultar el servicio.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  const parsedOutput = parseOutput(status?.output);
 
   return (
     <div className={`dashboard-layout ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
@@ -97,11 +238,27 @@ export default function DashboardPage() {
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
             <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-              <QueryComposer />
-              <TracePanel />
+              <QueryComposer
+                onSubmit={submitQuery}
+                isSubmitting={isSubmitting}
+                runtimeStatus={status?.runtimeStatus ?? "NotStarted"}
+                instanceId={status?.instanceId ?? null}
+                error={error}
+                assistantMessage={parsedOutput?.executiveSummary ?? null}
+              />
+              <TracePanel
+                instanceId={status?.instanceId ?? null}
+                runtimeStatus={status?.runtimeStatus ?? "NotStarted"}
+                createdAt={status?.createdAt ?? null}
+                lastUpdatedAt={status?.lastUpdatedAt ?? null}
+                sql={parsedOutput?.sql ?? null}
+              />
             </div>
             <div>
-              <InsightPanel />
+              <InsightPanel
+                runtimeStatus={status?.runtimeStatus ?? "NotStarted"}
+                output={parsedOutput}
+              />
             </div>
           </div>
         </main>

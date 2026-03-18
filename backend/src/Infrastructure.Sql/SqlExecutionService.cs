@@ -1,27 +1,44 @@
 namespace Infrastructure.Sql;
 
+using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Configuration;
+
 public interface ISqlExecutionService
 {
     Task<List<Dictionary<string, object?>>> ExecuteQueryAsync(string sql);
 }
 
-public sealed class SqlExecutionService : ISqlExecutionService
+public sealed class SqlExecutionService(IConfiguration configuration) : ISqlExecutionService
 {
-    public Task<List<Dictionary<string, object?>>> ExecuteQueryAsync(string sql)
+    private readonly string _connectionString =
+        configuration["SqlConnectionString"]
+        ?? throw new InvalidOperationException("SqlConnectionString configuration is required.");
+
+    public async Task<List<Dictionary<string, object?>>> ExecuteQueryAsync(string sql)
     {
-        // Placeholder para implementación real con Microsoft.Data.SqlClient y parámetros seguros.
-        var rows = new List<Dictionary<string, object?>>
+        await using var connection = new SqlConnection(_connectionString);
+        await connection.OpenAsync();
+
+        await using var command = new SqlCommand(sql, connection)
         {
-            new()
-            {
-                ["merchant_id"] = "M102",
-                ["merchant_name"] = "Northwind Fuel",
-                ["chargeback_rate"] = 0.082m,
-                ["baseline_rate"] = 0.022m,
-                ["delta_factor"] = 3.7m
-            }
+            CommandTimeout = 30
         };
 
-        return Task.FromResult(rows);
+        var rows = new List<Dictionary<string, object?>>();
+        await using var reader = await command.ExecuteReaderAsync();
+
+        while (await reader.ReadAsync())
+        {
+            var row = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+            for (var i = 0; i < reader.FieldCount; i++)
+            {
+                var value = reader.IsDBNull(i) ? null : reader.GetValue(i);
+                row[reader.GetName(i)] = value;
+            }
+
+            rows.Add(row);
+        }
+
+        return rows;
     }
 }

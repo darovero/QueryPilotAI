@@ -32,12 +32,63 @@ public class QueryIntakeFunction
             request);
 
         var response = req.CreateResponse(HttpStatusCode.Accepted);
+        var statusUrl = $"{req.Url.Scheme}://{req.Url.Authority}/api/orchestrations/{instanceId}";
         await response.WriteAsJsonAsync(new
         {
             instanceId,
-            statusQueryGetUri = $"/api/orchestrations/{instanceId}"
+            statusQueryGetUri = statusUrl
         });
 
         return response;
+    }
+}
+
+public class OrchestrationStatusFunction
+{
+    [Function(nameof(OrchestrationStatusFunction))]
+    public async Task<HttpResponseData> Run(
+        [HttpTrigger(AuthorizationLevel.Function, "get", Route = "orchestrations/{instanceId}")] HttpRequestData req,
+        string instanceId,
+        [DurableClient] DurableTaskClient durableClient)
+    {
+        var metadata = await durableClient.GetInstanceAsync(instanceId, getInputsAndOutputs: true);
+        if (metadata is null)
+        {
+            var notFound = req.CreateResponse(HttpStatusCode.NotFound);
+            await notFound.WriteAsJsonAsync(new
+            {
+                instanceId,
+                status = "NotFound"
+            });
+
+            return notFound;
+        }
+
+        var ok = req.CreateResponse(HttpStatusCode.OK);
+        var outputRaw = metadata.SerializedOutput;
+        InsightResponse? output = null;
+        if (!string.IsNullOrWhiteSpace(outputRaw))
+        {
+            try
+            {
+                output = JsonSerializer.Deserialize<InsightResponse>(outputRaw);
+            }
+            catch
+            {
+                // Keep output as null and expose outputRaw for troubleshooting.
+            }
+        }
+
+        await ok.WriteAsJsonAsync(new
+        {
+            instanceId = metadata.InstanceId,
+            runtimeStatus = metadata.RuntimeStatus.ToString(),
+            createdAt = metadata.CreatedAt,
+            lastUpdatedAt = metadata.LastUpdatedAt,
+            output,
+            outputRaw
+        });
+
+        return ok;
     }
 }

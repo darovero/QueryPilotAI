@@ -1,13 +1,21 @@
-export function TracePanel() {
+type TracePanelProps = {
+  instanceId: string | null;
+  runtimeStatus: string;
+  createdAt: string | null;
+  lastUpdatedAt: string | null;
+  sql: string | null;
+};
+
+export function TracePanel({ instanceId, runtimeStatus, createdAt, lastUpdatedAt, sql }: TracePanelProps) {
   return (
     <section className="card">
       <h2>Transparencia</h2>
       
       <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "16px" }}>
-        <div><strong style={{ color: "#42526E", display: "inline-block", width: "90px" }}>Intent:</strong> <span style={{ color: "#172B4D" }}>anomaly_detection</span></div>
-        <div><strong style={{ color: "#42526E", display: "inline-block", width: "90px" }}>Metric:</strong> <span style={{ color: "#172B4D" }}>chargeback_rate</span></div>
-        <div><strong style={{ color: "#42526E", display: "inline-block", width: "90px" }}>Dimensions:</strong> <span style={{ color: "#172B4D" }}>merchant</span></div>
-        <div><strong style={{ color: "#42526E", display: "inline-block", width: "90px" }}>Window:</strong> <span style={{ color: "#172B4D" }}>last_7_days vs last_30_days</span></div>
+        <div><strong style={{ color: "#42526E", display: "inline-block", width: "120px" }}>InstanceId:</strong> <span style={{ color: "#172B4D" }}>{instanceId ?? "N/A"}</span></div>
+        <div><strong style={{ color: "#42526E", display: "inline-block", width: "120px" }}>Runtime:</strong> <span style={{ color: "#172B4D" }}>{runtimeStatus || "NotStarted"}</span></div>
+        <div><strong style={{ color: "#42526E", display: "inline-block", width: "120px" }}>Created:</strong> <span style={{ color: "#172B4D" }}>{createdAt ?? "N/A"}</span></div>
+        <div><strong style={{ color: "#42526E", display: "inline-block", width: "120px" }}>Updated:</strong> <span style={{ color: "#172B4D" }}>{lastUpdatedAt ?? "N/A"}</span></div>
       </div>
       
       <h3 style={{ fontSize: "14px", fontWeight: "600", color: "#172B4D", marginTop: "16px", marginBottom: "8px", display: "flex", alignItems: "center", gap: "8px" }}>
@@ -15,15 +23,7 @@ export function TracePanel() {
         Generated SQL
       </h3>
       <div className="code" style={{ borderLeft: "4px solid #F2994A", borderRadius: "4px" }}>
-{`SELECT TOP 50
-    merchant_id,
-    merchant_name,
-    chargeback_rate,
-    baseline_rate,
-    delta_factor
-FROM dbo.vw_merchant_chargeback_trends
-WHERE observation_window = 'last_7_days'
-ORDER BY delta_factor DESC`}
+{sql ?? "SQL todavia no disponible"}
       </div>
     </section>
   );

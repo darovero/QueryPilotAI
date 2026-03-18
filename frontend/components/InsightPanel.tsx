@@ -1,4 +1,43 @@
-export function InsightPanel() {
+type AuditMetadata = {
+  riskLevel: string;
+  approvedBy: string | null;
+};
+
+type InsightResponse = {
+  requestId: string;
+  status: string;
+  executiveSummary: string;
+  keyFindings: string[];
+  sql: string;
+  warnings: string[];
+  resultPreview: Array<Record<string, unknown>>;
+  audit: AuditMetadata;
+};
+
+type InsightPanelProps = {
+  runtimeStatus: string;
+  output: InsightResponse | null;
+};
+
+function toTable(rows: Array<Record<string, unknown>>) {
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return "Sin resultados";
+  }
+
+  const headers = Object.keys(rows[0]);
+  const lines = [headers.join(" | ")];
+
+  for (const row of rows) {
+    lines.push(headers.map((header) => String(row[header] ?? "")).join(" | "));
+  }
+
+  return lines.join("\n");
+}
+
+export function InsightPanel({ runtimeStatus, output }: InsightPanelProps) {
+  const normalizedRuntime = runtimeStatus || "NotStarted";
+  const isCompleted = normalizedRuntime === "Completed";
+
   return (
     <section className="card">
       <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
@@ -8,18 +47,13 @@ export function InsightPanel() {
         <h2 style={{ margin: 0 }}>Insight Ejecutivo</h2>
       </div>
       <div className="badge-row">
-        <span className="badge badge-success">Validated</span>
-        <span className="badge badge-warning">Risk: Medium</span>
-        <span className="badge badge-info">Auto-executed</span>
+        <span className="badge badge-success">Runtime: {normalizedRuntime}</span>
+        <span className="badge badge-warning">Risk: {output?.audit?.riskLevel ?? "N/A"}</span>
+        <span className="badge badge-info">Status: {output?.status ?? "Pending"}</span>
       </div>
-      <p>
-        Se detectaron tres comercios con incremento material en tasa de chargeback. El caso más crítico multiplica por <strong>3.7</strong> su línea base reciente.
-      </p>
+      <p>{output?.executiveSummary ?? "Esperando resultado de la orquestacion..."}</p>
       <div className="code">
-{`merchant_id | merchant_name     | chargeback_rate | baseline_rate | delta_factor
-M102        | Northwind Fuel    | 0.082           | 0.022         | 3.7
-M394        | Global Supplies   | 0.045           | 0.012         | 3.5
-M821        | Tech Haven        | 0.038           | 0.011         | 3.4`}
+    {isCompleted && output ? toTable(output.resultPreview ?? []) : "Sin datos todavia"}
       </div>
     </section>
   );
