@@ -75,17 +75,31 @@ export function UnifiedChat() {
           setActivePoll(null);
           
           if (data.runtimeStatus === "Completed" && data.output) {
-             addLog("SUCCESS", "Query completed successfully.");
-             setMessages((prev) => {
-                 const newMsgs = [...prev];
-                 const aiIdx = newMsgs.findIndex(m => m.instanceId === activePoll);
-                 if (aiIdx !== -1) {
-                     newMsgs[aiIdx].status = "Completed";
-                     newMsgs[aiIdx].insight = data.output.ExecutiveSummary;
-                     newMsgs[aiIdx].sql = data.output.Sql;
-                 }
-                 return newMsgs;
-             });
+             // Handle conversational (non-SQL) responses
+             if (data.output.Status === "Conversational") {
+               addLog("SUCCESS", "Conversational response (no SQL pipeline needed).");
+               setMessages((prev) => {
+                   const newMsgs = [...prev];
+                   const aiIdx = newMsgs.findIndex(m => m.instanceId === activePoll);
+                   if (aiIdx !== -1) {
+                       newMsgs[aiIdx].status = "Completed";
+                       newMsgs[aiIdx].content = data.output.ExecutiveSummary;
+                   }
+                   return newMsgs;
+               });
+             } else {
+               addLog("SUCCESS", "Query completed successfully.");
+               setMessages((prev) => {
+                   const newMsgs = [...prev];
+                   const aiIdx = newMsgs.findIndex(m => m.instanceId === activePoll);
+                   if (aiIdx !== -1) {
+                       newMsgs[aiIdx].status = "Completed";
+                       newMsgs[aiIdx].insight = data.output.ExecutiveSummary;
+                       newMsgs[aiIdx].sql = data.output.Sql;
+                   }
+                   return newMsgs;
+               });
+             }
           } else if (data.runtimeStatus === "Failed") {
              addLog("ERROR", `Execution failed: ${data.outputRaw || "Unknown error"}`);
              setMessages((prev) => {

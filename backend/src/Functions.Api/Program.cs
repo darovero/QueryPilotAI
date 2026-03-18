@@ -21,6 +21,7 @@ var host = new HostBuilder()
         services.AddSingleton<Infrastructure.AzureOpenAI.ISqlGenerationService, Infrastructure.AzureOpenAI.SqlGenerationService>();
         services.AddSingleton<Infrastructure.AzureOpenAI.ISummaryService, Infrastructure.AzureOpenAI.SummaryService>();
         services.AddSingleton<Infrastructure.Security.IPromptSafetyService, Infrastructure.Security.PromptSafetyService>();
+        services.AddSingleton<Infrastructure.AzureOpenAI.IFoundryAgentService, Infrastructure.AzureOpenAI.FoundryAgentService>();
     })
     .Build();
 

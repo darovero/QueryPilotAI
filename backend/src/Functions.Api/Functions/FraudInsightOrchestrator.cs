@@ -17,6 +17,25 @@ public class FraudInsightOrchestrator
             ? context.InstanceId[..32].Replace("-", "")
             : context.InstanceId.PadRight(32, '0'));
 
+        // --- Step 0: Foundry Agent (Conversational Concierge) ---
+        context.SetCustomStatus(new PipelineStep("concierge_routing", "El Agente Conversacional está analizando el contexto", "Active", context.CurrentUtcDateTime));
+
+        var classification = await context.CallActivityAsync<ConversationalClassification?>(nameof(ClassifyConversationActivity), request);
+
+        if (classification is not null && !string.Equals(classification.Category, "analytical", StringComparison.OrdinalIgnoreCase))
+        {
+            context.SetCustomStatus(new PipelineStep("conversational", "El Agente respondió directamente", "Completed", context.CurrentUtcDateTime));
+
+            return new InsightResponse(
+                context.InstanceId, "Conversational",
+                classification.FriendlyReply ?? "Hola, ¿en qué puedo ayudarte?",
+                Array.Empty<string>(), string.Empty, Array.Empty<string>(),
+                new List<Dictionary<string, object?>>(),
+                new AuditMetadata("None", null));
+        }
+
+        context.SetCustomStatus(new PipelineStep("concierge_routing", "El Agente requiere análisis de datos, invocando Pipeline Especialista", "Completed", context.CurrentUtcDateTime));
+
         // --- Step 1: Prompt Safety ---
         context.SetCustomStatus(new PipelineStep("safety_check", "Verificando seguridad del prompt", "Active", context.CurrentUtcDateTime));
 

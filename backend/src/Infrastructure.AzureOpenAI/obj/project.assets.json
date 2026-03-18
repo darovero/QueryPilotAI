@@ -2,6 +2,23 @@
   "version": 3,
   "targets": {
     "net8.0": {
+      "Azure.AI.OpenAI/2.1.0-beta.2": {
+        "type": "package",
+        "dependencies": {
+          "Azure.Core": "1.44.1",
+          "OpenAI": "2.1.0-beta.2"
+        },
+        "compile": {
+          "lib/netstandard2.0/Azure.AI.OpenAI.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/netstandard2.0/Azure.AI.OpenAI.dll": {
+            "related": ".xml"
+          }
+        }
+      },
       "Azure.Core/1.44.1": {
         "type": "package",
         "dependencies": {
@@ -105,11 +122,28 @@
           }
         }
       },
-      "System.ClientModel/1.1.0": {
+      "OpenAI/2.1.0-beta.2": {
         "type": "package",
         "dependencies": {
-          "System.Memory.Data": "1.0.2",
-          "System.Text.Json": "6.0.9"
+          "System.ClientModel": "1.2.1",
+          "System.Diagnostics.DiagnosticSource": "6.0.1"
+        },
+        "compile": {
+          "lib/net6.0/OpenAI.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net6.0/OpenAI.dll": {
+            "related": ".xml"
+          }
+        }
+      },
+      "System.ClientModel/1.2.1": {
+        "type": "package",
+        "dependencies": {
+          "System.Memory.Data": "6.0.0",
+          "System.Text.Json": "6.0.10"
         },
         "compile": {
           "lib/net6.0/System.ClientModel.dll": {
@@ -291,6 +325,22 @@
     }
   },
   "libraries": {
+    "Azure.AI.OpenAI/2.1.0-beta.2": {
+      "sha512": "9dm9MgejTpvWZHkLC9rBP01SII2bRLR55CwkKHS55Hai1pKxST7QvZ46MjIcTcmApfaV6XbHuF8mxSorqUU05w==",
+      "type": "package",
+      "path": "azure.ai.openai/2.1.0-beta.2",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "CHANGELOG.md",
+        "README.md",
+        "azure.ai.openai.2.1.0-beta.2.nupkg.sha512",
+        "azure.ai.openai.nuspec",
+        "azureicon.png",
+        "lib/netstandard2.0/Azure.AI.OpenAI.dll",
+        "lib/netstandard2.0/Azure.AI.OpenAI.xml"
+      ]
+    },
     "Azure.Core/1.44.1": {
       "sha512": "YyznXLQZCregzHvioip07/BkzjuWNXogJEVz9T5W6TwjNr17ax41YGzYMptlo2G10oLCuVPoyva62y0SIRDixg==",
       "type": "package",
@@ -416,10 +466,28 @@
         "microsoft.identitymodel.abstractions.nuspec"
       ]
     },
-    "System.ClientModel/1.1.0": {
-      "sha512": "UocOlCkxLZrG2CKMAAImPcldJTxeesHnHGHwhJ0pNlZEvEXcWKuQvVOER2/NiOkJGRJk978SNdw3j6/7O9H1lg==",
+    "OpenAI/2.1.0-beta.2": {
+      "sha512": "l+fZAS9XnCxnxGodYFPziMNF9u0ZBfOGEyOuryXnjkcPe+Z4g/ErEvGYyq559V+Q9C8J87eQ0lfq5KtwSk6ppw==",
       "type": "package",
-      "path": "system.clientmodel/1.1.0",
+      "path": "openai/2.1.0-beta.2",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "CHANGELOG.md",
+        "OpenAI.png",
+        "README.md",
+        "lib/net6.0/OpenAI.dll",
+        "lib/net6.0/OpenAI.xml",
+        "lib/netstandard2.0/OpenAI.dll",
+        "lib/netstandard2.0/OpenAI.xml",
+        "openai.2.1.0-beta.2.nupkg.sha512",
+        "openai.nuspec"
+      ]
+    },
+    "System.ClientModel/1.2.1": {
+      "sha512": "s9+M5El+DXdCRRLzxak8uGBKWT8H/eIssGpFtpaMKdJULrQbBDPH/zFbVyHX+NDczhS5EvjHFbBH9/L+0UhmcA==",
+      "type": "package",
+      "path": "system.clientmodel/1.2.1",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
@@ -430,7 +498,7 @@
         "lib/net6.0/System.ClientModel.xml",
         "lib/netstandard2.0/System.ClientModel.dll",
         "lib/netstandard2.0/System.ClientModel.xml",
-        "system.clientmodel.1.1.0.nupkg.sha512",
+        "system.clientmodel.1.2.1.nupkg.sha512",
         "system.clientmodel.nuspec"
       ]
     },
@@ -749,6 +817,7 @@
   },
   "projectFileDependencyGroups": {
     "net8.0": [
+      "Azure.AI.OpenAI >= 2.1.0-beta.2",
       "Azure.Identity >= 1.13.2",
       "Core.Application >= 1.0.0"
     ]
@@ -807,6 +876,10 @@
       "net8.0": {
         "targetAlias": "net8.0",
         "dependencies": {
+          "Azure.AI.OpenAI": {
+            "target": "Package",
+            "version": "[2.1.0-beta.2, )"
+          },
           "Azure.Identity": {
             "target": "Package",
             "version": "[1.13.2, )"

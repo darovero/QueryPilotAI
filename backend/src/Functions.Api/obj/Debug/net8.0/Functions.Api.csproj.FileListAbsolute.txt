@@ -252,3 +252,7 @@ C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Functions.Api\bin\outpu
 C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Functions.Api\bin\output\runtimes\win\lib\net8.0\System.Diagnostics.EventLog.Messages.dll
 C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Functions.Api\bin\output\runtimes\win\lib\net8.0\System.Diagnostics.EventLog.dll
 C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Functions.Api\bin\output\runtimes\win\lib\net8.0\System.Runtime.Caching.dll
+C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Functions.Api\bin\Debug\net8.0\Azure.AI.OpenAI.dll
+C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Functions.Api\bin\Debug\net8.0\OpenAI.dll
+C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Functions.Api\bin\output\Azure.AI.OpenAI.dll
+C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Functions.Api\bin\output\OpenAI.dll

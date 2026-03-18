@@ -17,6 +17,23 @@
     ]
   },
   {
+    "name": "ClassifyConversationActivity",
+    "scriptFile": "Functions.Api.dll",
+    "entryPoint": "Functions.Api.Functions.ClassifyConversationActivity.Run",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "request",
+        "direction": "In",
+        "type": "activityTrigger",
+        "properties": {}
+      }
+    ]
+  },
+  {
     "name": "DecomposeIntentActivity",
     "scriptFile": "Functions.Api.dll",
     "entryPoint": "Functions.Api.Functions.DecomposeIntentActivity.Run",

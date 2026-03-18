@@ -6,6 +6,7 @@
     "SqlConnectionString": "Server=tcp:insightforge-sql3-86253.database.windows.net,1433;Initial Catalog=insightforge-sqldb;Encrypt=True;TrustServerCertificate=False;Authentication=Active Directory Default;",
     "AzureOpenAI__Endpoint": "https://eastus.api.cognitive.microsoft.com/",
     "AzureOpenAI__Deployment": "gpt41mini-std",
+    "AzureOpenAI__ApiKey": "2014DrxI4S9tJHnIXg1hR5FWaKLsxvNnsSQQJCoCH6QY2PfwHgtVJQQJ99CCACYeBjFXJ3w3AAABACOGddis",
     "ContentSafety__Endpoint": "https://eastus.api.cognitive.microsoft.com/"
   }
 }

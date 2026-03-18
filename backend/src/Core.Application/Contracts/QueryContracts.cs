@@ -26,6 +26,11 @@ public sealed record IntentParsingInput(QueryRequest Request, List<ConversationT
 
 public sealed record PromptSafetyResult(bool IsSafe, string Reason);
 
+public sealed record ConversationalClassification(
+    string Category,
+    string FriendlyReply,
+    double Confidence);
+
 public sealed record AnalyticalIntent(
     string Domain,
     string IntentType,

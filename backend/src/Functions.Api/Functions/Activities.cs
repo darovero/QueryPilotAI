@@ -11,6 +11,13 @@ public class AnalyzePromptSafetyActivity(Infrastructure.Security.IPromptSafetySe
         safetyService.AnalyzeAsync(request.Question, request.Role);
 }
 
+public class ClassifyConversationActivity(Infrastructure.AzureOpenAI.IFoundryAgentService agentService)
+{
+    [Function(nameof(ClassifyConversationActivity))]
+    public Task<ConversationalClassification?> Run([ActivityTrigger] QueryRequest request) =>
+        agentService.ProcessUserMessageAsync(request.UserId, request.SessionId, request.Question);
+}
+
 public class DecomposeIntentActivity(Infrastructure.AzureOpenAI.IIntentService intentService)
 {
     [Function(nameof(DecomposeIntentActivity))]
