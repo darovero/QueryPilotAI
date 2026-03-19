@@ -1,4 +1,6 @@
 import type { Config } from "tailwindcss";
+import forms from "@tailwindcss/forms";
+import containerQueries from "@tailwindcss/container-queries";
 
 const config: Config = {
   darkMode: "class",
@@ -59,13 +61,12 @@ const config: Config = {
         "inverse-on-surface": "#2d3137"
       },
       fontFamily: {
-        "headline": ["Space Grotesk", "sans-serif"],
-        "body": ["Inter", "sans-serif"],
-        "label": ["Inter", "sans-serif"],
-        "mono": ["JetBrains Mono", "monospace"]
+        sans: ["var(--font-ui)", "system-ui", "Segoe UI", "Roboto", "Arial", "sans-serif"],
+        display: ["var(--font-display)", "system-ui", "Segoe UI", "Roboto", "Arial", "sans-serif"],
+        mono: ["ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New", "monospace"]
       },
     },
   },
-  plugins: [],
+  plugins: [forms, containerQueries],
 };
 export default config;
