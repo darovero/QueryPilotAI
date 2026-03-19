@@ -787,100 +787,102 @@ export function UnifiedChat() {
 
           {/* VIEW: CHAT */}
           {openTabs.find(t => t.id === currentView && t.type === 'chat') && (
-            <div className="flex flex-col h-full items-center p-6 lg:p-12 max-w-[800px] mx-auto w-full relative">
+            <div className="flex flex-col h-full w-full relative">
                
                {messages.length === 0 && (
-                 <div className="h-full flex flex-col justify-center items-center w-full max-w-2xl space-y-12 mb-20 text-center">
-                    <div className="space-y-3">
-                       <h2 className="text-xl text-zinc-500 font-medium tracking-tight">Welcome, Jessy</h2>
-                       <h1 className="text-4xl font-semibold tracking-tight text-zinc-900">What would you like to explore?</h1>
-                    </div>
-                    
-                    <div className="w-full relative rounded-2xl group border border-zinc-200 focus-within:border-zinc-400 focus-within:ring-2 focus-within:ring-zinc-200 transition-colors bg-white">
-                      <textarea 
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        onKeyDown={(e) => { 
-                            if(e.key === 'Enter' && !e.shiftKey) { 
-                                e.preventDefault(); 
-                                handleSubmit(); 
-                            } 
-                        }}
-                        disabled={isTyping}
-                        className="w-full bg-transparent rounded-2xl px-6 py-5 pr-16 text-[15px] text-zinc-900 focus:outline-none resize-none h-32 font-medium placeholder:text-zinc-400"
-                        placeholder="Ask a question or create a chart..."
-                      ></textarea>
-                      <button 
-                        onClick={handleSubmit} 
-                        disabled={isTyping || !input.trim()}
-                        className="absolute right-4 bottom-4 w-10 h-10 rounded-xl bg-zinc-900 text-white flex items-center justify-center disabled:opacity-30 disabled:bg-zinc-200 disabled:text-zinc-500 transition-colors hover:bg-zinc-800 cursor-pointer">
-                        <span className="material-symbols-outlined text-[18px] font-bold">arrow_upward</span>
-                      </button>
-                    </div>
+                 <div className="h-full flex flex-col justify-center items-center w-full px-6 text-center">
+                    <div className="w-full max-w-xl space-y-10 mb-16">
+                      <div className="space-y-3">
+                         <h2 className="text-lg text-zinc-400 font-medium tracking-tight">Welcome, Jessy</h2>
+                         <h1 className="text-3xl font-semibold tracking-tight text-zinc-900">What would you like to explore?</h1>
+                      </div>
+                      
+                      <div className="w-full relative rounded-2xl bg-white border border-zinc-200 focus-within:border-zinc-300 focus-within:shadow-md transition-all">
+                        <textarea 
+                          value={input}
+                          onChange={(e) => setInput(e.target.value)}
+                          onKeyDown={(e) => { 
+                              if(e.key === 'Enter' && !e.shiftKey) { 
+                                  e.preventDefault(); 
+                                  handleSubmit(); 
+                              } 
+                          }}
+                          disabled={isTyping}
+                          className="w-full bg-transparent rounded-2xl px-5 py-4 pr-14 text-[15px] text-zinc-900 focus:outline-none resize-none h-28 font-medium placeholder:text-zinc-400"
+                          placeholder="Ask a question or create a chart..."
+                        ></textarea>
+                        <button 
+                          onClick={handleSubmit} 
+                          disabled={isTyping || !input.trim()}
+                          className="absolute right-3 bottom-3 w-9 h-9 rounded-xl bg-zinc-900 text-white flex items-center justify-center disabled:opacity-20 disabled:bg-zinc-200 disabled:text-zinc-400 transition-all hover:bg-zinc-800 cursor-pointer">
+                          <span className="material-symbols-outlined text-[16px]">arrow_upward</span>
+                        </button>
+                      </div>
 
-                    <div className="flex items-center justify-center gap-3 flex-wrap">
-                      {[
-                        { icon: 'bar_chart', label: 'Chart' },
-                        { icon: 'table_chart', label: 'Table' },
-                        { icon: 'lightbulb', label: 'Insight' },
-                        { icon: 'analytics', label: 'Analysis' }
-                      ].map(action => (
-                         <button key={action.label} className="px-5 py-2 rounded-full border border-zinc-200 bg-white text-[13px] font-medium text-zinc-600 hover:text-zinc-900 hover:border-zinc-300 flex items-center gap-2 transition-colors">
-                           <span className="material-symbols-outlined text-[16px]">{action.icon}</span> {action.label}
-                         </button>
-                      ))}
+                      <div className="flex items-center justify-center gap-2 flex-wrap">
+                        {[
+                          { icon: 'bar_chart', label: 'Chart' },
+                          { icon: 'table_chart', label: 'Table' },
+                          { icon: 'lightbulb', label: 'Insight' },
+                          { icon: 'analytics', label: 'Analysis' }
+                        ].map(action => (
+                           <button key={action.label} className="px-4 py-1.5 rounded-full border border-zinc-200 bg-white text-[12px] font-medium text-zinc-500 hover:text-zinc-900 hover:border-zinc-300 hover:bg-zinc-50 flex items-center gap-1.5 transition-all">
+                             <span className="material-symbols-outlined text-[14px]">{action.icon}</span> {action.label}
+                           </button>
+                        ))}
+                      </div>
                     </div>
                  </div>
                )}
 
                {/* Chat history area */}
                {messages.length > 0 && (
-                 <div className="w-full flex-1 overflow-y-auto pt-8 pb-48 flex flex-col items-center">
-                    <div className="w-full max-w-3xl space-y-8 px-4">
+                 <div className="w-full flex-1 overflow-y-auto px-6 md:px-10 lg:px-16 pt-6 pb-28">
+                    <div className="w-full space-y-6">
                        {messages.map((msg) => (
-                         <div key={msg.id} className="w-full animate-in slide-in-from-bottom-2 duration-300">
+                         <div key={msg.id} className="w-full">
                             
                             {msg.role === 'user' && (
                                <div className="flex justify-end w-full">
-                                  <div className="bg-zinc-100 border border-zinc-200/50 rounded-3xl px-6 py-4 text-[15px] text-zinc-900 shadow-sm max-w-[80%] font-medium leading-relaxed">
+                                  <div className="bg-zinc-100 rounded-2xl px-5 py-3 text-[14px] text-zinc-900 max-w-[70%] font-medium leading-relaxed">
                                      {msg.content}
                                   </div>
                                </div>
                             )}
 
                             {msg.role === 'ai' && (
-                               <div className="flex gap-5 w-full">
-                                  <div className="mt-1 shrink-0">
-                                    <div className="w-8 h-8 rounded-full bg-zinc-900 border border-zinc-200 flex items-center justify-center shadow-sm">
-                                      <span className="material-symbols-outlined text-[16px] text-white">smart_toy</span>
+                               <div className="flex gap-3 w-full">
+                                  <div className="mt-0.5 shrink-0">
+                                    <div className="w-7 h-7 rounded-full bg-zinc-900 flex items-center justify-center">
+                                      <span className="material-symbols-outlined text-[14px] text-white">smart_toy</span>
                                     </div>
                                   </div>
-                                  <div className="flex-1 space-y-4 min-w-0">
+                                  <div className="flex-1 space-y-3 min-w-0">
                                      
                                      {msg.content && msg.status !== 'Running' && (
-                                        <div className="text-[15px] text-zinc-800 leading-relaxed font-medium mt-1 max-w-none">
+                                        <div className="text-[14px] text-zinc-700 leading-relaxed font-medium mt-0.5">
                                            {msg.content}
                                         </div>
                                      )}
 
                                      {msg.status === 'Running' && msg.content && (
-                                        <div className="text-[14px] text-zinc-600 leading-relaxed font-bold mt-1 max-w-none">
+                                        <div className="text-[13px] text-zinc-500 leading-relaxed font-semibold mt-0.5">
                                            {msg.content}
                                         </div>
                                      )}
                                      
                                      {msg.sql && (
-                                        <div className="border border-zinc-200 rounded-2xl overflow-hidden bg-white shadow-sm mt-2 mb-6 ml-2 mr-2">
-                                           <div className="flex items-center border-b border-zinc-200 bg-zinc-50/50">
+                                        <div className="border border-zinc-200/80 rounded-xl overflow-hidden mt-2">
+                                           <div className="flex items-center border-b border-zinc-100 bg-zinc-50/80">
                                               <div 
                                                  onClick={() => setActiveTabs(prev => ({ ...prev, [msg.id]: 'query' }))}
-                                                 className={`px-5 py-3 text-[11px] uppercase tracking-widest font-bold cursor-pointer transition-colors ${activeTabs[msg.id] === 'query' ? 'border-b-2 border-zinc-900 text-zinc-900' : 'border-b-2 border-transparent text-zinc-400 hover:text-zinc-900'}`}
+                                                 className={`px-4 py-2.5 text-[11px] uppercase tracking-widest font-bold cursor-pointer transition-colors ${activeTabs[msg.id] === 'query' ? 'border-b-2 border-zinc-900 text-zinc-900' : 'border-b-2 border-transparent text-zinc-400 hover:text-zinc-700'}`}
                                               >
                                                  Query
                                               </div>
                                               <div 
                                                  onClick={() => setActiveTabs(prev => ({ ...prev, [msg.id]: 'insight' }))}
-                                                 className={`px-5 py-3 text-[11px] uppercase tracking-widest font-bold cursor-pointer transition-colors ${!activeTabs[msg.id] || activeTabs[msg.id] === 'insight' ? 'border-b-2 border-zinc-900 text-zinc-900' : 'border-b-2 border-transparent text-zinc-400 hover:text-zinc-900'}`}
+                                                 className={`px-4 py-2.5 text-[11px] uppercase tracking-widest font-bold cursor-pointer transition-colors ${!activeTabs[msg.id] || activeTabs[msg.id] === 'insight' ? 'border-b-2 border-zinc-900 text-zinc-900' : 'border-b-2 border-transparent text-zinc-400 hover:text-zinc-700'}`}
                                               >
                                                  Insight
                                               </div>
@@ -895,19 +897,19 @@ export function UnifiedChat() {
                                                    }
                                                    setCurrentView(tabId);
                                                  }}
-                                                 className="ml-auto mr-4 text-zinc-400 hover:text-zinc-900 transition-colors p-1.5 rounded-md hover:bg-zinc-100">
-                                                 <span className="material-symbols-outlined text-[16px]">open_in_new</span>
+                                                 className="ml-auto mr-3 text-zinc-400 hover:text-zinc-900 transition-colors p-1 rounded-md hover:bg-zinc-100">
+                                                 <span className="material-symbols-outlined text-[14px]">open_in_new</span>
                                               </button>
                                            </div>
                                            
                                            {activeTabs[msg.id] === 'query' ? (
-                                              <div className="p-4 overflow-x-auto text-[13px] bg-zinc-50/30">
+                                              <div className="p-4 overflow-x-auto text-[13px]">
                                                  <SyntaxHighlighter language="sql" style={prism} customStyle={{ margin: 0, padding: 0, background: 'transparent' }}>
                                                    {msg.sql.trim()}
                                                  </SyntaxHighlighter>
                                               </div>
                                            ) : (
-                                              <div className="p-5 text-[14px] text-zinc-800 font-medium leading-relaxed bg-white">
+                                              <div className="p-4 text-[14px] text-zinc-700 font-medium leading-relaxed">
                                                 {msg.insight ? msg.insight : <span className="text-zinc-400 italic">No insight generated yet...</span>}
                                               </div>
                                            )}
@@ -915,10 +917,10 @@ export function UnifiedChat() {
                                      )}
 
                                      {msg.status === 'Running' && (
-                                        <div className="flex gap-1.5 mt-2">
-                                           <div className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce"></div>
-                                           <div className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce delay-75"></div>
-                                           <div className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce delay-150"></div>
+                                        <div className="flex gap-1.5 mt-1">
+                                           <div className="w-1.5 h-1.5 bg-zinc-300 rounded-full animate-bounce"></div>
+                                           <div className="w-1.5 h-1.5 bg-zinc-300 rounded-full animate-bounce delay-75"></div>
+                                           <div className="w-1.5 h-1.5 bg-zinc-300 rounded-full animate-bounce delay-150"></div>
                                         </div>
                                      )}
 
@@ -933,10 +935,10 @@ export function UnifiedChat() {
                  </div>
                )}
 
-               {/* Floating input at bottom for active chat */}
+               {/* Fixed input bar at bottom */}
                {messages.length > 0 && (
-                 <div className="absolute bottom-10 left-1/2 -translate-x-1/2 w-full max-w-3xl px-4 z-20">
-                    <div className="relative rounded-2xl border border-zinc-200 focus-within:border-zinc-400 focus-within:ring-2 focus-within:ring-zinc-200 transition-all bg-white shadow-xl hover:shadow-2xl">
+                 <div className="absolute bottom-0 left-0 right-0 px-6 md:px-10 lg:px-16 pb-5 pt-3 bg-gradient-to-t from-[var(--surface)] via-[var(--surface)] to-transparent z-20">
+                    <div className="relative rounded-2xl bg-white border border-zinc-200 focus-within:border-zinc-300 focus-within:shadow-md transition-all">
                       <textarea 
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
@@ -947,14 +949,14 @@ export function UnifiedChat() {
                             } 
                         }}
                         disabled={isTyping}
-                        className="w-full bg-transparent px-5 py-4 pr-14 text-[14px] font-medium text-zinc-900 focus:outline-none resize-none h-[56px] placeholder:text-zinc-500"
+                        className="w-full bg-transparent px-5 py-3.5 pr-14 text-[14px] font-medium text-zinc-900 focus:outline-none resize-none h-[52px] placeholder:text-zinc-400 rounded-2xl"
                         placeholder="Ask a follow-up question..."
                       ></textarea>
                       <button 
                         onClick={handleSubmit} 
                         disabled={isTyping || !input.trim()}
-                        className="absolute right-2.5 top-2.5 w-9 h-9 rounded-xl bg-zinc-100 text-zinc-600 hover:bg-zinc-900 hover:text-white flex items-center justify-center disabled:opacity-50 disabled:bg-zinc-50 disabled:text-zinc-300 transition-colors border border-zinc-200">
-                        <span className="material-symbols-outlined text-[16px] font-bold">north</span>
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg bg-zinc-900 text-white flex items-center justify-center disabled:opacity-20 disabled:bg-zinc-200 disabled:text-zinc-400 transition-all hover:bg-zinc-800">
+                        <span className="material-symbols-outlined text-[16px]">arrow_upward</span>
                       </button>
                     </div>
                  </div>
