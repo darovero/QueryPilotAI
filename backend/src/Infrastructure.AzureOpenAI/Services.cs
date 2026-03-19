@@ -659,9 +659,12 @@ public sealed class SummaryService : ISummaryService
     {
         if (rows.Count == 0)
         {
-            return
-                "No encontré registros que cumplan esa condición en este momento. " +
-                "Si quieres, podemos ajustar la ventana de tiempo o el filtro para ampliar la búsqueda.";
+            var emptyJson = new
+            {
+                summary = "No encontré registros que cumplan esa condición en este momento. Si quieres, podemos ajustar la ventana de tiempo o el filtro para ampliar la búsqueda.",
+                chart = new { type = "none" }
+            };
+            return JsonSerializer.Serialize(emptyJson, JsonDefaults.Options);
         }
 
         var aiSummary = await TrySummarizeWithAiAsync(question, sql, rows);
@@ -683,11 +686,18 @@ public sealed class SummaryService : ISummaryService
                 ? $"con una variación de {FormatDecimal(delta)}x frente a su línea base"
                 : "sin variación calculable frente a la línea base";
 
-            return
-                $"Analicé {rows.Count} comercios para responder tu pregunta. " +
-                $"El principal foco es {topMerchant}, con un chargeback_rate de {FormatDecimal(topRate)} y {trendText}. " +
-                $"La línea base observada es {FormatDecimal(baseline)}. " +
-                "Si quieres, en el siguiente paso te separo estos resultados por canal o ciudad.";
+            var json = new
+            {
+                summary = $"Analicé {rows.Count} comercios para responder tu pregunta. El principal foco es {topMerchant}, con un chargeback_rate de {FormatDecimal(topRate)} y {trendText}. La línea base observada es {FormatDecimal(baseline)}. Si quieres, en el siguiente paso te separo estos resultados por canal o ciudad.",
+                chart = new
+                {
+                    type = "bar",
+                    title = "Tendencia de Comercios",
+                    xAxisKey = "merchant_name",
+                    yAxisKey = "chargeback_rate"
+                }
+            };
+            return JsonSerializer.Serialize(json, JsonDefaults.Options);
         }
 
         if (first.ContainsKey("risk_level") && first.ContainsKey("total_chargebacks"))
@@ -697,11 +707,18 @@ public sealed class SummaryService : ISummaryService
             var chargebacks = AsInt(first, "total_chargebacks");
             var alerts = AsInt(first, "total_alerts");
 
-            return
-                $"Encontré {rows.Count} perfiles de cliente relevantes. " +
-                $"El cliente {customer} aparece como prioridad con nivel de riesgo {riskLevel}, " +
-                $"{chargebacks} chargebacks y {alerts} alertas registradas. " +
-                "Recomiendo revisión manual de este segmento antes de escalar límites transaccionales.";
+            var json = new
+            {
+                summary = $"Encontré {rows.Count} perfiles de cliente relevantes. El cliente {customer} aparece como prioridad con nivel de riesgo {riskLevel}, {chargebacks} chargebacks y {alerts} alertas registradas. Recomiendo revisión manual de este segmento antes de escalar límites transaccionales.",
+                chart = new
+                {
+                    type = "bar",
+                    title = "Riesgo de Clientes",
+                    xAxisKey = "customer_id",
+                    yAxisKey = "total_chargebacks"
+                }
+            };
+            return JsonSerializer.Serialize(json, JsonDefaults.Options);
         }
 
         if (first.ContainsKey("fingerprint") && first.ContainsKey("distinct_customers"))
@@ -710,10 +727,15 @@ public sealed class SummaryService : ISummaryService
             var customers = AsInt(first, "distinct_customers");
             var risk = AsString(first, "max_risk_level", "N/D");
 
-            return
-                $"Detecté {rows.Count} dispositivos compartidos con señal de riesgo. " +
-                $"El fingerprint {fingerprint} está asociado a {customers} clientes y su riesgo máximo es {risk}. " +
-                "Este patrón suele indicar posible account sharing o abuso coordinado.";
+            var json = new
+            {
+                summary = $"Detecté {rows.Count} dispositivos compartidos con señal de riesgo. El fingerprint {fingerprint} está asociado a {customers} clientes y su riesgo máximo es {risk}. Este patrón suele indicar posible account sharing o abuso coordinado.",
+                chart = new
+                {
+                    type = "none"
+                }
+            };
+            return JsonSerializer.Serialize(json, JsonDefaults.Options);
         }
 
         if (first.ContainsKey("attempts_count") && first.ContainsKey("customer_id"))
@@ -722,10 +744,15 @@ public sealed class SummaryService : ISummaryService
             var account = AsString(first, "account_id", "N/D");
             var attempts = AsInt(first, "attempts_count");
 
-            return
-                $"Identifiqué {rows.Count} secuencias de intentos fallidos seguidos de aprobación. " +
-                $"El caso más relevante corresponde al cliente {customer} en la cuenta {account} con {attempts} intentos. " +
-                "Es un comportamiento compatible con prueba escalonada de credenciales o fraude de fricción baja.";
+            var json = new
+            {
+                summary = $"Identifiqué {rows.Count} secuencias de intentos fallidos seguidos de aprobación. El caso más relevante corresponde al cliente {customer} en la cuenta {account} con {attempts} intentos. Es un comportamiento compatible con prueba escalonada de credenciales o fraude de fricción baja.",
+                chart = new
+                {
+                    type = "none"
+                }
+            };
+            return JsonSerializer.Serialize(json, JsonDefaults.Options);
         }
 
         var preview = first
@@ -736,10 +763,12 @@ public sealed class SummaryService : ISummaryService
 
         var previewText = preview.Length == 0 ? "sin métricas clave" : string.Join(", ", preview);
 
-        return
-            $"Procesé tu consulta y devolví {rows.Count} registros. " +
-            $"El primer hallazgo muestra {previewText}. " +
-            "Si quieres, puedo convertir estos resultados en recomendaciones operativas por prioridad.";
+        var fallbackJson = new
+        {
+            summary = $"Procesé tu consulta y devolví {rows.Count} registros. El primer hallazgo muestra {previewText}. Si quieres, puedo convertir estos resultados en recomendaciones operativas por prioridad.",
+            chart = new { type = "none" }
+        };
+        return JsonSerializer.Serialize(fallbackJson, JsonDefaults.Options);
     }
 
     private static async Task<string?> TrySummarizeWithAiAsync(string question, string sql, List<Dictionary<string, object?>> rows)
@@ -748,21 +777,48 @@ public sealed class SummaryService : ISummaryService
         var rowsJson = JsonSerializer.Serialize(sampleRows);
 
         var systemPrompt =
-            "Eres un analista senior de fraude. Responde en espanol natural, claro y accionable. " +
+            "Eres un analista senior de fraude. Responde generando un JSON válido. " +
             "No inventes datos. No menciones detalles tecnicos internos. " +
-            "Debes producir un solo parrafo de 3 a 6 frases con tono ejecutivo y operativo.";
+            "Debes producir una respuesta que contenga un 'summary' (texto ejecutivo de 3 a 6 frases) y una configuracion de grafico 'chart'.\n" +
+            "Estructura JSON requerida:\n" +
+            "{\n" +
+            "  \"summary\": \"Texto ejecutivo con el analisis...\",\n" +
+            "  \"chart\": {\n" +
+            "    \"type\": \"bar\", // o \"line\", \"pie\", \"none\"\n" +
+            "    \"title\": \"Titulo del grafico\",\n" +
+            "    \"xAxisKey\": \"nombre_columna_x\",\n" +
+            "    \"yAxisKey\": \"nombre_columna_y\"\n" +
+            "  }\n" +
+            "}\n" +
+            "Usa type='none' si los datos no son propicios para un grafico.";
 
         var userPrompt =
             $"Pregunta del usuario: {question}\n" +
             $"SQL ejecutado: {sql}\n" +
             $"Filas devueltas: {rows.Count}\n" +
             $"Muestra JSON (max 25 filas): {rowsJson}\n" +
-            "Incluye: hallazgo principal, impacto de riesgo y recomendacion concreta del siguiente paso.";
+            "Incluye en el summary: hallazgo principal, impacto de riesgo y recomendacion concreta. " +
+            "Configura 'chart' seleccionando la mejor opcion basandose en las columnas del JSON devuelto.";
 
-        var raw = await ChatClient.CompleteAsync(systemPrompt, userPrompt, jsonResponse: false, maxTokens: 350, temperature: 0.2);
+        var raw = await ChatClient.CompleteAsync(systemPrompt, userPrompt, jsonResponse: true, maxTokens: 450, temperature: 0.1);
         if (string.IsNullOrWhiteSpace(raw))
         {
             return null;
+        }
+
+        raw = raw.Trim();
+        if (raw.StartsWith("```json", StringComparison.OrdinalIgnoreCase))
+        {
+            raw = raw.Substring(7);
+        }
+        else if (raw.StartsWith("```", StringComparison.OrdinalIgnoreCase))
+        {
+            raw = raw.Substring(3);
+        }
+
+        if (raw.EndsWith("```", StringComparison.OrdinalIgnoreCase))
+        {
+            raw = raw.Substring(0, raw.Length - 3);
         }
 
         return raw.Trim();

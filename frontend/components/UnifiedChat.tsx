@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { prism } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { ResponsiveContainer, BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import "./UnifiedChat.css";
 
 type ProgressEvent = { label: string; status: string; time: string };
@@ -16,6 +17,10 @@ type Message = {
   status?: "PendingApproval" | "Completed" | "Failed" | "Blocked" | "Running" | "Accepted" | "Rejected";
   instanceId?: string;
   progressEvents?: ProgressEvent[];
+  results?: Record<string, unknown>[];
+  approvalSql?: string;
+  riskLevel?: string;
+  reasons?: string[];
 };
 
 type LogEntry = {
@@ -30,15 +35,27 @@ type ChatSession = { id: string; connectionId: string; title: string; messages: 
 type DashboardTab = { type: 'chat' | 'ide'; id: string; title: string; connectionId?: string; sql?: string };
 
 export function UnifiedChat() {
-  const [connections, setConnections] = useState<Connection[]>([
-    { id: 'conn-demo', name: 'My Postgres Database', type: 'PostgreSQL', host: 'db.mypostgres.com', port: '5432', database: 'analytics_db' }
-  ]);
-  const [chatSessions, setChatSessions] = useState<ChatSession[]>([
-    { id: 'chat-demo-1', connectionId: 'conn-demo', title: 'Untitled Chat 1', messages: [] }
-  ]);
-  const [openTabs, setOpenTabs] = useState<DashboardTab[]>([
-    { type: 'chat', id: 'chat-demo-1', title: 'Untitled Chat 1', connectionId: 'conn-demo' }
-  ]);
+  const [connections, setConnections] = useState<Connection[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('qp_connections');
+      if (saved) try { return JSON.parse(saved); } catch {}
+    }
+    return [{ id: 'conn-demo', name: 'My Postgres Database', type: 'PostgreSQL', host: 'db.mypostgres.com', port: '5432', database: 'analytics_db' }];
+  });
+  const [chatSessions, setChatSessions] = useState<ChatSession[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('qp_chatSessions');
+      if (saved) try { return JSON.parse(saved); } catch {}
+    }
+    return [{ id: 'chat-demo-1', connectionId: 'conn-demo', title: 'Untitled Chat 1', messages: [] }];
+  });
+  const [openTabs, setOpenTabs] = useState<DashboardTab[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('qp_openTabs');
+      if (saved) try { return JSON.parse(saved); } catch {}
+    }
+    return [{ type: 'chat', id: 'chat-demo-1', title: 'Untitled Chat 1', connectionId: 'conn-demo' }];
+  });
 
   type ViewState = 'welcome' | 'integrations' | 'connect_postgres' | 'manage_connections' | string;
   const [currentView, setCurrentView] = useState<ViewState>('chat-demo-1');
@@ -72,7 +89,8 @@ export function UnifiedChat() {
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [terminalLogs, setTerminalLogs] = useState<LogEntry[]>([]);
-  const [activeTabs, setActiveTabs] = useState<Record<string, 'query' | 'insight'>>({});
+  const [activeTabs, setActiveTabs] = useState<Record<string, 'query' | 'insight' | 'results'>>({});
+  const [historyData, setHistoryData] = useState<any[]>([]);;
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const terminalEndRef = useRef<HTMLDivElement>(null);
@@ -83,6 +101,11 @@ export function UnifiedChat() {
       { id: "2", timestamp: new Date().toISOString(), level: "SUCCESS", message: "Dashboard UI ready." }
     ]);
   }, []);
+
+  // localStorage persistence
+  useEffect(() => { localStorage.setItem('qp_connections', JSON.stringify(connections)); }, [connections]);
+  useEffect(() => { localStorage.setItem('qp_chatSessions', JSON.stringify(chatSessions)); }, [chatSessions]);
+  useEffect(() => { localStorage.setItem('qp_openTabs', JSON.stringify(openTabs)); }, [openTabs]);
 
   const addLog = (level: LogEntry["level"], msg: string) => {
     setTerminalLogs((prev) => [
@@ -156,6 +179,9 @@ export function UnifiedChat() {
                        newMsgs[aiIdx].status = "Completed";
                        newMsgs[aiIdx].insight = data.output.ExecutiveSummary;
                        newMsgs[aiIdx].sql = data.output.Sql;
+                       if (data.output.ResultPreview && data.output.ResultPreview.length > 0) {
+                           newMsgs[aiIdx].results = data.output.ResultPreview;
+                       }
                    }
                    return newMsgs;
                });
@@ -237,6 +263,44 @@ export function UnifiedChat() {
     }
   };
 
+  const handleApproval = async (msg: Message, decision: 'Approved' | 'Rejected', comments?: string) => {
+    if (!msg.instanceId) return;
+    try {
+      addLog("INFO", `Sending ${decision} for ${msg.instanceId}`);
+      const res = await fetch(`/api/query/${msg.instanceId}/approve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ decision, approverUserId: "user@agent.com", comments: comments || "" }),
+      });
+      if (!res.ok) throw new Error("Approval failed");
+      setMessages((prev) => {
+        const newMsgs = [...prev];
+        const aiIdx = newMsgs.findIndex(m => m.id === msg.id);
+        if (aiIdx !== -1) {
+          if (decision === 'Approved') {
+            newMsgs[aiIdx].status = "Running";
+            newMsgs[aiIdx].content = "Consulta aprobada. Ejecutando...";
+            setActivePoll(msg.instanceId!);
+            setIsTyping(true);
+          } else {
+            newMsgs[aiIdx].status = "Rejected";
+            newMsgs[aiIdx].content = `Consulta rechazada${comments ? ': ' + comments : ''}.`;
+          }
+        }
+        return newMsgs;
+      });
+      addLog("SUCCESS", `Decision '${decision}' sent.`);
+    } catch (e: any) {
+      addLog("ERROR", "Approval error: " + e.message);
+    }
+  };
+
+  const handleCopySQL = (sql: string) => {
+    navigator.clipboard.writeText(sql).then(() => {
+      addLog("SUCCESS", "SQL copiado al clipboard.");
+    });
+  };
+
   const handleSaveConnection = () => {
     if (!connForm.name?.trim()) {
         setConnError("Connection name is required.");
@@ -308,6 +372,12 @@ export function UnifiedChat() {
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-colors ${currentView === 'settings' ? 'bg-zinc-100 text-zinc-900' : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'}`}>
                 <span className="material-symbols-outlined text-[18px]">tune</span>
                 Settings
+              </button>
+              <button 
+                onClick={async () => { setCurrentView('history'); try { const r = await fetch('/api/history'); if(r.ok) { const d = await r.json(); setHistoryData(d); } } catch {} }}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-colors ${currentView === 'history' ? 'bg-zinc-100 text-zinc-900' : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'}`}>
+                <span className="material-symbols-outlined text-[18px]">history</span>
+                History
               </button>
             </div>
             
@@ -785,6 +855,60 @@ export function UnifiedChat() {
              </div>
           )}
 
+          {/* VIEW: HISTORY */}
+          {currentView === 'history' && (
+             <div className="flex bg-white h-full text-zinc-900">
+                <div className="flex-1 p-8 overflow-y-auto">
+                   <div className="mb-6">
+                      <h1 className="text-2xl font-semibold text-zinc-900 tracking-tight">Activity History</h1>
+                      <p className="text-[13px] text-zinc-500 mt-1">Audit log of all queries and orchestrations.</p>
+                   </div>
+                   
+                   {historyData.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-20 text-zinc-400">
+                         <span className="material-symbols-outlined text-[48px] mb-3">history</span>
+                         <p className="text-[14px] font-medium">No activity recorded yet</p>
+                         <p className="text-[12px] mt-1">Queries and orchestration events will appear here.</p>
+                      </div>
+                   ) : (
+                      <div className="border border-zinc-200 rounded-xl overflow-hidden">
+                         <table className="w-full text-[13px]">
+                            <thead className="bg-zinc-50 border-b border-zinc-200">
+                               <tr>
+                                  <th className="text-left px-4 py-3 font-bold text-zinc-600 uppercase tracking-wider text-[10px]">Status</th>
+                                  <th className="text-left px-4 py-3 font-bold text-zinc-600 uppercase tracking-wider text-[10px]">Question</th>
+                                  <th className="text-left px-4 py-3 font-bold text-zinc-600 uppercase tracking-wider text-[10px]">Intent</th>
+                                  <th className="text-left px-4 py-3 font-bold text-zinc-600 uppercase tracking-wider text-[10px]">User</th>
+                                  <th className="text-left px-4 py-3 font-bold text-zinc-600 uppercase tracking-wider text-[10px]">Time</th>
+                               </tr>
+                            </thead>
+                            <tbody>
+                               {historyData.map((item: any, idx: number) => (
+                                  <tr key={idx} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-zinc-50/50'} hover:bg-blue-50/30 transition-colors border-b border-zinc-100`}>
+                                     <td className="px-4 py-3">
+                                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                                           item.Status === 'Completed' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                                           item.Status === 'Blocked' || item.Status === 'PolicyBlocked' ? 'bg-red-50 text-red-600 border border-red-200' :
+                                           item.Status === 'PendingApproval' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                                           'bg-zinc-100 text-zinc-500 border border-zinc-200'
+                                        }`}>
+                                           {item.Status || 'Unknown'}
+                                        </span>
+                                     </td>
+                                     <td className="px-4 py-3 max-w-[300px] truncate font-medium text-zinc-800">{item.OriginalQuestion || item.Question || '-'}</td>
+                                     <td className="px-4 py-3 text-zinc-500">{item.AnalyticalIntent || item.IntentType || '-'}</td>
+                                     <td className="px-4 py-3 text-zinc-500 font-mono text-[11px]">{item.UserId || '-'}</td>
+                                     <td className="px-4 py-3 text-zinc-400 text-[11px] whitespace-nowrap">{item.CreatedAt ? new Date(item.CreatedAt).toLocaleString() : '-'}</td>
+                                  </tr>
+                               ))}
+                            </tbody>
+                         </table>
+                      </div>
+                   )}
+                </div>
+             </div>
+          )}
+
           {/* VIEW: CHAT */}
           {openTabs.find(t => t.id === currentView && t.type === 'chat') && (
             <div className="flex flex-col h-full w-full relative">
@@ -821,12 +945,12 @@ export function UnifiedChat() {
 
                       <div className="flex items-center justify-center gap-2 flex-wrap">
                         {[
-                          { icon: 'bar_chart', label: 'Chart' },
-                          { icon: 'table_chart', label: 'Table' },
-                          { icon: 'lightbulb', label: 'Insight' },
-                          { icon: 'analytics', label: 'Analysis' }
+                          { icon: 'bar_chart', label: 'Chart', prompt: 'Generate a chart showing ' },
+                          { icon: 'table_chart', label: 'Table', prompt: 'Show me a table of ' },
+                          { icon: 'lightbulb', label: 'Insight', prompt: 'Give me insights about ' },
+                          { icon: 'analytics', label: 'Analysis', prompt: 'Analyze the trends in ' }
                         ].map(action => (
-                           <button key={action.label} className="px-4 py-1.5 rounded-full border border-zinc-200 bg-white text-[12px] font-medium text-zinc-500 hover:text-zinc-900 hover:border-zinc-300 hover:bg-zinc-50 flex items-center gap-1.5 transition-all">
+                           <button key={action.label} onClick={() => setInput(action.prompt)} className="px-4 py-1.5 rounded-full border border-zinc-200 bg-white text-[12px] font-medium text-zinc-500 hover:text-zinc-900 hover:border-zinc-300 hover:bg-zinc-50 flex items-center gap-1.5 transition-all">
                              <span className="material-symbols-outlined text-[14px]">{action.icon}</span> {action.label}
                            </button>
                         ))}
@@ -859,6 +983,37 @@ export function UnifiedChat() {
                                   </div>
                                   <div className="flex-1 space-y-3 min-w-0">
                                      
+                                     {/* Pipeline Stepper */}
+                                     {msg.progressEvents && msg.progressEvents.length > 0 && msg.status === 'Running' && (
+                                        <div className="flex flex-wrap gap-2 mt-1">
+                                           {msg.progressEvents.map((evt, i) => (
+                                              <div key={i} className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold ${evt.status === 'Completed' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : evt.status === 'Active' ? 'bg-blue-50 text-blue-700 border border-blue-200 animate-pulse' : evt.status === 'Failed' ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-zinc-50 text-zinc-500 border border-zinc-200'}`}>
+                                                 <span className="material-symbols-outlined text-[12px]">{evt.status === 'Completed' ? 'check_circle' : evt.status === 'Active' ? 'pending' : evt.status === 'Failed' ? 'error' : 'radio_button_unchecked'}</span>
+                                                 {evt.label}
+                                              </div>
+                                           ))}
+                                        </div>
+                                     )}
+
+                                     {/* Completed pipeline summary (collapsed) */}
+                                     {msg.progressEvents && msg.progressEvents.length > 0 && msg.status !== 'Running' && (
+                                        <details className="group">
+                                          <summary className="text-[11px] text-zinc-400 font-medium cursor-pointer hover:text-zinc-600 transition-colors flex items-center gap-1 select-none">
+                                            <span className="material-symbols-outlined text-[14px]">timeline</span>
+                                            {msg.progressEvents.length} pipeline steps
+                                            <span className="material-symbols-outlined text-[12px] group-open:rotate-180 transition-transform">expand_more</span>
+                                          </summary>
+                                          <div className="flex flex-wrap gap-1.5 mt-2">
+                                             {msg.progressEvents.map((evt, i) => (
+                                                <div key={i} className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium ${evt.status === 'Completed' ? 'bg-emerald-50 text-emerald-600' : evt.status === 'Failed' ? 'bg-red-50 text-red-500' : 'bg-zinc-50 text-zinc-400'}`}>
+                                                   <span className="material-symbols-outlined text-[10px]">{evt.status === 'Completed' ? 'check' : 'close'}</span>
+                                                   {evt.label}
+                                                </div>
+                                             ))}
+                                          </div>
+                                        </details>
+                                     )}
+
                                      {msg.content && msg.status !== 'Running' && (
                                         <div className="text-[14px] text-zinc-700 leading-relaxed font-medium mt-0.5">
                                            {msg.content}
@@ -870,8 +1025,37 @@ export function UnifiedChat() {
                                            {msg.content}
                                         </div>
                                      )}
+
+                                     {/* PendingApproval inline */}
+                                     {msg.status === 'PendingApproval' && (
+                                        <div className="border border-amber-200 bg-amber-50/50 rounded-xl p-4 mt-2 space-y-3">
+                                           <div className="flex items-center gap-2">
+                                              <span className="material-symbols-outlined text-[18px] text-amber-600">gpp_maybe</span>
+                                              <span className="text-[13px] font-bold text-amber-800">Aprobación requerida</span>
+                                              {msg.riskLevel && (
+                                                 <span className="ml-auto text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-700 border border-amber-200 px-2 py-0.5 rounded">{msg.riskLevel} Risk</span>
+                                              )}
+                                           </div>
+                                           {msg.sql && (
+                                              <div className="bg-white rounded-lg border border-amber-200 p-3 overflow-x-auto">
+                                                 <SyntaxHighlighter language="sql" style={prism} customStyle={{ margin: 0, padding: 0, background: 'transparent', fontSize: '12px' }}>
+                                                   {msg.sql.trim()}
+                                                 </SyntaxHighlighter>
+                                              </div>
+                                           )}
+                                           <div className="flex gap-2">
+                                              <button onClick={() => handleApproval(msg, 'Approved')} className="px-4 py-2 bg-emerald-600 text-white text-[12px] font-bold rounded-lg hover:bg-emerald-700 transition-colors flex items-center gap-1.5">
+                                                 <span className="material-symbols-outlined text-[14px]">check_circle</span> Aprobar
+                                              </button>
+                                              <button onClick={() => { const reason = prompt('Razón del rechazo (opcional):'); handleApproval(msg, 'Rejected', reason || ''); }} className="px-4 py-2 bg-white text-red-600 border border-red-200 text-[12px] font-bold rounded-lg hover:bg-red-50 transition-colors flex items-center gap-1.5">
+                                                 <span className="material-symbols-outlined text-[14px]">cancel</span> Rechazar
+                                              </button>
+                                           </div>
+                                        </div>
+                                     )}
                                      
-                                     {msg.sql && (
+                                     {/* SQL/Insight/Results Tabs */}
+                                     {msg.sql && msg.status !== 'PendingApproval' && (
                                         <div className="border border-zinc-200/80 rounded-xl overflow-hidden mt-2">
                                            <div className="flex items-center border-b border-zinc-100 bg-zinc-50/80">
                                               <div 
@@ -886,7 +1070,24 @@ export function UnifiedChat() {
                                               >
                                                  Insight
                                               </div>
+                                              {msg.results && msg.results.length > 0 && (
+                                                 <div 
+                                                    onClick={() => setActiveTabs(prev => ({ ...prev, [msg.id]: 'results' }))}
+                                                    className={`px-4 py-2.5 text-[11px] uppercase tracking-widest font-bold cursor-pointer transition-colors flex items-center gap-1 ${activeTabs[msg.id] === 'results' ? 'border-b-2 border-zinc-900 text-zinc-900' : 'border-b-2 border-transparent text-zinc-400 hover:text-zinc-700'}`}
+                                                 >
+                                                    Results
+                                                    <span className="text-[9px] bg-zinc-200 text-zinc-600 px-1.5 py-0.5 rounded-full font-bold">{msg.results.length}</span>
+                                                 </div>
+                                              )}
                                               
+                                              {/* Copy SQL */}
+                                              <button 
+                                                 title="Copy SQL"
+                                                 onClick={() => handleCopySQL(msg.sql!)}
+                                                 className="ml-auto text-zinc-400 hover:text-zinc-900 transition-colors p-1 rounded-md hover:bg-zinc-100">
+                                                 <span className="material-symbols-outlined text-[14px]">content_copy</span>
+                                              </button>
+                                              {/* Open in editor */}
                                               <button 
                                                  title="Open in editor"
                                                  onClick={() => {
@@ -897,7 +1098,7 @@ export function UnifiedChat() {
                                                    }
                                                    setCurrentView(tabId);
                                                  }}
-                                                 className="ml-auto mr-3 text-zinc-400 hover:text-zinc-900 transition-colors p-1 rounded-md hover:bg-zinc-100">
+                                                 className="mr-3 text-zinc-400 hover:text-zinc-900 transition-colors p-1 rounded-md hover:bg-zinc-100">
                                                  <span className="material-symbols-outlined text-[14px]">open_in_new</span>
                                               </button>
                                            </div>
@@ -908,9 +1109,90 @@ export function UnifiedChat() {
                                                    {msg.sql.trim()}
                                                  </SyntaxHighlighter>
                                               </div>
+                                           ) : activeTabs[msg.id] === 'results' && msg.results ? (
+                                              <div className="overflow-x-auto max-h-[300px] overflow-y-auto">
+                                                 <table className="w-full text-[12px]">
+                                                    <thead className="bg-zinc-50 sticky top-0">
+                                                       <tr>
+                                                          {Object.keys(msg.results[0]).map(col => (
+                                                             <th key={col} className="text-left px-3 py-2 font-bold text-zinc-600 uppercase tracking-wider text-[10px] border-b border-zinc-200 whitespace-nowrap">{col}</th>
+                                                          ))}
+                                                       </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                       {msg.results.map((row, rIdx) => (
+                                                          <tr key={rIdx} className={`${rIdx % 2 === 0 ? 'bg-white' : 'bg-zinc-50/50'} hover:bg-blue-50/30 transition-colors`}>
+                                                             {Object.values(row).map((val, cIdx) => (
+                                                                <td key={cIdx} className="px-3 py-2 text-zinc-700 font-medium border-b border-zinc-100 whitespace-nowrap">{val != null ? String(val) : <span className="text-zinc-300 italic">null</span>}</td>
+                                                             ))}
+                                                          </tr>
+                                                       ))}
+                                                    </tbody>
+                                                 </table>
+                                              </div>
                                            ) : (
                                               <div className="p-4 text-[14px] text-zinc-700 font-medium leading-relaxed">
-                                                {msg.insight ? msg.insight : <span className="text-zinc-400 italic">No insight generated yet...</span>}
+                                                {(() => {
+                                                    if (!msg.insight) return <span className="text-zinc-400 italic">No insight generated yet...</span>;
+                                                    
+                                                    try {
+                                                        const parsed = JSON.parse(msg.insight);
+                                                        const hasChart = parsed.chart && parsed.chart.type && parsed.chart.type !== 'none';
+                                                        
+                                                        return (
+                                                            <div className="space-y-4">
+                                                                <div>{parsed.summary}</div>
+                                                                {hasChart && msg.results && msg.results.length > 0 && (
+                                                                    <div className="mt-4 border border-slate-100 rounded-[24px] p-6 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+                                                                        <h4 className="text-[16px] font-semibold text-slate-800 mb-6">{parsed.chart.title || 'Analysis Chart'}</h4>
+                                                                        <div className="h-[320px] w-full">
+                                                                            <ResponsiveContainer width="100%" height="100%">
+                                                                                {parsed.chart.type === 'bar' ? (
+                                                                                    <BarChart data={msg.results} margin={{ top: 10, right: 30, left: 0, bottom: 20 }}>
+                                                                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                                                                        <XAxis dataKey={parsed.chart.xAxisKey} tick={{fontSize: 12, fill: '#94a3b8'}} tickLine={false} axisLine={false} dy={10} />
+                                                                                        <YAxis tick={{fontSize: 12, fill: '#94a3b8'}} tickLine={false} axisLine={false} dx={-10} />
+                                                                                        <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)', fontSize: '13px', padding: '12px 16px', fontWeight: 500}} />
+                                                                                        <Legend wrapperStyle={{fontSize: '13px', paddingTop: '20px'}} iconType="circle" />
+                                                                                        <Bar dataKey={parsed.chart.yAxisKey} radius={[10, 10, 10, 10]} maxBarSize={40}>
+                                                                                            {msg.results.map((entry, index) => (
+                                                                                                <Cell key={`cell-${index}`} fill={['#2dd4bf', '#fbbf24', '#fde047', '#60a5fa', '#a78bfa', '#f472b6', '#fb7185', '#86efac', '#22d3ee'][index % 9]} />
+                                                                                            ))}
+                                                                                        </Bar>
+                                                                                    </BarChart>
+                                                                                ) : parsed.chart.type === 'line' ? (
+                                                                                    <LineChart data={msg.results} margin={{ top: 10, right: 30, left: 0, bottom: 20 }}>
+                                                                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                                                                        <XAxis dataKey={parsed.chart.xAxisKey} tick={{fontSize: 12, fill: '#94a3b8'}} tickLine={false} axisLine={false} dy={10} />
+                                                                                        <YAxis tick={{fontSize: 12, fill: '#94a3b8'}} tickLine={false} axisLine={false} dx={-10} />
+                                                                                        <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)', fontSize: '13px', padding: '12px 16px', fontWeight: 500}} />
+                                                                                        <Legend wrapperStyle={{fontSize: '13px', paddingTop: '20px'}} iconType="circle" />
+                                                                                        <Line type="monotone" dataKey={parsed.chart.yAxisKey} stroke="#6366f1" strokeWidth={4} activeDot={{r: 8, fill: '#6366f1', strokeWidth: 0}} dot={{r: 0}} />
+                                                                                    </LineChart>
+                                                                                ) : parsed.chart.type === 'pie' ? (
+                                                                                    <PieChart margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
+                                                                                        <Pie data={msg.results} dataKey={parsed.chart.yAxisKey} nameKey={parsed.chart.xAxisKey} cx="50%" cy="50%" innerRadius={70} outerRadius={100} paddingAngle={4} stroke="none">
+                                                                                            {msg.results.map((entry, index) => (
+                                                                                                <Cell key={`cell-${index}`} fill={['#2dd4bf', '#fbbf24', '#fde047', '#60a5fa', '#a78bfa', '#f472b6', '#fb7185', '#86efac', '#22d3ee'][index % 9]} />
+                                                                                            ))}
+                                                                                        </Pie>
+                                                                                        <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)', fontSize: '13px', padding: '12px 16px', fontWeight: 500}} />
+                                                                                        <Legend wrapperStyle={{fontSize: '13px', paddingTop: '10px'}} iconType="circle" />
+                                                                                    </PieChart>
+                                                                                ) : (
+                                                                                    <div className="flex items-center justify-center h-full text-slate-400 italic text-[13px]">Unsupported chart type: {parsed.chart.type}</div>
+                                                                                )}
+                                                                            </ResponsiveContainer>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    } catch (e) {
+                                                        // Fallback for legacy plain text insights
+                                                        return msg.insight;
+                                                    }
+                                                })()}
                                               </div>
                                            )}
                                         </div>
@@ -1063,3 +1345,4 @@ export function UnifiedChat() {
     </div>
   );
 }
+
