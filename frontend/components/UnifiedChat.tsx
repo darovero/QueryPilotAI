@@ -42,28 +42,29 @@ export function UnifiedChat() {
       const saved = localStorage.getItem('qp_connections');
       if (saved) try { return JSON.parse(saved); } catch {}
     }
-    return [{ id: 'conn-demo', name: 'My Postgres Database', type: 'PostgreSQL', host: 'db.mypostgres.com', port: '5432', database: 'analytics_db' }];
+    return [];
   });
   const [chatSessions, setChatSessions] = useState<ChatSession[]>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('qp_chatSessions');
       if (saved) try { return JSON.parse(saved); } catch {}
     }
-    return [{ id: 'chat-demo-1', connectionId: 'conn-demo', title: 'Untitled Chat 1', messages: [] }];
+    return [];
   });
   const [openTabs, setOpenTabs] = useState<DashboardTab[]>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('qp_openTabs');
       if (saved) try { return JSON.parse(saved); } catch {}
     }
-    return [{ type: 'chat', id: 'chat-demo-1', title: 'Untitled Chat 1', connectionId: 'conn-demo' }];
+    return [];
   });
 
   const [isInsightPanelOpen, setIsInsightPanelOpen] = useState(false);
   const [selectedMessageForPanel, setSelectedMessageForPanel] = useState<Message | null>(null);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
 
   type ViewState = 'welcome' | 'integrations' | 'connect_postgres' | 'manage_connections' | string;
-  const [currentView, setCurrentView] = useState<ViewState>('chat-demo-1');
+  const [currentView, setCurrentView] = useState<ViewState>('welcome');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [expandedConns, setExpandedConns] = useState<Record<string, boolean>>({});
   
@@ -492,6 +493,15 @@ export function UnifiedChat() {
 
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col relative overflow-hidden bg-[var(--surface)]">
+        
+        {/* Subtle Background Grid (Personality) */}
+        <div 
+          className="absolute inset-0 pointer-events-none z-0 opacity-[0.3]" 
+          style={{
+            backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'24\' height=\'24\' viewBox=\'0 0 24 24\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M1.2 1.2 A 1.2 1.2 0 1 1 1.2 1.1\' fill=\'%2371717a\' fill-opacity=\'1\' fill-rule=\'evenodd\'/%3E%3C/svg%3E")',
+            backgroundSize: '24px 24px'
+          }}
+        />
 
         {/* Top bar with sleek tabs */}
         <div className="h-14 border-b border-zinc-200 flex items-center px-6 gap-6 shrink-0 bg-[var(--surface)] z-10 sticky top-0">
@@ -566,9 +576,45 @@ export function UnifiedChat() {
               <span className="material-symbols-outlined text-[18px]">add</span>
             </button>
             
-            <div className="ml-auto flex items-center gap-4">
+            <div className="ml-auto flex items-center gap-4 relative">
                 <button className="text-zinc-600 hover:text-zinc-900 transition-colors flex items-center"><span className="material-symbols-outlined text-[18px]">notifications</span></button>
-                <div className="w-7 h-7 rounded-full bg-black flex items-center justify-center text-[11px] font-medium text-white shadow-inner">J</div>
+                <button 
+                  onClick={() => setIsProfileMenuOpen(prev => !prev)}
+                  className="w-8 h-8 rounded-full bg-zinc-900 flex items-center justify-center text-[12px] font-medium text-white shadow-inner hover:ring-2 hover:ring-zinc-200 transition-all focus:outline-none"
+                >
+                  J
+                </button>
+
+                {isProfileMenuOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setIsProfileMenuOpen(false)}></div>
+                    <div className="absolute top-12 right-0 w-[240px] bg-white rounded-2xl shadow-xl border border-zinc-200 py-1 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                       <div className="px-4 py-3 border-b border-zinc-100 flex flex-col items-start">
+                          <p className="text-[14px] font-semibold text-zinc-900">Jessy</p>
+                          <p className="text-[12px] text-zinc-500 truncate w-full">quintojessy@gmail.com</p>
+                       </div>
+                       <div className="py-1">
+                          <button onClick={() => setIsProfileMenuOpen(false)} className="w-full text-left px-4 py-2 text-[13px] text-zinc-700 hover:bg-zinc-50 transition-colors flex items-center gap-3">
+                             <span className="material-symbols-outlined text-[18px]">help</span> Help and Support
+                          </button>
+                          <button onClick={() => setIsProfileMenuOpen(false)} className="w-full text-left px-4 py-2 text-[13px] text-zinc-700 hover:bg-zinc-50 transition-colors flex items-center gap-3">
+                             <span className="material-symbols-outlined text-[18px]">menu_book</span> Docs
+                          </button>
+                       </div>
+                       <div className="border-t border-zinc-100 py-1">
+                          <button 
+                            onClick={() => {
+                               setIsProfileMenuOpen(false);
+                               window.location.href = '/login';
+                            }}
+                            className="w-full text-left px-4 py-2 text-[13px] text-red-600 hover:bg-red-50 transition-colors flex items-center gap-3"
+                          >
+                             <span className="material-symbols-outlined text-[18px]">logout</span> Logout
+                          </button>
+                       </div>
+                    </div>
+                  </>
+                )}
             </div>
         </div>
 
