@@ -4,6 +4,8 @@ import { useEffect, useState, useRef } from "react";
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { prism } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { ResponsiveContainer, BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import "./UnifiedChat.css";
 
 type ProgressEvent = { label: string; status: string; time: string };
@@ -56,6 +58,9 @@ export function UnifiedChat() {
     }
     return [{ type: 'chat', id: 'chat-demo-1', title: 'Untitled Chat 1', connectionId: 'conn-demo' }];
   });
+
+  const [isInsightPanelOpen, setIsInsightPanelOpen] = useState(false);
+  const [selectedMessageForPanel, setSelectedMessageForPanel] = useState<Message | null>(null);
 
   type ViewState = 'welcome' | 'integrations' | 'connect_postgres' | 'manage_connections' | string;
   const [currentView, setCurrentView] = useState<ViewState>('chat-demo-1');
@@ -1087,19 +1092,26 @@ export function UnifiedChat() {
                                                  className="ml-auto text-zinc-400 hover:text-zinc-900 transition-colors p-1 rounded-md hover:bg-zinc-100">
                                                  <span className="material-symbols-outlined text-[14px]">content_copy</span>
                                               </button>
-                                              {/* Open in editor */}
+                                              {/* Context-Aware Action Button */}
                                               <button 
-                                                 title="Open in editor"
+                                                 title={(!activeTabs[msg.id] || activeTabs[msg.id] === 'insight') ? "Open Detailed Report" : "Open in Query Editor"}
                                                  onClick={() => {
-                                                   const tabId = 'ide-' + msg.id;
-                                                   const exists = openTabs.find(t => t.id === tabId);
-                                                   if (!exists) {
-                                                      setOpenTabs(prev => [...prev, { type: 'ide', id: tabId, title: "Query Editor", sql: msg.sql || '' }]);
+                                                   if (!activeTabs[msg.id] || activeTabs[msg.id] === 'insight') {
+                                                      setSelectedMessageForPanel(msg);
+                                                      setIsInsightPanelOpen(true);
+                                                   } else {
+                                                      const tabId = 'ide-' + msg.id;
+                                                      const exists = openTabs.find(t => t.id === tabId);
+                                                      if (!exists) {
+                                                         setOpenTabs(prev => [...prev, { type: 'ide', id: tabId, title: "Query Editor", sql: msg.sql || '' }]);
+                                                      }
+                                                      setCurrentView(tabId);
                                                    }
-                                                   setCurrentView(tabId);
                                                  }}
-                                                 className="mr-3 text-zinc-400 hover:text-zinc-900 transition-colors p-1 rounded-md hover:bg-zinc-100">
-                                                 <span className="material-symbols-outlined text-[14px]">open_in_new</span>
+                                                 className="mr-3 text-zinc-400 hover:text-zinc-900 transition-colors p-1 rounded-md hover:bg-zinc-100 flex items-center justify-center">
+                                                 <span className="material-symbols-outlined text-[14px]">
+                                                    {(!activeTabs[msg.id] || activeTabs[msg.id] === 'insight') ? 'article' : 'open_in_new'}
+                                                 </span>
                                               </button>
                                            </div>
                                            
@@ -1141,7 +1153,21 @@ export function UnifiedChat() {
                                                         
                                                         return (
                                                             <div className="space-y-4">
-                                                                <div>{parsed.summary}</div>
+                                                                <ReactMarkdown
+                                                                    remarkPlugins={[remarkGfm]}
+                                                                    components={{
+                                                                        h1: ({node, ...props}) => <h1 className="text-xl font-bold text-slate-800 mb-4" {...props} />,
+                                                                        h2: ({node, ...props}) => <h2 className="text-lg font-bold text-slate-800 mt-5 mb-3" {...props} />,
+                                                                        h3: ({node, ...props}) => <h3 className="text-md font-semibold text-slate-800 mt-4 mb-2" {...props} />,
+                                                                        p: ({node, ...props}) => <p className="text-[13px] text-slate-600 leading-relaxed mb-3" {...props} />,
+                                                                        ul: ({node, ...props}) => <ul className="list-disc pl-5 mb-3 text-[13px] text-slate-600 space-y-1" {...props} />,
+                                                                        li: ({node, ...props}) => <li {...props} />,
+                                                                        strong: ({node, ...props}) => <strong className="font-semibold text-slate-800" {...props} />,
+                                                                        blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-slate-200 pl-4 italic text-slate-500 my-3" {...props} />
+                                                                    }}
+                                                                >
+                                                                    {parsed.summary}
+                                                                </ReactMarkdown>
                                                                 {hasChart && msg.results && msg.results.length > 0 && (
                                                                     <div className="mt-4 border border-slate-100 rounded-[24px] p-6 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
                                                                         <h4 className="text-[16px] font-semibold text-slate-800 mb-6">{parsed.chart.title || 'Analysis Chart'}</h4>
@@ -1342,6 +1368,53 @@ export function UnifiedChat() {
         </div>
 
       </main>
+
+      {/* Extended Insight Panel */}
+      {isInsightPanelOpen && selectedMessageForPanel && (
+         <>
+            <div className="fixed inset-0 bg-zinc-900/40 z-[100]" onClick={() => setIsInsightPanelOpen(false)}></div>
+            <div className="fixed inset-y-0 right-0 w-[600px] bg-white shadow-2xl z-[110] transform transition-transform border-l border-zinc-200 flex flex-col overflow-hidden">
+                <div className="px-8 py-5 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/80">
+                   <div className="flex items-center gap-2 text-slate-800">
+                      <span className="material-symbols-outlined text-blue-600">assignment</span>
+                      <h2 className="text-[18px] font-bold">Extended Analysis Report</h2>
+                   </div>
+                   <button onClick={() => setIsInsightPanelOpen(false)} className="text-zinc-400 hover:text-zinc-900 p-2 rounded-lg hover:bg-zinc-200 transition-colors flex items-center justify-center">
+                      <span className="material-symbols-outlined text-[20px]">close</span>
+                   </button>
+                </div>
+                <div className="flex-1 overflow-y-auto p-10 bg-white">
+                   {(() => {
+                       try {
+                           const parsed = JSON.parse(selectedMessageForPanel.insight || "{}");
+                           if (!parsed.extendedReport) return <div className="text-zinc-500 italic mt-4">No extended report available for this analysis.</div>;
+                           return (
+                               <ReactMarkdown
+                                   remarkPlugins={[remarkGfm]}
+                                   components={{
+                                       h1: ({node, ...props}) => <h1 className="text-2xl font-bold text-slate-900 mb-6 border-b border-zinc-100 pb-4" {...props} />,
+                                       h2: ({node, ...props}) => <h2 className="text-xl font-bold text-slate-800 mt-8 mb-4 flex items-center gap-2" {...props} />,
+                                       h3: ({node, ...props}) => <h3 className="text-lg font-semibold text-slate-800 mt-6 mb-3" {...props} />,
+                                       p: ({node, ...props}) => <p className="text-[15px] text-slate-600 leading-relaxed mb-5" {...props} />,
+                                       ul: ({node, ...props}) => <ul className="list-disc pl-6 mb-6 text-[15px] text-slate-600 space-y-2" {...props} />,
+                                       ol: ({node, ...props}) => <ol className="list-decimal pl-6 mb-6 text-[15px] text-slate-600 space-y-2" {...props} />,
+                                       li: ({node, ...props}) => <li {...props} />,
+                                       strong: ({node, ...props}) => <strong className="font-semibold text-slate-900" {...props} />,
+                                       blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-blue-500 pl-5 bg-blue-50/50 py-3 pr-4 rounded-r-xl italic text-slate-700 my-6" {...props} />
+                                   }}
+                               >
+                                   {parsed.extendedReport}
+                               </ReactMarkdown>
+                           );
+                       } catch(e) {
+                           return <div className="text-zinc-500 italic mt-4">Error parsing extended report data.</div>;
+                       }
+                   })()}
+                </div>
+            </div>
+         </>
+      )}
+
     </div>
   );
 }

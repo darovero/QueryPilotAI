@@ -688,7 +688,8 @@ public sealed class SummaryService : ISummaryService
 
             var json = new
             {
-                summary = $"Analicé {rows.Count} comercios para responder tu pregunta. El principal foco es {topMerchant}, con un chargeback_rate de {FormatDecimal(topRate)} y {trendText}. La línea base observada es {FormatDecimal(baseline)}. Si quieres, en el siguiente paso te separo estos resultados por canal o ciudad.",
+                summary = $"### Análisis Rápido\n\nAnalicé **{rows.Count}** comercios. El principal foco es **{topMerchant}**, con una tasa de contracargos de **{FormatDecimal(topRate)}** y **{trendText}**.\n\n### Recomendación\nVerificar transacciones recientes de este comercio.",
+                extendedReport = $"# Análisis Detallado: Riesgo en Comercios\n\nEste reporte proporciona una vista profunda sobre el comercio **{topMerchant}**.\n\n### Observaciones Clave\n- **Tasa de Contracargos:** {FormatDecimal(topRate)}\n- **Línea Base:** {FormatDecimal(baseline)}\n- **Variación:** {trendText}\n\n### Recomendación Estratégica\nSe sugiere mantener en observación preventiva a este comercio, validando la legitimidad de sus últimas operaciones para determinar si el aumento en la tasa responde a un ataque estructurado o estacionalidad.",
                 chart = new
                 {
                     type = "bar",
@@ -709,7 +710,8 @@ public sealed class SummaryService : ISummaryService
 
             var json = new
             {
-                summary = $"Encontré {rows.Count} perfiles de cliente relevantes. El cliente {customer} aparece como prioridad con nivel de riesgo {riskLevel}, {chargebacks} chargebacks y {alerts} alertas registradas. Recomiendo revisión manual de este segmento antes de escalar límites transaccionales.",
+                summary = $"### Análisis de Riesgo Cliente\n\nEncontré **{rows.Count}** perfiles relevantes. El cliente **{customer}** es prioridad (Riesgo: **{riskLevel}**), con **{chargebacks}** contracargos y **{alerts}** alertas.\n\n### Acción Recomendada\nRevisar manualmente este segmento antes de escalar límites transaccionales.",
+                extendedReport = $"# Perfilamiento de Riesgo por Cliente\n\nEl sistema ha identificado comportamientos atípicos en **{rows.Count}** clientes, destacando severamente el cliente **{customer}**.\n\n### Métricas del Cliente\n- **Nivel de Riesgo Evaluado:** {riskLevel}\n- **Alertas Totales:** {alerts}\n- **Contracargos Históricos:** {chargebacks}\n\n### Recomendación Operativa\nUn perfil con riesgo '{riskLevel}' y esta cantidad de contracargos requiere intervención inmediata. Congelar subida de límites e iniciar proceso de debida diligencia ampliada.",
                 chart = new
                 {
                     type = "bar",
@@ -729,7 +731,8 @@ public sealed class SummaryService : ISummaryService
 
             var json = new
             {
-                summary = $"Detecté {rows.Count} dispositivos compartidos con señal de riesgo. El fingerprint {fingerprint} está asociado a {customers} clientes y su riesgo máximo es {risk}. Este patrón suele indicar posible account sharing o abuso coordinado.",
+                summary = $"### Alerta de Abuso Coordinado\n\nDetecté **{rows.Count}** dispositivos compartidos con señal de riesgo. El fingerprint **{fingerprint}** está asociado a **{customers}** clientes y su riesgo máximo es **{risk}**.\n\n### Conclusión\nEste patrón suele indicar abuso coordinado o account sharing.",
+                extendedReport = $"# Análisis de Dispositivos y Redes\n\nLa huella digital (fingerprint) cruzada revela un cluster de riesgo.\n\n### Detalles de la Huella\n- **Fingerprint ID:** {fingerprint}\n- **Clientes Únicos Vinculados:** {customers}\n- **Riesgo Máximo en Cluster:** {risk}\n\n### Diagnóstico y Mitigación\nLa superposición de más de múltiples cuentas en un solo dispositivo físico o red de origen ('fingerprint') levanta alertas de robo de cuentas sistemático o granjas de fraude. Validar IP, geolocalización e implementar fricción MFA a los implicados.",
                 chart = new
                 {
                     type = "none"
@@ -746,7 +749,8 @@ public sealed class SummaryService : ISummaryService
 
             var json = new
             {
-                summary = $"Identifiqué {rows.Count} secuencias de intentos fallidos seguidos de aprobación. El caso más relevante corresponde al cliente {customer} en la cuenta {account} con {attempts} intentos. Es un comportamiento compatible con prueba escalonada de credenciales o fraude de fricción baja.",
+                summary = $"### Secuencias Iterativas\n\nIdentifiqué **{rows.Count}** secuencias de intentos fallidos. El cliente **{customer}** (cuenta **{account}**) cuenta con **{attempts}** intentos.\n\n### Impacto\nComportamiento compatible con prueba escalonada de credenciales.",
+                extendedReport = $"# Detección de Fricción Baja o Carding\n\nSe han observado patrones continuos de falla y éxito que simulan pruebas de autorización.\n\n### Anomalía Primaria\n- **Cliente:** {customer}\n- **Cuenta Afectada:** {account}\n- **Secuencia de Intentos:** {attempts}\n\n### Mitigación\nBloquear preventivamente el origen de estas pruebas temporalmente e instalar lógicas de rate-limiting (velocity checks) más estrictas para rechazar iteraciones.",
                 chart = new
                 {
                     type = "none"
@@ -765,7 +769,8 @@ public sealed class SummaryService : ISummaryService
 
         var fallbackJson = new
         {
-            summary = $"Procesé tu consulta y devolví {rows.Count} registros. El primer hallazgo muestra {previewText}. Si quieres, puedo convertir estos resultados en recomendaciones operativas por prioridad.",
+            summary = $"### Informe Analítico\n\nProcesé tu consulta y devolví **{rows.Count}** registros. El primer hallazgo muestra: `{previewText}`.\n\n### Nota\nNo se detectó un patrón predefinido de hiper-riesgo, pero los datos han sido extraídos exitosamente.",
+            extendedReport = $"# Resumen Extendido de Datos\n\nLa base de datos retornó **{rows.Count}** entidades que cumplen los filtros indicados.\n\n### Exploración Inicial\nUna muestra rápida de los datos arroja los siguientes valores:\n> {previewText}\n\n### Próximos Pasos Recomendados\nSe sugiere realizar cruces adicionales con bases de listas negras (watchlists) o acotar temporalmente la búsqueda para aislar comportamientos anómalos más focalizados.",
             chart = new { type = "none" }
         };
         return JsonSerializer.Serialize(fallbackJson, JsonDefaults.Options);
@@ -777,30 +782,25 @@ public sealed class SummaryService : ISummaryService
         var rowsJson = JsonSerializer.Serialize(sampleRows);
 
         var systemPrompt =
-            "Eres un analista senior de fraude. Responde generando un JSON válido. " +
-            "No inventes datos. No menciones detalles tecnicos internos. " +
-            "Debes producir una respuesta que contenga un 'summary' (texto ejecutivo de 3 a 6 frases) y una configuracion de grafico 'chart'.\n" +
+            "Eres un analista senior de fraude. Responde generando un JSON válido. No inventes datos ni menciones la base de datos subyacente.\n" +
+            "Debe contener:\n" +
+            "1. 'summary': Un resumen profesional visual en formato Markdown (usa ### títulos de sección, **negritas** y viñetas). Debe incluir siempre '### Resumen', '### Hallazgos Clave' y '### Recomendación'.\n" +
+            "2. 'extendedReport': Un reporte analítico profundo en Markdown para lectura detallada (al menos 3 párrafos y viñetas). Explica contexto, riesgos y planes de acción extendidos.\n" +
+            "3. 'chart': La configuracion visual. IMPORTANTE: type debe ser 'none' A MENOS QUE el usuario explícitamente pida visualizar un gráfico (grafico, chart, gráfica, barras, pastel, grafica) en su pregunta.\n" +
             "Estructura JSON requerida:\n" +
             "{\n" +
-            "  \"summary\": \"Texto ejecutivo con el analisis...\",\n" +
-            "  \"chart\": {\n" +
-            "    \"type\": \"bar\", // o \"line\", \"pie\", \"none\"\n" +
-            "    \"title\": \"Titulo del grafico\",\n" +
-            "    \"xAxisKey\": \"nombre_columna_x\",\n" +
-            "    \"yAxisKey\": \"nombre_columna_y\"\n" +
-            "  }\n" +
-            "}\n" +
-            "Usa type='none' si los datos no son propicios para un grafico.";
+            "  \"summary\": \"Resumen ejecutivo en Markdown...\",\n" +
+            "  \"extendedReport\": \"Reporte largo en Markdown...\",\n" +
+            "  \"chart\": { \"type\": \"none\", \"title\": \"Titulo\", \"xAxisKey\": \"x_col\", \"yAxisKey\": \"y_col\" }\n" +
+            "}";
 
         var userPrompt =
             $"Pregunta del usuario: {question}\n" +
-            $"SQL ejecutado: {sql}\n" +
             $"Filas devueltas: {rows.Count}\n" +
             $"Muestra JSON (max 25 filas): {rowsJson}\n" +
-            "Incluye en el summary: hallazgo principal, impacto de riesgo y recomendacion concreta. " +
-            "Configura 'chart' seleccionando la mejor opcion basandose en las columnas del JSON devuelto.";
+            "Genera el JSON estructurado respondiendo a la pregunta de manera profesional.";
 
-        var raw = await ChatClient.CompleteAsync(systemPrompt, userPrompt, jsonResponse: true, maxTokens: 450, temperature: 0.1);
+        var raw = await ChatClient.CompleteAsync(systemPrompt, userPrompt, jsonResponse: true, maxTokens: 1200, temperature: 0.2);
         if (string.IsNullOrWhiteSpace(raw))
         {
             return null;
