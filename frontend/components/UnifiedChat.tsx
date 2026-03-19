@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import "./UnifiedChat.css";
 
 type ProgressEvent = { label: string; status: string; time: string };
@@ -23,18 +25,52 @@ type LogEntry = {
   message: string;
 };
 
+type Connection = { id: string; name: string };
+type ChatSession = { id: string; connectionId: string; title: string; messages: Message[] };
+type DashboardTab = { type: 'chat' | 'ide'; id: string; title: string; connectionId?: string; sql?: string };
+
 export function UnifiedChat() {
-  const [currentView, setCurrentView] = useState<'welcome' | 'integrations' | 'connect_postgres' | 'chat'>('welcome');
+  const [connections, setConnections] = useState<Connection[]>([
+    { id: 'conn-demo', name: 'My Postgres Database' }
+  ]);
+  const [chatSessions, setChatSessions] = useState<ChatSession[]>([
+    { id: 'chat-demo-1', connectionId: 'conn-demo', title: 'Untitled Chat 1', messages: [] }
+  ]);
+  const [openTabs, setOpenTabs] = useState<DashboardTab[]>([
+    { type: 'chat', id: 'chat-demo-1', title: 'Untitled Chat 1', connectionId: 'conn-demo' }
+  ]);
+
+  type ViewState = 'welcome' | 'integrations' | 'connect_postgres' | string;
+  const [currentView, setCurrentView] = useState<ViewState>('chat-demo-1');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   
-  const [messages, setMessages] = useState<Message[]>([]);
+  const activeChatSession = chatSessions.find(c => c.id === currentView) || null;
+  const messages = activeChatSession?.messages || [];
+
+  const [activePoll, setActivePoll] = useState<string | null>(null);
+
+  // Compatibility wrapper for dynamic multi-chat support
+  const setMessages = (updater: Message[] | ((prev: Message[]) => Message[])) => {
+      setChatSessions(prevSessions => prevSessions.map(session => {
+          const isTargetSession = activePoll 
+             ? session.messages.some(m => m.instanceId === activePoll)
+             : session.id === currentView;
+             
+          if (isTargetSession) {
+              const newMsgs = typeof updater === 'function' ? updater(session.messages) : updater;
+              return { ...session, messages: newMsgs };
+          }
+          return session;
+      }));
+  };
+
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [terminalLogs, setTerminalLogs] = useState<LogEntry[]>([]);
+  const [activeTabs, setActiveTabs] = useState<Record<string, 'query' | 'insight'>>({});
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const terminalEndRef = useRef<HTMLDivElement>(null);
-
-  const [activePoll, setActivePoll] = useState<string | null>(null);
 
   useEffect(() => {
     setTerminalLogs([
@@ -155,7 +191,7 @@ export function UnifiedChat() {
   }, [activePoll]);
 
   const handleSubmit = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() || !activeChatSession) return;
 
     const userMsg: Message = { id: Math.random().toString(), role: "user", content: input };
     setMessages((prev) => [...prev, userMsg]);
@@ -197,15 +233,32 @@ export function UnifiedChat() {
   };
 
   const handleConnectPostgres = () => {
-    setCurrentView('chat');
+    const newConnId = 'conn-' + Date.now();
+    const newChatId = 'chat-' + Date.now();
+    
+    setConnections(prev => [...prev, { id: newConnId, name: 'My Postgres Database' }]);
+    setChatSessions(prev => [...prev, { id: newChatId, connectionId: newConnId, title: 'Untitled Chat 1', messages: [] }]);
+    setOpenTabs(prev => [...prev, { type: 'chat', id: newChatId, title: 'Untitled Chat 1', connectionId: newConnId }]);
+    
+    setCurrentView(newChatId);
     addLog("SUCCESS", "Connected to PostgreSQL database successfully.");
+  };
+
+  const openChat = (chatId: string) => {
+    if (!openTabs.find(t => t.id === chatId)) {
+       const chat = chatSessions.find(c => c.id === chatId);
+       if (chat) {
+          setOpenTabs(prev => [...prev, { type: 'chat', id: chat.id, title: chat.title, connectionId: chat.connectionId }]);
+       }
+    }
+    setCurrentView(chatId);
   };
 
   return (
     <div className="flex h-screen overflow-hidden bg-[var(--bg)] text-[var(--text)] font-sans antialiased selection:bg-zinc-900 selection:text-white">
       
       {/* Sidebar - Clean Light Minimalist */}
-      <aside className="w-[260px] bg-[var(--bg)] border-r border-zinc-200 flex flex-col justify-between shrink-0 relative z-20">
+      <aside className={`bg-[var(--bg)] border-r border-zinc-200 flex flex-col justify-between shrink-0 relative z-20 transition-all duration-300 ease-in-out ${isSidebarOpen ? 'w-[260px] opacity-100' : 'w-0 opacity-0 overflow-hidden border-none'}`}>
         <div className="flex flex-col h-full">
           {/* Workspace Switcher */}
           <button type="button" className="py-5 px-6 flex items-center justify-between group cursor-pointer border-b border-zinc-200/50">
@@ -218,19 +271,74 @@ export function UnifiedChat() {
             <span className="material-symbols-outlined text-sm text-zinc-400 group-hover:text-zinc-900 transition-colors">unfold_more</span>
           </button>
           
-          {/* Navigation Links */}
-          <div className="px-4 py-4 space-y-1">
-            <button 
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] transition-colors ${currentView !== 'chat' ? 'bg-zinc-100 text-zinc-900 font-medium' : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'}`}
-              onClick={() => setCurrentView('welcome')}
-            >
-              <span className="material-symbols-outlined text-[18px]">grid_view</span>
-              Data Sources
-            </button>
-            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-colors">
-              <span className="material-symbols-outlined text-[18px]">tune</span>
-              Settings
-            </button>
+          {/* Navigation Links & Connections */}
+          <div className="flex-1 overflow-y-auto w-full">
+            <div className="px-4 py-4 space-y-1 border-b border-zinc-200/50">
+              <button 
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] transition-colors ${currentView === 'welcome' || currentView === 'integrations' || currentView === 'connect_postgres' ? 'bg-zinc-100 text-zinc-900 font-medium' : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'}`}
+                onClick={() => setCurrentView('welcome')}
+              >
+                <span className="material-symbols-outlined text-[18px]">grid_view</span>
+                Data Sources
+              </button>
+              <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-colors">
+                <span className="material-symbols-outlined text-[18px]">tune</span>
+                Settings
+              </button>
+            </div>
+            
+            <div className="px-4 py-4">
+               <div className="flex items-center justify-between px-3 text-[11px] uppercase tracking-widest text-zinc-400 font-bold mb-3">
+                  <span>Connections</span>
+                  <button onClick={() => setCurrentView('integrations')} className="hover:text-zinc-900 transition-colors" title="New Connection">
+                    <span className="material-symbols-outlined text-[16px]">add</span>
+                  </button>
+               </div>
+               
+               <div className="space-y-3">
+                  {connections.map(conn => {
+                     const chats = chatSessions.filter(c => c.connectionId === conn.id);
+                     return (
+                        <div key={conn.id} className="space-y-1">
+                           <button 
+                              onClick={() => {
+                                 if (chats.length === 0) {
+                                     const newChatId = 'chat-' + Date.now();
+                                     setChatSessions(prev => [...prev, { id: newChatId, connectionId: conn.id, title: 'New Chat', messages: [] }]);
+                                     setOpenTabs(prev => { 
+                                         if (!prev.find(t => t.id === newChatId)) {
+                                             return [...prev, { type: 'chat', id: newChatId, title: 'New Chat', connectionId: conn.id }];
+                                         }
+                                         return prev;
+                                     });
+                                     setCurrentView(newChatId);
+                                 } else {
+                                     openChat(chats[chats.length - 1].id);
+                                 }
+                              }}
+                              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium text-zinc-700 hover:bg-zinc-100 transition-colors group"
+                           >
+                              <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                              <span className="truncate">{conn.name}</span>
+                           </button>
+                           {chats.length > 0 && (
+                              <div className="pl-6 pr-2 space-y-0.5">
+                                 {chats.map(chat => (
+                                    <button 
+                                       key={chat.id}
+                                       onClick={() => openChat(chat.id)}
+                                       className={`w-full text-left truncate px-3 py-1.5 rounded-md text-[13px] transition-colors ${currentView === chat.id ? 'bg-zinc-100 text-zinc-900 font-medium' : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50'}`}
+                                    >
+                                       {chat.title}
+                                    </button>
+                                 ))}
+                              </div>
+                           )}
+                        </div>
+                     );
+                  })}
+               </div>
+            </div>
           </div>
         </div>
         
@@ -249,30 +357,66 @@ export function UnifiedChat() {
 
         {/* Top bar with sleek tabs */}
         <div className="h-14 border-b border-zinc-200 flex items-center px-6 gap-6 shrink-0 bg-[var(--surface)] z-10 sticky top-0">
-            <button
-              type="button"
-              className={`text-[13px] font-medium flex items-center gap-2 h-full relative transition-colors ${currentView === 'chat' ? 'text-zinc-900' : 'text-zinc-600 hover:text-zinc-900'}`}
-              onClick={() => setCurrentView('chat')}
+            <button 
+                onClick={() => setIsSidebarOpen(prev => !prev)}
+                className="text-zinc-500 hover:text-zinc-900 transition-colors flex items-center justify-center w-8 h-8 rounded-md hover:bg-zinc-100 -ml-2 mr-2"
+                title="Toggle Sidebar"
             >
-              <span className="material-symbols-outlined text-[16px]">chat_bubble</span>
-              Untitled Chat 1
-              {currentView === 'chat' && <div className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-zinc-900 rounded-t-full"></div>}
+                <span className="material-symbols-outlined text-[20px]">menu</span>
             </button>
+            {currentView === 'welcome' && (
+              <div className="text-[13px] font-medium flex items-center gap-2 h-full text-zinc-900 relative">
+                <span className="material-symbols-outlined text-[16px]">grid_view</span>
+                Data Sources
+                <div className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-zinc-900 rounded-t-full"></div>
+              </div>
+            )}
             {currentView === 'integrations' && (
-              <div className="text-[13px] font-medium cursor-pointer flex items-center gap-2 h-full text-zinc-900 relative">
+              <div className="text-[13px] font-medium flex items-center gap-2 h-full text-zinc-900 relative">
                 <span className="material-symbols-outlined text-[16px]">grid_view</span>
                 Integrations
                 <div className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-zinc-900 rounded-t-full"></div>
               </div>
             )}
             {currentView === 'connect_postgres' && (
-              <div className="text-[13px] font-medium cursor-pointer flex items-center gap-2 h-full text-zinc-900 relative">
+              <div className="text-[13px] font-medium flex items-center gap-2 h-full text-zinc-900 relative">
                 <span className="material-symbols-outlined text-[16px]">database</span>
                 Connect PostgreSQL
                 <div className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-zinc-900 rounded-t-full"></div>
               </div>
             )}
-            <button type="button" disabled className="text-zinc-300 flex items-center transition-colors cursor-not-allowed">
+            
+            {openTabs.map((tab) => (
+               <div key={tab.id} className="flex items-center h-full relative group shrink-0">
+                  <button
+                    type="button"
+                    className={`text-[13px] font-medium flex items-center gap-2 h-full transition-colors pl-4 pr-1 ${currentView === tab.id ? 'text-zinc-900' : 'text-zinc-600 hover:text-zinc-900'}`}
+                    onClick={() => setCurrentView(tab.id)}
+                  >
+                    <span className="material-symbols-outlined text-[16px]">
+                       {tab.type === 'chat' ? 'chat_bubble' : 'terminal'}
+                    </span>
+                    <span className="truncate max-w-[120px]">{tab.title}</span>
+                    {currentView === tab.id && <div className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-zinc-900 rounded-t-full"></div>}
+                  </button>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setOpenTabs(prev => {
+                          const newTabs = prev.filter(t => t.id !== tab.id);
+                          if (currentView === tab.id) {
+                              setCurrentView(newTabs.length > 0 ? newTabs[newTabs.length - 1].id : 'welcome');
+                          }
+                          return newTabs;
+                      });
+                    }}
+                    className="ml-1 mr-4 w-5 h-5 rounded-md flex items-center justify-center text-zinc-400 hover:text-zinc-800 hover:bg-zinc-100 opacity-0 group-hover:opacity-100 transition-all">
+                      <span className="material-symbols-outlined text-[14px]">close</span>
+                  </button>
+               </div>
+            ))}
+
+            <button onClick={() => setCurrentView('welcome')} className="text-zinc-300 hover:text-zinc-600 flex items-center transition-colors">
               <span className="material-symbols-outlined text-[18px]">add</span>
             </button>
             
@@ -427,7 +571,7 @@ export function UnifiedChat() {
           )}
 
           {/* VIEW: CHAT */}
-          {currentView === 'chat' && (
+          {openTabs.find(t => t.id === currentView && t.type === 'chat') && (
             <div className="flex flex-col h-full items-center p-6 lg:p-12 max-w-[800px] mx-auto w-full relative">
                
                {messages.length === 0 && (
@@ -476,64 +620,108 @@ export function UnifiedChat() {
 
                {/* Chat history area */}
                {messages.length > 0 && (
-                 <div className="w-full flex-1 overflow-y-auto pt-6 space-y-10 pb-40">
-                    {messages.map((msg) => (
-                      <div key={msg.id} className="w-full animate-in slide-in-from-bottom-2 duration-300">
-                         
-                         {msg.role === 'user' && (
-                            <div className="flex justify-end">
-                               <div className="bg-zinc-100 border border-zinc-200/50 rounded-[24px] rounded-br-sm px-6 py-3.5 text-[14px] text-zinc-900 shadow-sm max-w-[85%] font-medium">
-                                  {msg.content}
+                 <div className="w-full flex-1 overflow-y-auto pt-8 pb-48 flex flex-col items-center">
+                    <div className="w-full max-w-3xl space-y-8 px-4">
+                       {messages.map((msg) => (
+                         <div key={msg.id} className="w-full animate-in slide-in-from-bottom-2 duration-300">
+                            
+                            {msg.role === 'user' && (
+                               <div className="flex justify-end w-full">
+                                  <div className="bg-zinc-100 border border-zinc-200/50 rounded-3xl px-6 py-4 text-[15px] text-zinc-900 shadow-sm max-w-[80%] font-medium leading-relaxed">
+                                     {msg.content}
+                                  </div>
                                </div>
-                            </div>
-                         )}
+                            )}
 
-                         {msg.role === 'ai' && (
-                            <div className="flex gap-4">
-                               <div className="mt-1 shrink-0">
-                                 <div className="w-8 h-8 rounded-full bg-black border border-zinc-200 flex items-center justify-center shadow-inner">
-                                   <span className="material-symbols-outlined text-[18px] text-white">smart_toy</span>
-                                 </div>
-                               </div>
-                               <div className="flex-1 space-y-4">
-                                  
-                                  {msg.content && <div className="text-[14px] text-zinc-700 leading-relaxed font-medium mt-1.5">{msg.content}</div>}
-                                  
-                                  {msg.sql && (
-                                     <div className="border border-zinc-200 rounded-2xl overflow-hidden bg-white shadow-sm">
-                                        <div className="flex items-center border-b border-zinc-200 bg-zinc-50/50">
-                                           <div className="px-5 py-3 border-b-2 border-zinc-900 text-zinc-900 text-[11px] uppercase tracking-widest font-bold">Query</div>
-                                           <div className="px-5 py-3 text-zinc-400 text-[11px] uppercase tracking-widest font-bold border-b-2 border-transparent hover:text-zinc-900 cursor-pointer transition-colors">Results</div>
-                                           <button className="ml-auto mr-4 text-zinc-400 hover:text-zinc-900 transition-colors"><span className="material-symbols-outlined text-[16px]">content_copy</span></button>
+                            {msg.role === 'ai' && (
+                               <div className="flex gap-5 w-full">
+                                  <div className="mt-1 shrink-0">
+                                    <div className="w-8 h-8 rounded-full bg-zinc-900 border border-zinc-200 flex items-center justify-center shadow-sm">
+                                      <span className="material-symbols-outlined text-[16px] text-white">smart_toy</span>
+                                    </div>
+                                  </div>
+                                  <div className="flex-1 space-y-4 min-w-0">
+                                     
+                                     {msg.content && msg.status !== 'Running' && (
+                                        <div className="text-[15px] text-zinc-800 leading-relaxed font-medium mt-1 max-w-none">
+                                           {msg.content}
                                         </div>
-                                        <pre className="p-5 text-[13px] text-zinc-800 font-mono overflow-x-auto whitespace-pre-wrap leading-relaxed shadow-inner bg-zinc-50/30">
-                                          {msg.sql.trim()}
-                                        </pre>
-                                     </div>
-                                  )}
+                                     )}
 
-                                  {msg.status === 'Running' && (
-                                     <div className="flex gap-1.5 mt-2">
-                                        <div className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce"></div>
-                                        <div className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce delay-75"></div>
-                                        <div className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce delay-150"></div>
-                                     </div>
-                                  )}
+                                     {msg.status === 'Running' && msg.content && (
+                                        <div className="text-[14px] text-zinc-600 leading-relaxed font-bold mt-1 max-w-none">
+                                           {msg.content}
+                                        </div>
+                                     )}
+                                     
+                                     {msg.sql && (
+                                        <div className="border border-zinc-200 rounded-2xl overflow-hidden bg-white shadow-sm my-4">
+                                           <div className="flex items-center border-b border-zinc-200 bg-zinc-50/50">
+                                              <div 
+                                                 onClick={() => setActiveTabs(prev => ({ ...prev, [msg.id]: 'query' }))}
+                                                 className={`px-5 py-3 text-[11px] uppercase tracking-widest font-bold cursor-pointer transition-colors ${activeTabs[msg.id] === 'query' ? 'border-b-2 border-zinc-900 text-zinc-900' : 'border-b-2 border-transparent text-zinc-400 hover:text-zinc-900'}`}
+                                              >
+                                                 Query
+                                              </div>
+                                              <div 
+                                                 onClick={() => setActiveTabs(prev => ({ ...prev, [msg.id]: 'insight' }))}
+                                                 className={`px-5 py-3 text-[11px] uppercase tracking-widest font-bold cursor-pointer transition-colors ${!activeTabs[msg.id] || activeTabs[msg.id] === 'insight' ? 'border-b-2 border-zinc-900 text-zinc-900' : 'border-b-2 border-transparent text-zinc-400 hover:text-zinc-900'}`}
+                                              >
+                                                 Insight
+                                              </div>
+                                              
+                                              <button 
+                                                 title="Open in editor"
+                                                 onClick={() => {
+                                                   const tabId = 'ide-' + msg.id;
+                                                   const exists = openTabs.find(t => t.id === tabId);
+                                                   if (!exists) {
+                                                      setOpenTabs(prev => [...prev, { type: 'ide', id: tabId, title: "Query Editor", sql: msg.sql || '' }]);
+                                                   }
+                                                   setCurrentView(tabId);
+                                                 }}
+                                                 className="ml-auto mr-4 text-zinc-400 hover:text-zinc-900 transition-colors p-1.5 rounded-md hover:bg-zinc-100">
+                                                 <span className="material-symbols-outlined text-[16px]">open_in_new</span>
+                                              </button>
+                                           </div>
+                                           
+                                           {activeTabs[msg.id] === 'query' ? (
+                                              <div className="bg-[#1e1e1e] p-5 overflow-x-auto shadow-inner text-[13px]">
+                                                 <SyntaxHighlighter language="sql" style={vscDarkPlus} customStyle={{ margin: 0, padding: 0, background: 'transparent' }}>
+                                                   {msg.sql.trim()}
+                                                 </SyntaxHighlighter>
+                                              </div>
+                                           ) : (
+                                              <div className="p-5 text-[14px] text-zinc-800 font-medium leading-relaxed bg-white">
+                                                {msg.insight ? msg.insight : <span className="text-zinc-400 italic">No insight generated yet...</span>}
+                                              </div>
+                                           )}
+                                        </div>
+                                     )}
 
+                                     {msg.status === 'Running' && (
+                                        <div className="flex gap-1.5 mt-2">
+                                           <div className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce"></div>
+                                           <div className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce delay-75"></div>
+                                           <div className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce delay-150"></div>
+                                        </div>
+                                     )}
+
+                                  </div>
                                </div>
-                            </div>
-                         )}
+                            )}
 
-                      </div>
-                    ))}
-                    <div ref={messagesEndRef} />
+                         </div>
+                       ))}
+                       <div ref={messagesEndRef} />
+                    </div>
                  </div>
                )}
 
                {/* Floating input at bottom for active chat */}
                {messages.length > 0 && (
-                 <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-full max-w-[700px] px-4 z-20">
-                    <div className="relative rounded-2xl border border-zinc-200 focus-within:border-zinc-400 focus-within:ring-2 focus-within:ring-zinc-200 transition-colors bg-white">
+                 <div className="absolute bottom-10 left-1/2 -translate-x-1/2 w-full max-w-3xl px-4 z-20">
+                    <div className="relative rounded-2xl border border-zinc-200 focus-within:border-zinc-400 focus-within:ring-2 focus-within:ring-zinc-200 transition-all bg-white shadow-xl hover:shadow-2xl">
                       <textarea 
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
@@ -559,6 +747,98 @@ export function UnifiedChat() {
 
             </div>
           )}
+
+          {/* VIEW: IDE EDITOR */}
+          {openTabs.find(t => t.id === currentView && t.type === 'ide') && (() => {
+             const activeTab = openTabs.find(t => t.id === currentView)!;
+             return (
+               <div className="flex flex-col h-full bg-[#1e1e1e] text-[#d4d4d4]">
+                 {/* Editor Toolbar */}
+                 <div className="h-16 border-b border-[#2d2d2d] flex items-center px-8 justify-between shrink-0 bg-[#1e1e1e]">
+                    <div className="flex items-center gap-3 text-[14px] font-mono text-[#858585]">
+                       <span className="material-symbols-outlined text-[18px] text-[#4d90fe]">database</span>
+                       <span>analytics_db</span>
+                       <span className="text-[#555] mx-2">|</span>
+                       <span className="text-[#858585] text-[12px] font-normal">Connected • 12ms</span>
+                    </div>
+                    <div>
+                       <button className="bg-emerald-600 hover:bg-emerald-500 text-white flex items-center gap-2 px-5 py-2.5 rounded-lg text-[13px] font-medium transition-colors shadow-sm">
+                          <span className="material-symbols-outlined text-[18px]">play_arrow</span>
+                          Run Query <span className="text-emerald-200/50 text-[11px] ml-2 font-mono">⌘Enter</span>
+                       </button>
+                    </div>
+                 </div>
+
+                 {/* Editor Area */}
+                 <div className="flex-1 relative overflow-hidden bg-[#1e1e1e] text-[15px]">
+                    <textarea 
+                      className="absolute inset-0 w-full h-full text-transparent caret-white p-8 resize-none focus:outline-none z-10 bg-transparent"
+                      style={{ fontFamily: 'Consolas, Monaco, "Andale Mono", "Ubuntu Mono", monospace', lineHeight: '1.6' }}
+                      value={activeTab.sql}
+                      onChange={(e) => {
+                         const newSql = e.target.value;
+                         setOpenTabs(prev => prev.map(t => t.id === activeTab.id ? { ...t, sql: newSql } : t));
+                      }}
+                      onScroll={(e) => {
+                         const target = e.target as HTMLTextAreaElement;
+                         const div = target.nextElementSibling as HTMLDivElement;
+                         if (div) {
+                            div.scrollTop = target.scrollTop;
+                            div.scrollLeft = target.scrollLeft;
+                         }
+                      }}
+                      spellCheck="false"
+                    />
+                    <div className="absolute inset-0 w-full h-full pointer-events-none p-8 z-0 overflow-hidden" aria-hidden="true">
+                       <SyntaxHighlighter language="sql" style={vscDarkPlus} customStyle={{ margin: 0, padding: 0, background: 'transparent', lineHeight: '1.6', fontFamily: 'Consolas, Monaco, "Andale Mono", "Ubuntu Mono", monospace' }}>
+                          {activeTab.sql || ' '}
+                       </SyntaxHighlighter>
+                    </div>
+                 </div>
+
+                 {/* Results Area (Mock) */}
+                 <div className="h-[45%] bg-[#181818] border-t border-[#2d2d2d] flex flex-col shrink-0">
+                    <div className="h-12 flex items-center px-8 justify-between bg-[#1e1e1e]">
+                       <div className="flex items-center gap-8 text-[13px] text-[#858585]">
+                          <span className="text-[#cccccc] font-medium">Results</span>
+                          <span className="flex items-center gap-2 cursor-pointer hover:text-white transition-colors"><span className="material-symbols-outlined text-[16px]">download</span> Export CSV</span>
+                          <span className="flex items-center gap-2 cursor-pointer hover:text-white transition-colors"><span className="material-symbols-outlined text-[16px]">content_copy</span> Copy</span>
+                          <span className="text-[#555] mx-1">|</span>
+                          <span>4 rows in result</span>
+                       </div>
+                    </div>
+                    <div className="flex-1 overflow-auto p-8 bg-[#181818]">
+                       <table className="w-full text-left border-collapse text-[14px]">
+                          <thead>
+                             <tr>
+                                <th className="border-b border-[#2d2d2d] text-[#858585] font-medium p-3 sticky top-0 bg-[#181818]">empresa</th>
+                                <th className="border-b border-[#2d2d2d] text-[#858585] font-medium p-3 sticky top-0 bg-[#181818]">gasto_total_salarios</th>
+                             </tr>
+                          </thead>
+                          <tbody className="text-[#d4d4d4] font-mono">
+                             <tr className="border-b border-[#2d2d2d]/50 hover:bg-[#2a2d2e] transition-colors">
+                                <td className="p-3 whitespace-nowrap pt-4">Quantum Dynamics</td>
+                                <td className="p-3 whitespace-nowrap pt-4">375000.00</td>
+                             </tr>
+                             <tr className="border-b border-[#2d2d2d]/50 hover:bg-[#2a2d2e] transition-colors">
+                                <td className="p-3 whitespace-nowrap">Pacific FinTech</td>
+                                <td className="p-3 whitespace-nowrap">142000.00</td>
+                             </tr>
+                             <tr className="border-b border-[#2d2d2d]/50 hover:bg-[#2a2d2e] transition-colors">
+                                <td className="p-3 whitespace-nowrap">Global Logistics Corp</td>
+                                <td className="p-3 whitespace-nowrap">95000.00</td>
+                             </tr>
+                             <tr className="border-b border-[#2d2d2d]/50 hover:bg-[#2a2d2e] transition-colors">
+                                <td className="p-3 whitespace-nowrap pb-4">NeoEnergy S.A.</td>
+                                <td className="p-3 whitespace-nowrap pb-4">82000.00</td>
+                             </tr>
+                          </tbody>
+                       </table>
+                    </div>
+                 </div>
+               </div>
+             );
+          })()}
 
         </div>
 
