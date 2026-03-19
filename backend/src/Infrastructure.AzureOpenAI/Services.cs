@@ -558,10 +558,11 @@ SELECT TOP {top}
     merchant_name,
     chargeback_rate,
     baseline_rate,
-    delta_factor
+    delta_factor,
+    observation_window
 FROM dbo.vw_merchant_chargeback_trends
-WHERE observation_window = '{windowLabel}'
-ORDER BY delta_factor DESC",
+WHERE observation_window IN ('{windowLabel}', 'last_7_days', 'previous_7_days')
+ORDER BY chargeback_rate DESC",
 
             "customer_risk_score" => $@"
 SELECT TOP {top}
@@ -624,16 +625,17 @@ ORDER BY metric_date DESC"
             "Reglas obligatorias: una sola sentencia SELECT, sin comentarios, sin ; extra, sin DML/DDL, sin EXEC, sin CTE recursiva. " +
             "Solo se permite consultar estas vistas con estos esquemas exactos:\n" +
             "- dbo.vw_daily_fraud_metrics (metric_date, channel, geo_city, total_transactions, total_chargebacks, chargeback_rate)\n" +
-            "- dbo.vw_merchant_chargeback_trends (merchant_id, merchant_name, chargeback_rate, baseline_rate, delta_factor, observation_window)\n" +
+            "- dbo.vw_merchant_chargeback_trends (merchant_id, merchant_name, chargeback_rate, baseline_rate, delta_factor, observation_window) — observation_window values disponibles: 'last_7_days', 'previous_7_days'\n" +
             "- dbo.vw_customer_risk_profile (customer_id, segment, city, risk_level, total_transactions, total_alerts, total_chargebacks)\n" +
             "- dbo.vw_failed_then_successful_transactions (customer_id, account_id, first_attempt_ts, last_attempt_ts, attempts_count)\n" +
             "- dbo.vw_high_risk_device_reuse (device_id, fingerprint, distinct_customers, max_risk_level)\n\n" +
+            "IMPORTANTE: Para observation_window, SOLO usa los valores 'last_7_days' o 'previous_7_days'. No uses 'last_30_days' ni 'last_90_days' porque no existen en la base de datos.\n" +
             "Debes incluir TOP con el valor solicitado y ordenar por relevancia.";
 
         var userPrompt =
             $"Genera SQL para esta intencion: {intentJson}\n" +
             $"TOP solicitado: {top}\n" +
-            "Usa el campo observation_window cuando exista en la vista de chargebacks.";
+            "Para la vista de chargebacks, usa observation_window IN ('last_7_days', 'previous_7_days') para obtener datos.";
 
         var raw = await ChatClient.CompleteAsync(systemPrompt, userPrompt, jsonResponse: false, maxTokens: 450, temperature: 0.1);
         if (string.IsNullOrWhiteSpace(raw))
@@ -786,12 +788,34 @@ public sealed class SummaryService : ISummaryService
             "Debe contener:\n" +
             "1. 'summary': Un resumen profesional visual en formato Markdown (usa ### títulos de sección, **negritas** y viñetas). Debe incluir siempre '### Resumen', '### Hallazgos Clave' y '### Recomendación'.\n" +
             "2. 'extendedReport': Un reporte analítico profundo en Markdown para lectura detallada (al menos 3 párrafos y viñetas). Explica contexto, riesgos y planes de acción extendidos.\n" +
-            "3. 'chart': La configuracion visual. IMPORTANTE: type debe ser 'none' A MENOS QUE el usuario explícitamente pida visualizar un gráfico (grafico, chart, gráfica, barras, pastel, grafica) en su pregunta.\n" +
-            "Estructura JSON requerida:\n" +
+            "3. 'chart': La configuracion visual detallada. Sigue estas REGLAS DE DECISION:\n" +
+            "   - Usa 'bar' o 'horizontal_bar' para top N de comercios, clientes, canales o ciudades.\n" +
+            "   - Usa 'line' para series de tiempo o fechas.\n" +
+            "   - Usa 'donut' (o pie) si hay max 5 categorias para mostrar participacion.\n" +
+            "   - Usa 'none' si no se debe o no se puede graficar.\n" +
+            "Estructura JSON requerida (todo en un solo root JSON):\n" +
             "{\n" +
             "  \"summary\": \"Resumen ejecutivo en Markdown...\",\n" +
             "  \"extendedReport\": \"Reporte largo en Markdown...\",\n" +
-            "  \"chart\": { \"type\": \"none\", \"title\": \"Titulo\", \"xAxisKey\": \"x_col\", \"yAxisKey\": \"y_col\" }\n" +
+            "  \"chart\": {\n" +
+            "    \"should_render_chart\": true,\n" +
+            "    \"chart_type\": \"bar|line|donut|horizontal_bar|none\",\n" +
+            "    \"title\": \"Titulo de la visualización\",\n" +
+            "    \"subtitle\": \"Subtítulo descriptivo\",\n" +
+            "    \"x_axis\": \"nombre_columna_x\",\n" +
+            "    \"y_axis\": \"nombre_columna_y\",\n" +
+            "    \"category_field\": \"\",\n" +
+            "    \"sort_by\": \"\",\n" +
+            "    \"sort_direction\": \"asc|desc\",\n" +
+            "    \"formatting\": {\n" +
+            "      \"x_label\": \"\",\n" +
+            "      \"y_label\": \"\",\n" +
+            "      \"value_format\": \"number|currency|percentage\",\n" +
+            "      \"show_legend\": true,\n" +
+            "      \"show_data_labels\": false\n" +
+            "    },\n" +
+            "    \"reason\": \"Por qué elegiste esta gráfica\"\n" +
+            "  }\n" +
             "}";
 
         var userPrompt =

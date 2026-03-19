@@ -1186,26 +1186,43 @@ export function UnifiedChat() {
                                                  </SyntaxHighlighter>
                                               </div>
                                            ) : activeTabs[msg.id] === 'results' && msg.results ? (
-                                              <div className="overflow-x-auto max-h-[300px] overflow-y-auto">
-                                                 <table className="w-full text-[12px]">
-                                                    <thead className="bg-zinc-50 sticky top-0">
-                                                       <tr>
-                                                          {Object.keys(msg.results[0]).map(col => (
-                                                             <th key={col} className="text-left px-3 py-2 font-bold text-zinc-600 uppercase tracking-wider text-[10px] border-b border-zinc-200 whitespace-nowrap">{col}</th>
-                                                          ))}
-                                                       </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                       {msg.results.map((row, rIdx) => (
-                                                          <tr key={rIdx} className={`${rIdx % 2 === 0 ? 'bg-white' : 'bg-zinc-50/50'} hover:bg-blue-50/30 transition-colors`}>
-                                                             {Object.values(row).map((val, cIdx) => (
-                                                                <td key={cIdx} className="px-3 py-2 text-zinc-700 font-medium border-b border-zinc-100 whitespace-nowrap">{val != null ? String(val) : <span className="text-zinc-300 italic">null</span>}</td>
-                                                             ))}
-                                                          </tr>
-                                                       ))}
-                                                    </tbody>
-                                                 </table>
-                                              </div>
+                                               <div className="overflow-x-auto max-h-[350px] overflow-y-auto border-t border-zinc-200">
+                                                  <table className="w-full text-[13px] font-mono border-collapse">
+                                                     <thead className="sticky top-0 z-10">
+                                                        <tr className="bg-[#f3f3f3] border-b border-zinc-300">
+                                                           <th className="text-center px-3 py-2 text-zinc-400 font-normal border-r border-zinc-200 w-10">
+                                                              <span className="material-symbols-outlined text-[14px]">grid_on</span>
+                                                           </th>
+                                                           {Object.keys(msg.results[0]).map(col => {
+                                                              const isDate = col.toLowerCase().includes('date') || col.toLowerCase().includes('_ts');
+                                                              const isNum = col.toLowerCase().includes('rate') || col.toLowerCase().includes('total') || col.toLowerCase().includes('count') || col.toLowerCase().includes('factor') || col.toLowerCase().includes('score');
+                                                              return (
+                                                                 <th key={col} className="text-left px-4 py-2.5 font-normal text-zinc-700 border-r border-zinc-200 whitespace-nowrap">
+                                                                    <div className="flex items-center gap-2">
+                                                                       <span className="text-blue-500 text-[13px]">
+                                                                          {isDate ? '📅' : isNum ? 'eˣ' : '⊞'}
+                                                                       </span>
+                                                                       <span>{col}</span>
+                                                                    </div>
+                                                                 </th>
+                                                              );
+                                                           })}
+                                                        </tr>
+                                                     </thead>
+                                                     <tbody>
+                                                        {msg.results.map((row, rIdx) => (
+                                                           <tr key={rIdx} className="border-b border-zinc-100 hover:bg-blue-50/40 transition-colors">
+                                                              <td className="text-center px-3 py-2 text-zinc-400 font-normal border-r border-zinc-200 bg-[#f9f9f9] tabular-nums text-[12px]">{rIdx + 1}</td>
+                                                              {Object.values(row).map((val, cIdx) => (
+                                                                 <td key={cIdx} className="px-4 py-2 text-zinc-800 border-r border-zinc-100 whitespace-nowrap tabular-nums">
+                                                                    {val != null ? String(val) : <span className="text-zinc-300 italic">NULL</span>}
+                                                                 </td>
+                                                              ))}
+                                                           </tr>
+                                                        ))}
+                                                     </tbody>
+                                                  </table>
+                                               </div>
                                            ) : (
                                               <div className="p-4 text-[14px] text-zinc-700 font-medium leading-relaxed">
                                                 {(() => {
@@ -1213,7 +1230,7 @@ export function UnifiedChat() {
                                                     
                                                     try {
                                                         const parsed = JSON.parse(msg.insight);
-                                                        const hasChart = parsed.chart && parsed.chart.type && parsed.chart.type !== 'none';
+                                                        const hasChart = parsed.chart && parsed.chart.should_render_chart && parsed.chart.chart_type && parsed.chart.chart_type !== 'none' && parsed.chart.chart_type !== 'table';
                                                         
                                                         return (
                                                             <div className="space-y-4">
@@ -1234,46 +1251,63 @@ export function UnifiedChat() {
                                                                 </ReactMarkdown>
                                                                 {hasChart && msg.results && msg.results.length > 0 && (
                                                                     <div className="mt-4 border border-slate-100 rounded-[24px] p-6 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-                                                                        <h4 className="text-[16px] font-semibold text-slate-800 mb-6">{parsed.chart.title || 'Analysis Chart'}</h4>
+                                                                        <div className="mb-6">
+                                                                           <h4 className="text-[16px] font-semibold text-slate-800">{parsed.chart.title || 'Analysis Chart'}</h4>
+                                                                           {parsed.chart.subtitle && <p className="text-[13px] text-slate-500 mt-1">{parsed.chart.subtitle}</p>}
+                                                                        </div>
                                                                         <div className="h-[320px] w-full">
                                                                             <ResponsiveContainer width="100%" height="100%">
-                                                                                {parsed.chart.type === 'bar' ? (
+                                                                                {parsed.chart.chart_type === 'bar' ? (
                                                                                     <BarChart data={msg.results} margin={{ top: 10, right: 30, left: 0, bottom: 20 }}>
                                                                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                                                                        <XAxis dataKey={parsed.chart.xAxisKey} tick={{fontSize: 12, fill: '#94a3b8'}} tickLine={false} axisLine={false} dy={10} />
+                                                                                        <XAxis dataKey={parsed.chart.x_axis} tick={{fontSize: 12, fill: '#94a3b8'}} tickLine={false} axisLine={false} dy={10} />
                                                                                         <YAxis tick={{fontSize: 12, fill: '#94a3b8'}} tickLine={false} axisLine={false} dx={-10} />
                                                                                         <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)', fontSize: '13px', padding: '12px 16px', fontWeight: 500}} />
                                                                                         <Legend wrapperStyle={{fontSize: '13px', paddingTop: '20px'}} iconType="circle" />
-                                                                                        <Bar dataKey={parsed.chart.yAxisKey} radius={[10, 10, 10, 10]} maxBarSize={40}>
+                                                                                        <Bar dataKey={parsed.chart.y_axis} radius={[4, 4, 0, 0]} maxBarSize={50}>
                                                                                             {msg.results.map((entry, index) => (
-                                                                                                <Cell key={`cell-${index}`} fill={['#2dd4bf', '#fbbf24', '#fde047', '#60a5fa', '#a78bfa', '#f472b6', '#fb7185', '#86efac', '#22d3ee'][index % 9]} />
+                                                                                                <Cell key={`cell-${index}`} fill={['#6366f1', '#3b82f6', '#0ea5e9', '#06b6d4', '#14b8a6', '#10b981', '#84cc16', '#eab308', '#f59e0b'][index % 9]} />
                                                                                             ))}
                                                                                         </Bar>
                                                                                     </BarChart>
-                                                                                ) : parsed.chart.type === 'line' ? (
+                                                                                ) : parsed.chart.chart_type === 'horizontal_bar' ? (
+                                                                                    <BarChart layout="vertical" data={msg.results} margin={{ top: 10, right: 30, left: 10, bottom: 20 }}>
+                                                                                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                                                                                        <XAxis type="number" tick={{fontSize: 12, fill: '#94a3b8'}} tickLine={false} axisLine={false} dy={10} />
+                                                                                        <YAxis type="category" dataKey={parsed.chart.x_axis} tick={{fontSize: 12, fill: '#94a3b8'}} tickLine={false} axisLine={false} dx={-10} width={80} />
+                                                                                        <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)', fontSize: '13px', padding: '12px 16px', fontWeight: 500}} />
+                                                                                        <Legend wrapperStyle={{fontSize: '13px', paddingTop: '20px'}} iconType="circle" />
+                                                                                        <Bar dataKey={parsed.chart.y_axis} radius={[0, 4, 4, 0]} maxBarSize={30}>
+                                                                                            {msg.results.map((entry, index) => (
+                                                                                                <Cell key={`cell-${index}`} fill={['#6366f1', '#3b82f6', '#0ea5e9', '#06b6d4', '#14b8a6', '#10b981', '#84cc16', '#eab308', '#f59e0b'][index % 9]} />
+                                                                                            ))}
+                                                                                        </Bar>
+                                                                                    </BarChart>
+                                                                                ) : parsed.chart.chart_type === 'line' ? (
                                                                                     <LineChart data={msg.results} margin={{ top: 10, right: 30, left: 0, bottom: 20 }}>
                                                                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                                                                        <XAxis dataKey={parsed.chart.xAxisKey} tick={{fontSize: 12, fill: '#94a3b8'}} tickLine={false} axisLine={false} dy={10} />
+                                                                                        <XAxis dataKey={parsed.chart.x_axis} tick={{fontSize: 12, fill: '#94a3b8'}} tickLine={false} axisLine={false} dy={10} />
                                                                                         <YAxis tick={{fontSize: 12, fill: '#94a3b8'}} tickLine={false} axisLine={false} dx={-10} />
                                                                                         <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)', fontSize: '13px', padding: '12px 16px', fontWeight: 500}} />
                                                                                         <Legend wrapperStyle={{fontSize: '13px', paddingTop: '20px'}} iconType="circle" />
-                                                                                        <Line type="monotone" dataKey={parsed.chart.yAxisKey} stroke="#6366f1" strokeWidth={4} activeDot={{r: 8, fill: '#6366f1', strokeWidth: 0}} dot={{r: 0}} />
+                                                                                        <Line type="monotone" dataKey={parsed.chart.y_axis} stroke="#6366f1" strokeWidth={4} activeDot={{r: 8, fill: '#6366f1', strokeWidth: 0}} dot={{r: 0}} />
                                                                                     </LineChart>
-                                                                                ) : parsed.chart.type === 'pie' ? (
+                                                                                ) : parsed.chart.chart_type === 'pie' || parsed.chart.chart_type === 'donut' ? (
                                                                                     <PieChart margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
-                                                                                        <Pie data={msg.results} dataKey={parsed.chart.yAxisKey} nameKey={parsed.chart.xAxisKey} cx="50%" cy="50%" innerRadius={70} outerRadius={100} paddingAngle={4} stroke="none">
+                                                                                        <Pie data={msg.results} dataKey={parsed.chart.y_axis} nameKey={parsed.chart.x_axis} cx="50%" cy="50%" innerRadius={parsed.chart.chart_type === 'donut' ? 70 : 0} outerRadius={100} paddingAngle={4} stroke="none">
                                                                                             {msg.results.map((entry, index) => (
-                                                                                                <Cell key={`cell-${index}`} fill={['#2dd4bf', '#fbbf24', '#fde047', '#60a5fa', '#a78bfa', '#f472b6', '#fb7185', '#86efac', '#22d3ee'][index % 9]} />
+                                                                                                <Cell key={`cell-${index}`} fill={['#6366f1', '#3b82f6', '#0ea5e9', '#06b6d4', '#14b8a6', '#10b981', '#84cc16', '#eab308', '#f59e0b'][index % 9]} />
                                                                                             ))}
                                                                                         </Pie>
                                                                                         <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)', fontSize: '13px', padding: '12px 16px', fontWeight: 500}} />
                                                                                         <Legend wrapperStyle={{fontSize: '13px', paddingTop: '10px'}} iconType="circle" />
                                                                                     </PieChart>
                                                                                 ) : (
-                                                                                    <div className="flex items-center justify-center h-full text-slate-400 italic text-[13px]">Unsupported chart type: {parsed.chart.type}</div>
+                                                                                    <div className="flex items-center justify-center h-full text-slate-400 italic text-[13px]">Unsupported chart type: {parsed.chart.chart_type}</div>
                                                                                 )}
                                                                             </ResponsiveContainer>
                                                                         </div>
+                                                                        {parsed.chart.reason && <p className="text-[12px] text-zinc-400 text-center mt-3 flex items-center justify-center gap-1.5"><span className="material-symbols-outlined text-[14px]">lightbulb</span> {parsed.chart.reason}</p>}
                                                                     </div>
                                                                 )}
                                                             </div>
