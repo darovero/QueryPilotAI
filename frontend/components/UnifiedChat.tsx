@@ -376,7 +376,7 @@ export function UnifiedChat() {
                 onClick={() => setCurrentView('settings')}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-colors ${currentView === 'settings' ? 'bg-zinc-100 text-zinc-900' : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'}`}>
                 <span className="material-symbols-outlined text-[18px]">tune</span>
-                Settings
+                Workspace Settings
               </button>
               <button 
                 onClick={async () => { setCurrentView('history'); try { const r = await fetch('/api/history'); if(r.ok) { const d = await r.json(); setHistoryData(d); } } catch {} }}
@@ -451,13 +451,31 @@ export function UnifiedChat() {
                            {isExpanded && chats.length > 0 && (
                               <div className="pl-6 pr-2 space-y-0.5">
                                  {chats.map(chat => (
-                                    <button 
-                                       key={chat.id}
-                                       onClick={() => openChat(chat.id)}
-                                       className={`w-full text-left truncate px-3 py-1.5 rounded-md text-[13px] transition-colors ${currentView === chat.id ? 'bg-zinc-100 text-zinc-900 font-medium' : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50'}`}
-                                    >
-                                       {chat.title}
-                                    </button>
+                                    <div key={chat.id} className="group flex items-center pr-1">
+                                       <button 
+                                          onClick={() => openChat(chat.id)}
+                                          className={`flex-1 text-left truncate px-3 py-1.5 rounded-md text-[13px] transition-colors ${currentView === chat.id ? 'bg-zinc-100 text-zinc-900 font-medium' : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50'}`}
+                                       >
+                                          {chat.title}
+                                       </button>
+                                       <button 
+                                          onClick={(e) => {
+                                              e.stopPropagation();
+                                              setChatSessions(prev => prev.filter(c => c.id !== chat.id));
+                                              setOpenTabs(prev => {
+                                                  const newTabs = prev.filter(t => t.id !== chat.id);
+                                                  if (currentView === chat.id) {
+                                                      setCurrentView(newTabs.length > 0 ? newTabs[newTabs.length - 1].id : 'welcome');
+                                                  }
+                                                  return newTabs;
+                                              });
+                                          }}
+                                          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-50 text-red-400 hover:text-red-600 rounded transition-all shrink-0 ml-1"
+                                          title="Delete Chat"
+                                       >
+                                          <span className="material-symbols-outlined text-[14px]">delete</span>
+                                       </button>
+                                    </div>
                                  ))}
                               </div>
                            )}
