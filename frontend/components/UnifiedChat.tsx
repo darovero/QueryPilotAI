@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { prism } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import "./UnifiedChat.css";
 
 type ProgressEvent = { label: string; status: string; time: string };
@@ -25,13 +25,13 @@ type LogEntry = {
   message: string;
 };
 
-type Connection = { id: string; name: string };
+type Connection = { id: string; name: string; host?: string; port?: string; database?: string; username?: string; password?: string; type?: string; };
 type ChatSession = { id: string; connectionId: string; title: string; messages: Message[] };
 type DashboardTab = { type: 'chat' | 'ide'; id: string; title: string; connectionId?: string; sql?: string };
 
 export function UnifiedChat() {
   const [connections, setConnections] = useState<Connection[]>([
-    { id: 'conn-demo', name: 'My Postgres Database' }
+    { id: 'conn-demo', name: 'My Postgres Database', type: 'PostgreSQL', host: 'db.mypostgres.com', port: '5432', database: 'analytics_db' }
   ]);
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([
     { id: 'chat-demo-1', connectionId: 'conn-demo', title: 'Untitled Chat 1', messages: [] }
@@ -40,9 +40,14 @@ export function UnifiedChat() {
     { type: 'chat', id: 'chat-demo-1', title: 'Untitled Chat 1', connectionId: 'conn-demo' }
   ]);
 
-  type ViewState = 'welcome' | 'integrations' | 'connect_postgres' | string;
+  type ViewState = 'welcome' | 'integrations' | 'connect_postgres' | 'manage_connections' | string;
   const [currentView, setCurrentView] = useState<ViewState>('chat-demo-1');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [expandedConns, setExpandedConns] = useState<Record<string, boolean>>({});
+  
+  const [editingConnId, setEditingConnId] = useState<string | null>(null);
+  const [connForm, setConnForm] = useState<Partial<Connection>>({ name: "My Postgres Database", host: "db.mypostgres.com", port: "5432", database: "analytics_db", username: "postgres_admin", password: "", type: "PostgreSQL" });
+  const [connError, setConnError] = useState("");
   
   const activeChatSession = chatSessions.find(c => c.id === currentView) || null;
   const messages = activeChatSession?.messages || [];
@@ -232,16 +237,33 @@ export function UnifiedChat() {
     }
   };
 
-  const handleConnectPostgres = () => {
-    const newConnId = 'conn-' + Date.now();
-    const newChatId = 'chat-' + Date.now();
+  const handleSaveConnection = () => {
+    if (!connForm.name?.trim()) {
+        setConnError("Connection name is required.");
+        return;
+    }
     
-    setConnections(prev => [...prev, { id: newConnId, name: 'My Postgres Database' }]);
-    setChatSessions(prev => [...prev, { id: newChatId, connectionId: newConnId, title: 'Untitled Chat 1', messages: [] }]);
-    setOpenTabs(prev => [...prev, { type: 'chat', id: newChatId, title: 'Untitled Chat 1', connectionId: newConnId }]);
-    
-    setCurrentView(newChatId);
-    addLog("SUCCESS", "Connected to PostgreSQL database successfully.");
+    if (editingConnId) {
+        if (connections.some(c => c.id !== editingConnId && c.name.toLowerCase() === connForm.name!.trim().toLowerCase())) {
+            setConnError("A connection with this name already exists.");
+            return;
+        }
+        setConnections(prev => prev.map(c => c.id === editingConnId ? { ...c, ...connForm } : c));
+        setConnError("");
+        setCurrentView('manage_connections');
+        addLog("SUCCESS", `Connection ${connForm.name} updated successfully.`);
+    } else {
+        if (connections.some(c => c.name.toLowerCase() === connForm.name!.trim().toLowerCase())) {
+            setConnError("A connection with this name already exists.");
+            return;
+        }
+        setConnError("");
+        const newConnId = 'conn-' + Date.now();
+        const { id: _ignoreId, ...formWithoutId } = connForm;
+        setConnections(prev => [...prev, { ...formWithoutId, id: newConnId, name: connForm.name!.trim() } as Connection]);
+        setCurrentView('manage_connections');
+        addLog("SUCCESS", `Connected to ${connForm.name!.trim()} successfully.`);
+    }
   };
 
   const openChat = (chatId: string) => {
@@ -281,7 +303,9 @@ export function UnifiedChat() {
                 <span className="material-symbols-outlined text-[18px]">grid_view</span>
                 Data Sources
               </button>
-              <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-colors">
+              <button 
+                onClick={() => setCurrentView('settings')}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-colors ${currentView === 'settings' ? 'bg-zinc-100 text-zinc-900' : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'}`}>
                 <span className="material-symbols-outlined text-[18px]">tune</span>
                 Settings
               </button>
@@ -290,38 +314,66 @@ export function UnifiedChat() {
             <div className="px-4 py-4">
                <div className="flex items-center justify-between px-3 text-[11px] uppercase tracking-widest text-zinc-400 font-bold mb-3">
                   <span>Connections</span>
-                  <button onClick={() => setCurrentView('integrations')} className="hover:text-zinc-900 transition-colors" title="New Connection">
-                    <span className="material-symbols-outlined text-[16px]">add</span>
-                  </button>
+                  <div className="flex gap-1">
+                    <button onClick={() => setCurrentView('manage_connections')} className="hover:text-zinc-900 transition-colors" title="Manage Connections">
+                      <span className="material-symbols-outlined text-[16px]">settings</span>
+                    </button>
+                    <button onClick={() => { setEditingConnId(null); setConnForm({ name: "New Connection", host: "", port: "5432", database: "", username: "", password: "", type: "PostgreSQL" }); setCurrentView('integrations'); }} className="hover:text-zinc-900 transition-colors" title="New Connection">
+                      <span className="material-symbols-outlined text-[16px]">add</span>
+                    </button>
+                  </div>
                </div>
                
                <div className="space-y-3">
                   {connections.map(conn => {
                      const chats = chatSessions.filter(c => c.connectionId === conn.id);
+                     const isConnActive = chats.some(c => c.id === currentView) || openTabs.some(t => t.connectionId === conn.id && t.id === currentView);
+                     const isExpanded = expandedConns[conn.id] !== false; // default to true
+                     
                      return (
                         <div key={conn.id} className="space-y-1">
-                           <button 
-                              onClick={() => {
-                                 if (chats.length === 0) {
+                           <div className={`flex items-center justify-between px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors group ${isConnActive ? 'bg-zinc-100 text-zinc-900' : 'text-zinc-700 hover:bg-zinc-50'}`}>
+                               <button 
+                                  onClick={() => setExpandedConns(prev => ({ ...prev, [conn.id]: prev[conn.id] === false ? true : false }))}
+                                  className="w-5 h-5 flex items-center justify-center text-zinc-400 hover:text-zinc-900 transition-colors shrink-0"
+                               >
+                                  <span className="material-symbols-outlined text-[16px] transition-transform" style={{ transform: isExpanded ? 'rotate(90deg)' : 'none' }}>chevron_right</span>
+                               </button>
+                               <button 
+                                  onClick={() => {
+                                     if (chats.length === 0) {
+                                         const newChatId = 'chat-' + Date.now();
+                                         setChatSessions(prev => [...prev, { id: newChatId, connectionId: conn.id, title: 'New Chat', messages: [] }]);
+                                         setOpenTabs(prev => { 
+                                             if (!prev.find(t => t.id === newChatId)) {
+                                                 return [...prev, { type: 'chat', id: newChatId, title: 'New Chat', connectionId: conn.id }];
+                                             }
+                                             return prev;
+                                         });
+                                         setCurrentView(newChatId);
+                                     } else {
+                                         openChat(chats[chats.length - 1].id);
+                                     }
+                                  }}
+                                  className="flex flex-1 items-center gap-3 truncate text-left h-full py-1 ml-1"
+                               >
+                                  <span className="truncate">{conn.name}</span>
+                               </button>
+                               <button 
+                                 onClick={(e) => {
+                                     e.stopPropagation();
                                      const newChatId = 'chat-' + Date.now();
                                      setChatSessions(prev => [...prev, { id: newChatId, connectionId: conn.id, title: 'New Chat', messages: [] }]);
-                                     setOpenTabs(prev => { 
-                                         if (!prev.find(t => t.id === newChatId)) {
-                                             return [...prev, { type: 'chat', id: newChatId, title: 'New Chat', connectionId: conn.id }];
-                                         }
-                                         return prev;
-                                     });
+                                     setOpenTabs(prev => [...prev, { type: 'chat', id: newChatId, title: 'New Chat', connectionId: conn.id }]);
                                      setCurrentView(newChatId);
-                                 } else {
-                                     openChat(chats[chats.length - 1].id);
-                                 }
-                              }}
-                              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium text-zinc-700 hover:bg-zinc-100 transition-colors group"
-                           >
-                              <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-                              <span className="truncate">{conn.name}</span>
-                           </button>
-                           {chats.length > 0 && (
+                                     setExpandedConns(prev => ({ ...prev, [conn.id]: true })); // Expand on new chat
+                                 }}
+                                 className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-zinc-200 rounded text-zinc-500 hover:text-zinc-900 transition-all shrink-0 ml-2" 
+                                 title="New Chat">
+                                  <span className="material-symbols-outlined text-[16px]">add</span>
+                               </button>
+                           </div>
+                           {isExpanded && chats.length > 0 && (
                               <div className="pl-6 pr-2 space-y-0.5">
                                  {chats.map(chat => (
                                     <button 
@@ -342,14 +394,7 @@ export function UnifiedChat() {
           </div>
         </div>
         
-        {/* Bottom actions */}
-        <div className="px-6 py-5 border-t border-zinc-200/50">
-          <div className="text-[10px] uppercase tracking-widest text-zinc-400 font-bold mb-2">Plan</div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-zinc-700">Free</span>
-            <button className="text-[11px] font-medium text-zinc-900 transition-colors hover:underline">Upgrade</button>
-          </div>
-        </div>
+        {/* Bottom actions removed based on user request */}
       </aside>
 
       {/* Main Content Area */}
@@ -381,10 +426,18 @@ export function UnifiedChat() {
             {currentView === 'connect_postgres' && (
               <div className="text-[13px] font-medium flex items-center gap-2 h-full text-zinc-900 relative">
                 <span className="material-symbols-outlined text-[16px]">database</span>
-                Connect PostgreSQL
+                {editingConnId ? 'Edit Connection' : 'Connect PostgreSQL'}
                 <div className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-zinc-900 rounded-t-full"></div>
               </div>
             )}
+            {currentView === 'manage_connections' && (
+              <div className="text-[13px] font-medium flex items-center gap-2 h-full text-zinc-900 relative">
+                <span className="material-symbols-outlined text-[16px]">settings_input_component</span>
+                Manage Connections
+                <div className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-zinc-900 rounded-t-full"></div>
+              </div>
+            )}
+
             
             {openTabs.map((tab) => (
                <div key={tab.id} className="flex items-center h-full relative group shrink-0">
@@ -515,29 +568,53 @@ export function UnifiedChat() {
                      <h2 className="text-2xl font-semibold tracking-tight text-zinc-900 mb-8">Connect Postgres Database</h2>
                      
                      <div className="space-y-6 bg-white border border-zinc-200 p-8 rounded-3xl">
-                        {[
-                          { label: "Display Name*", defaultValue: "My Postgres Database", type: "text" },
-                          { label: "Host address*", defaultValue: "db.mypostgres.com", type: "text" },
-                          { label: "Port*", defaultValue: "5432", type: "text" },
-                          { label: "Database*", defaultValue: "analytics_db", type: "text" },
-                          { label: "Username*", defaultValue: "postgres_admin", type: "text" },
-                          { label: "Password*", defaultValue: "••••••••••••", type: "password" }
+                         {connError && (
+                            <div className="p-3 bg-red-50 text-red-600 rounded-xl text-[13px] font-medium border border-red-100 flex items-center gap-2">
+                               <span className="material-symbols-outlined text-[16px]">error</span>
+                               {connError}
+                            </div>
+                         )}
+                         
+                         <div className="space-y-1.5">
+                            <label className="text-[12px] font-semibold text-zinc-600 uppercase tracking-widest">Display Name*</label>
+                            <input 
+                              type="text" 
+                              value={connForm.name || ""}
+                              onChange={(e) => setConnForm(prev => ({ ...prev, name: e.target.value }))}
+                              className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-[13px] text-black focus:outline-none focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200 transition-colors font-mono" 
+                            />
+                         </div>
+
+                         {[
+                          { label: "Host address*", key: "host", type: "text" },
+                          { label: "Port*", key: "port", type: "text" },
+                          { label: "Database*", key: "database", type: "text" },
+                          { label: "Username*", key: "username", type: "text" },
+                          { label: "Password*", key: "password", type: "password" }
                         ].map((field, i) => (
                            <div key={i} className="space-y-1.5">
                               <label className="text-[12px] font-semibold text-zinc-600 uppercase tracking-widest">{field.label}</label>
                               <input 
-                                type={field.type} 
-                                defaultValue={field.defaultValue} 
+                                type={field.type}
+                                value={(connForm as any)[field.key] || ""}
+                                onChange={(e) => setConnForm(prev => ({ ...prev, [field.key]: e.target.value }))}
                                 className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-[13px] text-black focus:outline-none focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200 transition-colors font-mono" 
                               />
                            </div>
                         ))}
                         
-                        <div className="pt-4">
+                        <div className="pt-4 flex gap-4">
+                          {editingConnId && (
+                            <button 
+                              onClick={() => setCurrentView('manage_connections')}
+                              className="w-1/3 bg-white border border-zinc-200 text-zinc-700 font-medium rounded-xl py-3.5 text-[14px] hover:bg-zinc-50 transition-colors flex justify-center items-center">
+                                Cancel
+                            </button>
+                          )}
                           <button 
-                            onClick={handleConnectPostgres}
-                            className="w-full bg-zinc-900 text-white font-medium rounded-xl py-3.5 text-[14px] hover:bg-zinc-800 transition-colors flex justify-center items-center gap-2">
-                              Test and Save Connection <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+                            onClick={handleSaveConnection}
+                            className={`bg-zinc-900 text-white font-medium rounded-xl py-3.5 text-[14px] hover:bg-zinc-800 transition-colors flex justify-center items-center gap-2 ${editingConnId ? 'w-2/3' : 'w-full'}`}>
+                              {editingConnId ? 'Save Changes' : 'Test and Save Connection'} <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
                           </button>
                         </div>
                      </div>
@@ -568,6 +645,144 @@ export function UnifiedChat() {
                   </div>
                </div>
             </div>
+          )}
+
+          {/* VIEW: MANAGE CONNECTIONS */}
+          {currentView === 'manage_connections' && (
+            <div className="py-16 px-10 max-w-5xl mx-auto">
+              <div className="flex justify-between items-center mb-10">
+                <div className="space-y-2">
+                  <h1 className="text-3xl font-semibold text-zinc-900 tracking-tight">Manage Connections</h1>
+                  <p className="text-[14px] text-zinc-500 font-medium">View, edit, or remove configured database connections.</p>
+                </div>
+                <button 
+                  onClick={() => { setEditingConnId(null); setConnForm({ name: "New Connection", host: "", port: "5432", database: "", username: "", password: "", type: "PostgreSQL" }); setCurrentView('connect_postgres'); }}
+                  className="bg-zinc-900 text-white hover:bg-zinc-800 px-5 py-2.5 rounded-xl text-[13px] font-medium flex items-center gap-2 transition-colors shadow-sm"
+                >
+                  <span className="material-symbols-outlined text-[16px]">add</span> Add Connection
+                </button>
+              </div>
+
+              <div className="bg-white border border-zinc-200 rounded-2xl overflow-hidden shadow-sm">
+                <div className="grid grid-cols-12 gap-4 p-4 border-b border-zinc-200 bg-zinc-50 text-[12px] font-semibold text-zinc-500 uppercase tracking-widest">
+                  <div className="col-span-3">Name</div>
+                  <div className="col-span-2">Type</div>
+                  <div className="col-span-3">Host</div>
+                  <div className="col-span-2">Database</div>
+                  <div className="col-span-2 text-right">Actions</div>
+                </div>
+                {connections.length === 0 ? (
+                  <div className="p-8 text-center text-zinc-500 text-[14px]">No connections found. Add one to get started.</div>
+                ) : (
+                  <div className="divide-y divide-zinc-100">
+                    {connections.map((conn) => (
+                      <div key={conn.id} className="grid grid-cols-12 gap-4 p-4 items-center text-[14px] hover:bg-zinc-50/50 transition-colors text-zinc-700">
+                        <div className="col-span-3 font-medium text-zinc-900 truncate">
+                          <div className="flex items-center gap-2">
+                             <span className="material-symbols-outlined text-[16px] text-zinc-400">database</span>
+                             {conn.name}
+                          </div>
+                        </div>
+                        <div className="col-span-2">{conn.type || 'PostgreSQL'}</div>
+                        <div className="col-span-3 truncate font-mono text-[12px]">{conn.host || 'db.mypostgres.com'}</div>
+                        <div className="col-span-2 truncate">{conn.database || 'analytics_db'}</div>
+                        <div className="col-span-2 flex justify-end gap-2">
+                          <button 
+                            onClick={() => { setEditingConnId(conn.id); setConnForm(conn); setCurrentView('connect_postgres'); }}
+                            className="w-8 h-8 rounded-lg border border-zinc-200 bg-white text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50 flex items-center justify-center transition-colors"
+                            title="Edit"
+                          >
+                            <span className="material-symbols-outlined text-[16px]">edit</span>
+                          </button>
+                          <button 
+                            onClick={() => {
+                               if (confirm(`Are you sure you want to delete ${conn.name}?`)) {
+                                  setConnections(prev => prev.filter(c => c.id !== conn.id));
+                                  setChatSessions(prev => prev.filter(c => c.connectionId !== conn.id));
+                                  setOpenTabs(prev => prev.filter(t => t.connectionId !== conn.id));
+                                  if (currentView === conn.id) setCurrentView('manage_connections');
+                                  addLog("SUCCESS", `Connection ${conn.name} deleted.`);
+                               }
+                            }}
+                            className="w-8 h-8 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:text-red-700 hover:bg-red-100 flex items-center justify-center transition-colors"
+                            title="Delete"
+                          >
+                            <span className="material-symbols-outlined text-[16px]">delete</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* VIEW: SETTINGS */}
+          {currentView === 'settings' && (
+             <div className="flex bg-white h-full text-zinc-900">
+                <div className="flex-1 p-10 max-w-4xl mx-auto overflow-y-auto">
+                   <div className="mb-8 border-b border-zinc-200 pb-6 text-center">
+                      <h1 className="text-3xl font-semibold text-zinc-900 tracking-tight">Workspace Settings</h1>
+                      <p className="text-[14px] text-zinc-500 mt-2">Manage your team workspace and preferences.</p>
+                   </div>
+                   
+                   <div className="bg-zinc-50 border border-zinc-200 rounded-2xl p-6 mb-8 flex flex-col md:flex-row md:items-center gap-6">
+                      <div className="w-16 h-16 rounded-xl bg-purple-600 flex items-center justify-center text-white text-2xl font-medium shadow-sm shrink-0">J</div>
+                      <div className="flex-1">
+                         <h2 className="text-[18px] font-semibold text-zinc-900">Jessy's workspace</h2>
+                         <p className="text-[14px] text-zinc-500 mt-1">1 Members active</p>
+                      </div>
+                      <button className="bg-white border border-zinc-200 text-zinc-700 hover:bg-zinc-50 hover:text-zinc-900 px-5 py-2.5 rounded-xl text-[13px] font-medium transition-colors shadow-sm self-start md:self-center">
+                         Leave Workspace
+                      </button>
+                   </div>
+
+                   <div className="space-y-10">
+                      <div>
+                         <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-2">
+                             <div>
+                               <h3 className="text-[15px] font-medium text-zinc-900">Workspace Name</h3>
+                               <p className="text-[13px] text-zinc-500 mt-1 max-w-md">Change the name of your workspace. This will be visible to all members associated with this workspace.</p>
+                             </div>
+                             <div className="flex gap-2 w-full md:w-auto">
+                                 <input type="text" defaultValue="Jessy's workspace" className="bg-white border border-zinc-200 text-zinc-900 rounded-xl px-4 py-2.5 text-[14px] font-medium w-full md:w-[260px] focus:outline-none focus:border-zinc-400 focus:ring-2 focus:ring-zinc-100 transition-all shadow-sm" />
+                                 <button className="bg-zinc-900 text-white font-medium rounded-xl px-5 text-[13px] hover:bg-zinc-800 transition-colors shadow-sm border border-transparent whitespace-nowrap">Save</button>
+                             </div>
+                         </div>
+                      </div>
+                      
+                      <div className="border-t border-zinc-200 pt-10">
+                         <div className="flex justify-between items-center mb-6">
+                             <div>
+                               <h3 className="text-[15px] font-medium text-zinc-900">Members</h3>
+                               <p className="text-[13px] text-zinc-500 mt-1">Manage users and roles in your workspace</p>
+                             </div>
+                             <button className="bg-white hover:bg-zinc-50 text-zinc-700 hover:text-zinc-900 border border-zinc-200 px-4 py-2.5 rounded-xl text-[13px] font-medium flex items-center gap-2 transition-colors shadow-sm">
+                                <span className="material-symbols-outlined text-[16px]">person_add</span> Invite Colleague
+                             </button>
+                         </div>
+                         <div className="bg-white border border-zinc-200 rounded-2xl overflow-hidden shadow-sm">
+                             <div className="flex items-center justify-between p-5 hover:bg-zinc-50/50 transition-colors">
+                                <div className="flex items-center gap-4">
+                                   <div className="relative">
+                                     <div className="w-10 h-10 rounded-full bg-orange-100 border border-orange-200 flex items-center justify-center text-orange-600 text-[15px] font-bold shadow-sm">J</div>
+                                     <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-white rounded-full flex items-center justify-center shrink-0">
+                                       <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full"></div>
+                                     </div>
+                                   </div>
+                                   <div className="flex items-center gap-3">
+                                      <span className="text-[15px] font-medium text-zinc-900">Jessy (You)</span>
+                                      <span className="text-[10px] font-bold uppercase tracking-wider bg-zinc-100 text-zinc-500 border border-zinc-200 px-2 py-0.5 rounded-md">Admin</span>
+                                   </div>
+                                </div>
+                                <span className="text-[14px] text-zinc-500 font-medium">quintojessy@gmail.com</span>
+                             </div>
+                         </div>
+                      </div>
+                   </div>
+                </div>
+             </div>
           )}
 
           {/* VIEW: CHAT */}
@@ -655,7 +870,7 @@ export function UnifiedChat() {
                                      )}
                                      
                                      {msg.sql && (
-                                        <div className="border border-zinc-200 rounded-2xl overflow-hidden bg-white shadow-sm my-4">
+                                        <div className="border border-zinc-200 rounded-2xl overflow-hidden bg-white shadow-sm mt-2 mb-6 ml-2 mr-2">
                                            <div className="flex items-center border-b border-zinc-200 bg-zinc-50/50">
                                               <div 
                                                  onClick={() => setActiveTabs(prev => ({ ...prev, [msg.id]: 'query' }))}
@@ -686,8 +901,8 @@ export function UnifiedChat() {
                                            </div>
                                            
                                            {activeTabs[msg.id] === 'query' ? (
-                                              <div className="bg-[#1e1e1e] p-5 overflow-x-auto shadow-inner text-[13px]">
-                                                 <SyntaxHighlighter language="sql" style={vscDarkPlus} customStyle={{ margin: 0, padding: 0, background: 'transparent' }}>
+                                              <div className="p-4 overflow-x-auto text-[13px] bg-zinc-50/30">
+                                                 <SyntaxHighlighter language="sql" style={prism} customStyle={{ margin: 0, padding: 0, background: 'transparent' }}>
                                                    {msg.sql.trim()}
                                                  </SyntaxHighlighter>
                                               </div>
@@ -790,7 +1005,7 @@ export function UnifiedChat() {
                       spellCheck="false"
                     />
                     <div className="absolute inset-0 w-full h-full pointer-events-none p-8 z-0 overflow-hidden" aria-hidden="true">
-                       <SyntaxHighlighter language="sql" style={vscDarkPlus} customStyle={{ margin: 0, padding: 0, background: 'transparent', lineHeight: '1.6', fontFamily: 'Consolas, Monaco, "Andale Mono", "Ubuntu Mono", monospace' }}>
+                       <SyntaxHighlighter language="sql" style={prism} customStyle={{ margin: 0, padding: 0, background: 'transparent', lineHeight: '1.6', fontFamily: 'Consolas, Monaco, "Andale Mono", "Ubuntu Mono", monospace' }}>
                           {activeTab.sql || ' '}
                        </SyntaxHighlighter>
                     </div>
