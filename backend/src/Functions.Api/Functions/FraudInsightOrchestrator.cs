@@ -158,7 +158,7 @@ public class FraudInsightOrchestrator
         // --- Step 7: SQL Execution ---
         context.SetCustomStatus(new PipelineStep("sql_execution", "Ejecutando SQL en Azure SQL", "Active", context.CurrentUtcDateTime));
 
-        var rows = await context.CallActivityAsync<List<Dictionary<string, object?>>>(nameof(ExecuteSqlActivity), validation.NormalizedSql);
+        var rows = await context.CallActivityAsync<List<Dictionary<string, object?>>>(nameof(ExecuteSqlActivity), new SqlExecutionInput(validation.NormalizedSql, request.Connection));
 
         context.SetCustomStatus(new PipelineStep("sql_execution", "Consulta ejecutada", "Completed", context.CurrentUtcDateTime));
 

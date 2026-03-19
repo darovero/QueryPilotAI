@@ -56,8 +56,8 @@ public class ValidateSqlPolicyActivity(Core.Domain.Policies.ISqlPolicyEngine sql
 public class ExecuteSqlActivity(Infrastructure.Sql.ISqlExecutionService sqlExecutionService)
 {
     [Function(nameof(ExecuteSqlActivity))]
-    public Task<List<Dictionary<string, object?>>> Run([ActivityTrigger] string sql) =>
-        sqlExecutionService.ExecuteQueryAsync(sql);
+    public Task<List<Dictionary<string, object?>>> Run([ActivityTrigger] SqlExecutionInput input) =>
+        sqlExecutionService.ExecuteQueryAsync(input.Sql, input.Config);
 }
 
 public class SummarizeInsightActivity(Infrastructure.AzureOpenAI.ISummaryService summaryService)

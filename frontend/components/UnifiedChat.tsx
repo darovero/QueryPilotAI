@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import { useMsal } from "@azure/msal-react";
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { prism } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { ResponsiveContainer, BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
@@ -32,32 +33,28 @@ type LogEntry = {
   message: string;
 };
 
-type Connection = { id: string; name: string; host?: string; port?: string; database?: string; username?: string; password?: string; type?: string; };
+type Connection = { id: string; name: string; host?: string; port?: string; database?: string; username?: string; password?: string; type?: string; authType?: string; };
 type ChatSession = { id: string; connectionId: string; title: string; messages: Message[] };
 type DashboardTab = { type: 'chat' | 'ide'; id: string; title: string; connectionId?: string; sql?: string };
 
 export function UnifiedChat() {
-  const [connections, setConnections] = useState<Connection[]>(() => {
+  const [connections, setConnections] = useState<Connection[]>([]);
+  const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
+  const [openTabs, setOpenTabs] = useState<DashboardTab[]>([]);
+
+  // Hydration fix: load from localStorage after mount
+  useEffect(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('qp_connections');
-      if (saved) try { return JSON.parse(saved); } catch {}
+      const savedConns = localStorage.getItem('qp_connections');
+      if (savedConns) try { setConnections(JSON.parse(savedConns)); } catch {}
+      
+      const savedChats = localStorage.getItem('qp_chatSessions');
+      if (savedChats) try { setChatSessions(JSON.parse(savedChats)); } catch {}
+      
+      const savedTabs = localStorage.getItem('qp_openTabs');
+      if (savedTabs) try { setOpenTabs(JSON.parse(savedTabs)); } catch {}
     }
-    return [];
-  });
-  const [chatSessions, setChatSessions] = useState<ChatSession[]>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('qp_chatSessions');
-      if (saved) try { return JSON.parse(saved); } catch {}
-    }
-    return [];
-  });
-  const [openTabs, setOpenTabs] = useState<DashboardTab[]>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('qp_openTabs');
-      if (saved) try { return JSON.parse(saved); } catch {}
-    }
-    return [];
-  });
+  }, []);
 
   const [isInsightPanelOpen, setIsInsightPanelOpen] = useState(false);
   const [selectedMessageForPanel, setSelectedMessageForPanel] = useState<Message | null>(null);
@@ -71,6 +68,29 @@ export function UnifiedChat() {
   const [editingConnId, setEditingConnId] = useState<string | null>(null);
   const [connForm, setConnForm] = useState<Partial<Connection>>({ name: "My Postgres Database", host: "db.mypostgres.com", port: "5432", database: "analytics_db", username: "postgres_admin", password: "", type: "PostgreSQL" });
   const [connError, setConnError] = useState("");
+  const [isTestingConnection, setIsTestingConnection] = useState(false);
+  const [testSuccess, setTestSuccess] = useState(false);
+  const { instance } = useMsal();
+  
+  const handleMsalLogin = async () => {
+    try {
+      const loginResponse = await instance.loginPopup({
+        scopes: ["https://database.windows.net//user_impersonation"]
+      });
+      if (loginResponse && loginResponse.accessToken) {
+        setConnForm(prev => ({ 
+          ...prev, 
+          username: loginResponse.account?.username || 'Azure AD User',
+          password: loginResponse.accessToken,
+          authType: 'AzureADToken'
+        }));
+        addLog("INFO", "Microsoft Entra ID token acquired via MSAL.");
+      }
+    } catch (err: any) {
+      console.error(err);
+      setConnError("Microsoft login failed: " + err.message);
+    }
+  };
   
   const activeChatSession = chatSessions.find(c => c.id === currentView) || null;
   const messages = activeChatSession?.messages || [];
@@ -108,10 +128,10 @@ export function UnifiedChat() {
     ]);
   }, []);
 
-  // localStorage persistence
-  useEffect(() => { localStorage.setItem('qp_connections', JSON.stringify(connections)); }, [connections]);
-  useEffect(() => { localStorage.setItem('qp_chatSessions', JSON.stringify(chatSessions)); }, [chatSessions]);
-  useEffect(() => { localStorage.setItem('qp_openTabs', JSON.stringify(openTabs)); }, [openTabs]);
+  // localStorage persistence (skipped on initial empty render)
+  useEffect(() => { if (connections.length > 0) localStorage.setItem('qp_connections', JSON.stringify(connections)); }, [connections]);
+  useEffect(() => { if (chatSessions.length > 0) localStorage.setItem('qp_chatSessions', JSON.stringify(chatSessions)); }, [chatSessions]);
+  useEffect(() => { if (openTabs.length > 0) localStorage.setItem('qp_openTabs', JSON.stringify(openTabs)); }, [openTabs]);
 
   const addLog = (level: LogEntry["level"], msg: string) => {
     setTerminalLogs((prev) => [
@@ -236,6 +256,8 @@ export function UnifiedChat() {
     setIsTyping(true);
     addLog("INFO", "Received user query: " + userMsg.content);
 
+    const activeConnection = connections.find(c => c.id === activeChatSession.connectionId);
+    
     try {
       const response = await fetch("/api/query", {
         method: "POST",
@@ -245,7 +267,15 @@ export function UnifiedChat() {
           userId: "user@agent.com",
           role: "FraudAnalyst",
           correlationId: "chat-" + Date.now(),
-          sessionId: "unified-session"
+          sessionId: "unified-session",
+          connection: activeConnection ? {
+            type: activeConnection.type || "PostgreSQL",
+            host: activeConnection.host,
+            port: activeConnection.port,
+            database: activeConnection.database,
+            username: activeConnection.username,
+            password: activeConnection.password
+          } : undefined
         }),
       });
 
@@ -307,32 +337,78 @@ export function UnifiedChat() {
     });
   };
 
-  const handleSaveConnection = () => {
+  const handleSaveConnection = async () => {
     if (!connForm.name?.trim()) {
         setConnError("Connection name is required.");
         return;
     }
     
-    if (editingConnId) {
-        if (connections.some(c => c.id !== editingConnId && c.name.toLowerCase() === connForm.name!.trim().toLowerCase())) {
-            setConnError("A connection with this name already exists.");
-            return;
-        }
-        setConnections(prev => prev.map(c => c.id === editingConnId ? { ...c, ...connForm } : c));
+    if (editingConnId && connections.some(c => c.id !== editingConnId && c.name.toLowerCase() === connForm.name!.trim().toLowerCase())) {
+        setConnError("A connection with this name already exists.");
+        return;
+    }
+    
+    if (!editingConnId && connections.some(c => c.name.toLowerCase() === connForm.name!.trim().toLowerCase())) {
+        setConnError("A connection with this name already exists.");
+        return;
+    }
+
+    try {
         setConnError("");
-        setCurrentView('manage_connections');
-        addLog("SUCCESS", `Connection ${connForm.name} updated successfully.`);
-    } else {
-        if (connections.some(c => c.name.toLowerCase() === connForm.name!.trim().toLowerCase())) {
-            setConnError("A connection with this name already exists.");
-            return;
+        setIsTestingConnection(true);
+        const res = await fetch("/api/test-connection", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                type: connForm.type || "Azure SQL",
+                host: connForm.host,
+                port: connForm.port,
+                database: connForm.database,
+                username: connForm.username,
+                password: connForm.password,
+                authType: connForm.authType
+            })
+        });
+
+        if (!res.ok) {
+            let errorMsg = "Failed to connect to the database.";
+            try {
+                const errBody = await res.json();
+                if (errBody.error) errorMsg = errBody.error;
+            } catch (jsonErr) {
+                // If the response is empty or not JSON (e.g. 404 or 500 from proxy), just use text
+                const textBody = await res.text();
+                if (textBody) errorMsg = textBody;
+            }
+            throw new Error(errorMsg);
         }
-        setConnError("");
-        const newConnId = 'conn-' + Date.now();
-        const { id: _ignoreId, ...formWithoutId } = connForm;
-        setConnections(prev => [...prev, { ...formWithoutId, id: newConnId, name: connForm.name!.trim() } as Connection]);
-        setCurrentView('manage_connections');
-        addLog("SUCCESS", `Connected to ${connForm.name!.trim()} successfully.`);
+
+        if (editingConnId) {
+            setTestSuccess(true);
+            setTimeout(() => {
+                setTestSuccess(false);
+                setConnections(prev => prev.map(c => c.id === editingConnId ? { ...c, ...connForm } : c));
+                setConnError("");
+                setCurrentView('manage_connections');
+                addLog("SUCCESS", `Connection ${connForm.name} updated successfully.`);
+            }, 1500);
+        } else {
+            setTestSuccess(true);
+            setTimeout(() => {
+                setTestSuccess(false);
+                setConnError("");
+                const newConnId = 'conn-' + Date.now();
+                const { id: _ignoreId, ...formWithoutId } = connForm;
+                setConnections(prev => [...prev, { ...formWithoutId, id: newConnId, name: connForm.name!.trim() } as Connection]);
+                setCurrentView('manage_connections');
+                addLog("SUCCESS", `Connected to ${connForm.name!.trim()} successfully.`);
+            }, 1500);
+        }
+    } catch (e: any) {
+        setConnError(e.message);
+        addLog("ERROR", "Connection test failed: " + e.message);
+    } finally {
+        setIsTestingConnection(false);
     }
   };
 
@@ -370,26 +446,29 @@ export function UnifiedChat() {
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] transition-colors ${currentView === 'welcome' || currentView === 'integrations' || currentView === 'connect_postgres' ? 'bg-zinc-100 text-zinc-900 font-medium' : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'}`}
                 onClick={() => setCurrentView('welcome')}
               >
-                <span className="material-symbols-outlined text-[18px]">grid_view</span>
+                <span className="material-symbols-outlined text-[24px]">grid_view</span>
                 Data Sources
               </button>
               <button 
                 onClick={() => setCurrentView('settings')}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-colors ${currentView === 'settings' ? 'bg-zinc-100 text-zinc-900' : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'}`}>
-                <span className="material-symbols-outlined text-[18px]">tune</span>
+                <span className="material-symbols-outlined text-[24px]">tune</span>
                 Workspace Settings
               </button>
               <button 
                 onClick={async () => { setCurrentView('history'); try { const r = await fetch('/api/history'); if(r.ok) { const d = await r.json(); setHistoryData(d); } } catch {} }}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-colors ${currentView === 'history' ? 'bg-zinc-100 text-zinc-900' : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'}`}>
-                <span className="material-symbols-outlined text-[18px]">history</span>
+                <span className="material-symbols-outlined text-[24px]">history</span>
                 History
               </button>
             </div>
             
             <div className="px-4 py-4">
                <div className="flex items-center justify-between px-3 text-[11px] uppercase tracking-widest text-zinc-400 font-bold mb-3">
-                  <span>Connections</span>
+                  <span className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[24px]">database</span>
+                    Connections
+                  </span>
                   <div className="flex gap-1">
                     <button onClick={() => setCurrentView('manage_connections')} className="hover:text-zinc-900 transition-colors" title="Manage Connections">
                       <span className="material-symbols-outlined text-[16px]">settings</span>
@@ -433,21 +512,44 @@ export function UnifiedChat() {
                                   }}
                                   className="flex flex-1 items-center gap-3 truncate text-left h-full py-1 ml-1"
                                >
+                                  <div className="w-5 h-5 flex items-center justify-center shrink-0">
+                                     {conn.type === 'Azure SQL' && <img src="/assets/iconos sql/DeviconAzuresqldatabase.svg" className="w-4 h-4 object-contain" alt="Azure" />}
+                                     {conn.type === 'PostgreSQL' && <img src="/assets/iconos sql/DeviconPostgresqlWordmark.svg" className="w-4 h-4 object-contain" alt="Postgres" />}
+                                     {conn.type === 'MySQL' && <img src="/assets/iconos sql/LogosMysql.svg" className="w-4 h-4 object-contain" alt="MySQL" />}
+                                     {(!conn.type || !['Azure SQL', 'PostgreSQL', 'MySQL'].includes(conn.type)) && (
+                                        <div className={`w-1.5 h-1.5 rounded-full ${isConnActive ? 'bg-emerald-500' : 'bg-zinc-400'}`}></div>
+                                     )}
+                                  </div>
                                   <span className="truncate">{conn.name}</span>
                                </button>
                                <button 
-                                 onClick={(e) => {
-                                     e.stopPropagation();
-                                     const newChatId = 'chat-' + Date.now();
-                                     setChatSessions(prev => [...prev, { id: newChatId, connectionId: conn.id, title: 'New Chat', messages: [] }]);
-                                     setOpenTabs(prev => [...prev, { type: 'chat', id: newChatId, title: 'New Chat', connectionId: conn.id }]);
-                                     setCurrentView(newChatId);
-                                     setExpandedConns(prev => ({ ...prev, [conn.id]: true })); // Expand on new chat
-                                 }}
-                                 className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-zinc-200 rounded text-zinc-500 hover:text-zinc-900 transition-all shrink-0 ml-2" 
-                                 title="New Chat">
-                                  <span className="material-symbols-outlined text-[16px]">add</span>
-                               </button>
+                                  onClick={(e) => {
+                                      e.stopPropagation();
+                                      const newChatId = 'chat-' + Date.now();
+                                      setChatSessions(prev => [...prev, { id: newChatId, connectionId: conn.id, title: 'New Chat', messages: [] }]);
+                                      setOpenTabs(prev => [...prev, { type: 'chat', id: newChatId, title: 'New Chat', connectionId: conn.id }]);
+                                      setCurrentView(newChatId);
+                                      setExpandedConns(prev => ({ ...prev, [conn.id]: true })); // Expand on new chat
+                                  }}
+                                  className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-zinc-200 rounded text-zinc-500 hover:text-zinc-900 transition-all shrink-0 ml-1" 
+                                  title="New Chat">
+                                   <span className="material-symbols-outlined text-[16px]">add</span>
+                                </button>
+                                <button 
+                                  onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (confirm(`Are you sure you want to delete ${conn.name}?`)) {
+                                          setConnections(prev => prev.filter(c => c.id !== conn.id));
+                                          setChatSessions(prev => prev.filter(c => c.connectionId !== conn.id));
+                                          setOpenTabs(prev => prev.filter(t => t.connectionId !== conn.id));
+                                          if (currentView === conn.id) setCurrentView('welcome');
+                                          addLog("SUCCESS", `Connection ${conn.name} removed.`);
+                                      }
+                                  }}
+                                  className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-red-50 rounded text-zinc-400 hover:text-red-500 transition-all shrink-0 ml-1" 
+                                  title="Delete Connection">
+                                   <span className="material-symbols-outlined text-[16px]">delete</span>
+                                </button>
                            </div>
                            {isExpanded && chats.length > 0 && (
                               <div className="pl-6 pr-2 space-y-0.5">
@@ -675,18 +777,45 @@ export function UnifiedChat() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {['PostgreSQL', 'MySQL', 'TursoDB', 'Cloudflare D1', 'ClickHouse', 'MotherDuck', 'GraphQL APIs', 'BigQuery'].map((db, i) => (
+                {[
+                  { name: 'Azure SQL', icon: '/assets/iconos sql/DeviconAzuresqldatabase.svg' },
+                  { name: 'PostgreSQL', icon: '/assets/iconos sql/DeviconPostgresqlWordmark.svg' },
+                  { name: 'MySQL', icon: '/assets/iconos sql/LogosMysql.svg' },
+                  { name: 'MariaDB', icon: '/assets/iconos sql/LogosMariadb.svg' },
+                  { name: 'SQLite', icon: '/assets/iconos sql/LogosSqlite.svg' },
+                  { name: 'Oracle', icon: '/assets/iconos sql/DeviconOracle.svg' },
+                  { name: 'TursoDB', icon: 'database' },
+                  { name: 'Cloudflare D1', icon: 'database' },
+                  { name: 'ClickHouse', icon: 'database' },
+                  { name: 'MotherDuck', icon: 'database' },
+                  { name: 'GraphQL APIs', icon: 'database' },
+                  { name: 'BigQuery', icon: 'database' }
+                ].map((item, i) => (
                   <button 
-                    key={db}
-                    onClick={() => db === 'PostgreSQL' ? setCurrentView('connect_postgres') : null}
-                    className={`bg-white border border-zinc-200 hover:border-zinc-300 rounded-2xl p-5 flex items-center gap-4 transition-colors group ${db !== 'PostgreSQL' && 'opacity-50 cursor-not-allowed hover:border-zinc-200'}`}
+                    key={item.name}
+                    onClick={() => {
+                        if (item.name === 'Azure SQL') {
+                            setEditingConnId(null);
+                            setConnForm({ name: "", host: "", port: "", database: "", username: "", password: "", type: "Azure SQL", authType: 'SQL' });
+                            setCurrentView('connect_azuresql');
+                        } else if (item.name === 'PostgreSQL') {
+                            setEditingConnId(null);
+                            setConnForm({ name: "My Postgres Database", host: "db.mypostgres.com", port: "5432", database: "analytics_db", username: "postgres_admin", password: "", type: "PostgreSQL" });
+                            setCurrentView('connect_postgres');
+                        }
+                    }}
+                    className={`bg-white border border-zinc-200 hover:border-zinc-300 rounded-2xl p-5 flex items-center gap-4 transition-colors group ${item.name !== 'Azure SQL' && 'opacity-50 cursor-not-allowed hover:border-zinc-200'}`}
                   >
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center transition-transform ${db === 'PostgreSQL' ? 'bg-zinc-50 group-hover:bg-zinc-100 group-hover:scale-105' : 'bg-zinc-50'}`}>
-                       <span className={`material-symbols-outlined text-[20px] ${db === 'PostgreSQL' ? 'text-zinc-900' : 'text-zinc-500'}`}>database</span>
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center transition-transform ${item.name === 'Azure SQL' ? 'bg-zinc-50 group-hover:bg-zinc-100 group-hover:scale-105' : 'bg-zinc-50'}`}>
+                       {item.icon.includes('.svg') ? (
+                          <img src={item.icon} className="w-6 h-6 object-contain" alt={item.name} />
+                       ) : (
+                          <span className={`material-symbols-outlined text-[20px] ${item.name === 'Azure SQL' ? 'text-zinc-900' : 'text-zinc-500'}`}>database</span>
+                       )}
                     </div>
                     <div className="flex flex-col items-start gap-1">
-                      <span className={`text-[14px] font-medium ${db === 'PostgreSQL' ? 'text-zinc-900' : 'text-zinc-700'}`}>{db}</span>
-                      {db !== 'PostgreSQL' && <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Coming Soon</span>}
+                      <span className={`text-[14px] font-medium ${item.name === 'Azure SQL' ? 'text-zinc-900' : 'text-zinc-700'}`}>{item.name}</span>
+                      {item.name !== 'Azure SQL' && <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Coming Soon</span>}
                     </div>
                   </button>
                 ))}
@@ -694,8 +823,8 @@ export function UnifiedChat() {
             </div>
           )}
 
-          {/* VIEW: CONNECT POSTGRES */}
-          {currentView === 'connect_postgres' && (
+          {/* VIEW: CONNECT AZURE SQL */}
+          {currentView === 'connect_azuresql' && (
             <div className="flex h-full">
                <div className="flex-1 flex justify-center py-12 px-8 overflow-y-auto">
                   <div className="w-full max-w-[480px]">
@@ -704,7 +833,10 @@ export function UnifiedChat() {
                         <span className="material-symbols-outlined text-[16px]">arrow_back</span> Back to Integrations
                      </button>
 
-                     <h2 className="text-2xl font-semibold tracking-tight text-zinc-900 mb-8">Connect Postgres Database</h2>
+                      <div className="flex items-center gap-4 mb-8">
+                        <img src="/assets/iconos sql/DeviconAzuresqldatabase.svg" className="w-10 h-10" alt="Azure SQL" />
+                        <h2 className="text-2xl font-semibold tracking-tight text-zinc-900 leading-tight">Connect Azure SQL</h2>
+                      </div>
                      
                      <div className="space-y-6 bg-white border border-zinc-200 p-8 rounded-3xl">
                          {connError && (
@@ -713,25 +845,99 @@ export function UnifiedChat() {
                                {connError}
                             </div>
                          )}
+                         {testSuccess && (
+                            <div className="p-4 bg-emerald-50 text-emerald-700 rounded-2xl text-[14px] font-medium border border-emerald-200 flex items-center justify-center gap-3 animate-in fade-in slide-in-from-top-4 duration-300">
+                               <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                                  <span className="material-symbols-outlined text-[20px]">check</span>
+                               </div>
+                               Connection verified! Redirecting...
+                            </div>
+                         )}
                          
                          <div className="space-y-1.5">
                             <label className="text-[12px] font-semibold text-zinc-600 uppercase tracking-widest">Display Name*</label>
                             <input 
                               type="text" 
                               value={connForm.name || ""}
-                              onChange={(e) => setConnForm(prev => ({ ...prev, name: e.target.value }))}
+                              onChange={(e) => setConnForm(prev => ({ ...prev, name: e.target.value, type: "Azure SQL" }))}
                               className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-[13px] text-black focus:outline-none focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200 transition-colors font-mono" 
                             />
                          </div>
 
                          {[
-                          { label: "Host address*", key: "host", type: "text" },
-                          { label: "Port*", key: "port", type: "text" },
-                          { label: "Database*", key: "database", type: "text" },
+                          { label: "Server Address (URL)*", key: "host", type: "text" },
+                          { label: "Database Name*", key: "database", type: "text" }
+                        ].map((field, i) => (
+                           <div key={i} className="space-y-1.5">
+                              <label className="text-[12px] font-semibold text-zinc-600 uppercase tracking-widest">{field.label}</label>
+                              <input 
+                                type={field.type}
+                                value={(connForm as any)[field.key] || ""}
+                                onChange={(e) => setConnForm(prev => ({ ...prev, [field.key]: e.target.value }))}
+                                className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-[13px] text-black focus:outline-none focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200 transition-colors font-mono" 
+                              />
+                           </div>
+                        ))}
+
+                        {connForm.type === 'Azure SQL' && (
+                           <div className="space-y-3 pt-2">
+                              <label className="text-[12px] font-semibold text-zinc-600 uppercase tracking-widest">Authentication Method</label>
+                              <div className="grid grid-cols-2 gap-3">
+                                 <button 
+                                   onClick={() => setConnForm(prev => ({ ...prev, authType: 'SQL' }))}
+                                   className={`flex items-center gap-2 p-3 border rounded-xl text-[13px] font-medium transition-colors ${connForm.authType !== 'AzureAD' ? 'border-zinc-900 bg-zinc-50 text-zinc-900' : 'border-zinc-200 bg-white text-zinc-500 hover:border-zinc-300'}`}>
+                                   <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${connForm.authType !== 'AzureAD' ? 'border-zinc-900' : 'border-zinc-300'}`}>
+                                      {connForm.authType !== 'AzureAD' && <div className="w-2 h-2 rounded-full bg-zinc-900"></div>}
+                                   </div>
+                                   SQL Authentication
+                                 </button>
+                                 <button 
+                                   onClick={() => setConnForm(prev => ({ ...prev, authType: 'AzureAD' }))}
+                                   className={`flex items-center gap-2 p-3 border rounded-xl text-[13px] font-medium transition-colors text-left leading-tight ${connForm.authType === 'AzureAD' ? 'border-zinc-900 bg-zinc-50 text-zinc-900' : 'border-zinc-200 bg-white text-zinc-500 hover:border-zinc-300'}`}>
+                                   <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${connForm.authType === 'AzureAD' ? 'border-zinc-900' : 'border-zinc-300'}`}>
+                                      {connForm.authType === 'AzureAD' && <div className="w-2 h-2 rounded-full bg-zinc-900"></div>}
+                                   </div>
+                                   Microsoft Entra ID
+                                 </button>
+                              </div>
+                           </div>
+                        )}
+
+                        {connForm.authType === 'AzureADToken' && (
+                           <div className="pt-2">
+                             <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 p-4 rounded-xl flex items-center justify-between">
+                               <div className="flex items-center gap-3">
+                                 <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
+                                   <span className="material-symbols-outlined text-[18px]">lock_open</span>
+                                 </div>
+                                 <div>
+                                   <div className="text-[13px] font-bold">Successfully authenticated</div>
+                                   <div className="text-[12px] opacity-80">{connForm.username}</div>
+                                 </div>
+                               </div>
+                               <button onClick={() => setConnForm(prev => ({ ...prev, authType: 'AzureAD', username: '', password: '' }))} className="text-[12px] font-semibold underline hover:text-emerald-900 transition-colors">
+                                 Sign out
+                               </button>
+                             </div>
+                           </div>
+                        )}
+
+                        {connForm.authType === 'AzureAD' && (
+                           <div className="pt-2">
+                              <button 
+                                onClick={handleMsalLogin}
+                                className="w-full bg-[#2F2F2F] hover:bg-[#1f1f1f] text-white border border-[#2F2F2F] rounded-xl px-4 py-3.5 text-[14px] font-semibold transition-colors flex items-center justify-center gap-3">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 21 21"><path fill="#f35325" d="M1 1h9v9H1z"/><path fill="#81bc06" d="M11 1h9v9h-9z"/><path fill="#05a6f0" d="M1 11h9v9H1z"/><path fill="#ffba08" d="M11 11h9v9h-9z"/></svg>
+                                Sign in with Microsoft
+                              </button>
+                           </div>
+                        )}
+
+                        {(!connForm.authType || connForm.authType === 'SQL') && [
                           { label: "Username*", key: "username", type: "text" },
                           { label: "Password*", key: "password", type: "password" }
                         ].map((field, i) => (
-                           <div key={i} className="space-y-1.5">
+                           <div key={i + 10} className="space-y-1.5 pt-2">
                               <label className="text-[12px] font-semibold text-zinc-600 uppercase tracking-widest">{field.label}</label>
                               <input 
                                 type={field.type}
@@ -752,8 +958,23 @@ export function UnifiedChat() {
                           )}
                           <button 
                             onClick={handleSaveConnection}
-                            className={`bg-zinc-900 text-white font-medium rounded-xl py-3.5 text-[14px] hover:bg-zinc-800 transition-colors flex justify-center items-center gap-2 ${editingConnId ? 'w-2/3' : 'w-full'}`}>
-                              {editingConnId ? 'Save Changes' : 'Test and Save Connection'} <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+                            disabled={isTestingConnection}
+                            className={`bg-zinc-900 text-white font-medium rounded-xl py-3.5 text-[14px] hover:bg-zinc-800 transition-colors flex justify-center items-center gap-2 disabled:bg-zinc-400 disabled:cursor-not-allowed ${editingConnId ? 'w-2/3' : 'w-full'}`}>
+                              {isTestingConnection ? (
+                                <>
+                                  <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                                  Testing...
+                                </>
+                              ) : testSuccess ? (
+                                <>
+                                  <span className="material-symbols-outlined text-[18px]">verified</span>
+                                  Success!
+                                </>
+                              ) : (
+                                <>
+                                  {editingConnId ? 'Save Changes' : 'Test and Save Connection'} <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+                                </>
+                              )}
                           </button>
                         </div>
                      </div>
@@ -766,17 +987,46 @@ export function UnifiedChat() {
                   <div className="space-y-10">
                      <div className="space-y-4">
                        <div className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold">Documentation</div>
-                       <a className="flex items-center gap-3 text-[13px] font-medium text-zinc-600 hover:text-zinc-900 transition-colors" href="#">
-                         <div className="w-8 h-8 rounded-lg bg-white border border-zinc-200 flex items-center justify-center shadow-sm"><span className="material-symbols-outlined text-[16px]">description</span></div>
-                         Connecting PostgreSQL
-                       </a>
+                       <a className="flex items-center gap-3 text-[13px] font-medium text-zinc-600 hover:text-zinc-900 transition-colors" href="https://learn.microsoft.com/en-us/azure/azure-sql/database/connect-query-portal" target="_blank" rel="noopener noreferrer">
+                          <img src="/assets/iConos 28_28/LogosMicrosoftIcon.svg" className="w-8 h-8" alt="Microsoft" />
+                          Connecting Azure SQL
+                        </a>
                      </div>
                      <div className="space-y-4">
                        <div className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold">Platform Guides</div>
                        <div className="space-y-2">
-                         {['DigitalOcean', 'Supabase', 'Neon', 'AWS RDS', 'Heroku'].map((plat) => (
-                           <a key={plat} className="flex items-center gap-3 text-[13px] font-medium text-zinc-600 hover:text-zinc-900 transition-colors p-2 rounded-lg hover:bg-zinc-900/5 -ml-2" href="#">
-                             <span className="material-symbols-outlined text-[16px] text-zinc-400">public</span> {plat}
+                         {[
+                           { 
+                             name: 'Azure SQL', 
+                             url: 'https://learn.microsoft.com/en-us/azure/azure-sql/database/',
+                             icon: <img src="/assets/iConos 28_28/MaterialIconThemeAzure.svg" className="w-6 h-6" alt="Azure" />
+                           },
+                           { 
+                             name: 'DigitalOcean', 
+                             url: 'https://docs.digitalocean.com/products/databases/',
+                             icon: <img src="/assets/iConos 28_28/LogosDigitalOceanIcon.svg" className="w-6 h-6" alt="DigitalOcean" />
+                           },
+                           { 
+                             name: 'Heroku', 
+                             url: 'https://devcenter.heroku.com/categories/heroku-postgres',
+                             icon: <img src="/assets/iConos 28_28/LogosHerokuIcon.svg" className="w-6 h-6" alt="Heroku" />
+                           },
+                           { 
+                             name: 'Neon', 
+                             url: 'https://neon.tech/docs/connect/connect-from-any-app',
+                             icon: <img src="/assets/iConos 28_28/LogosNeonIcon.svg" className="w-6 h-6" alt="Neon" />
+                           },
+                           { 
+                             name: 'Supabase', 
+                             url: 'https://supabase.com/docs/guides/database/connecting-to-postgres',
+                             icon: <img src="/assets/iConos 28_28/DeviconSupabase.svg" className="w-6 h-6" alt="Supabase" />
+                           }
+                         ].map((plat) => (
+                           <a key={plat.name} className="flex items-center gap-3 text-[13px] font-medium text-zinc-600 hover:text-zinc-900 transition-colors p-2 rounded-lg hover:bg-zinc-900/5 -ml-2" href={plat.url} target="_blank" rel="noopener noreferrer">
+                             <div className="w-7 h-7 flex items-center justify-center shrink-0">
+                               {plat.icon}
+                             </div>
+                             {plat.name}
                            </a>
                          ))}
                        </div>
@@ -795,7 +1045,7 @@ export function UnifiedChat() {
                   <p className="text-[14px] text-zinc-500 font-medium">View, edit, or remove configured database connections.</p>
                 </div>
                 <button 
-                  onClick={() => { setEditingConnId(null); setConnForm({ name: "New Connection", host: "", port: "5432", database: "", username: "", password: "", type: "PostgreSQL" }); setCurrentView('connect_postgres'); }}
+                  onClick={() => { setEditingConnId(null); setConnForm({ name: "", host: "", port: "", database: "", username: "", password: "", type: "Azure SQL" }); setCurrentView('connect_azuresql'); }}
                   className="bg-zinc-900 text-white hover:bg-zinc-800 px-5 py-2.5 rounded-xl text-[13px] font-medium flex items-center gap-2 transition-colors shadow-sm"
                 >
                   <span className="material-symbols-outlined text-[16px]">add</span> Add Connection
@@ -818,8 +1068,14 @@ export function UnifiedChat() {
                       <div key={conn.id} className="grid grid-cols-12 gap-4 p-4 items-center text-[14px] hover:bg-zinc-50/50 transition-colors text-zinc-700">
                         <div className="col-span-3 font-medium text-zinc-900 truncate">
                           <div className="flex items-center gap-2">
-                             <span className="material-symbols-outlined text-[16px] text-zinc-400">database</span>
-                             {conn.name}
+                                <div className="w-10 h-10 rounded-xl bg-zinc-50 flex items-center justify-center border border-zinc-100">
+                                   {conn.type === 'Azure SQL' && <img src="/assets/iconos sql/DeviconAzuresqldatabase.svg" className="w-6 h-6 object-contain" alt="Azure" />}
+                                   {(conn.type === 'PostgreSQL' || (!conn.type && !conn.authType)) && <img src="/assets/iconos sql/DeviconPostgresqlWordmark.svg" className="w-6 h-6 object-contain" alt="Postgres" />}
+                                   {conn.type === 'MySQL' && <img src="/assets/iconos sql/LogosMysql.svg" className="w-6 h-6 object-contain" alt="MySQL" />}
+                                   {conn.type && !['Azure SQL', 'PostgreSQL', 'MySQL'].includes(conn.type) && (
+                                      <span className="material-symbols-outlined text-[22px] text-zinc-900">database</span>
+                                   )}
+                                </div>   {conn.name}
                           </div>
                         </div>
                         <div className="col-span-2">{conn.type || 'PostgreSQL'}</div>
@@ -827,7 +1083,30 @@ export function UnifiedChat() {
                         <div className="col-span-2 truncate">{conn.database || 'analytics_db'}</div>
                         <div className="col-span-2 flex justify-end gap-2">
                           <button 
-                            onClick={() => { setEditingConnId(conn.id); setConnForm(conn); setCurrentView('connect_postgres'); }}
+                            onClick={() => {
+                               const newChatId = 'chat-' + Date.now();
+                               setChatSessions(prev => [...prev, { id: newChatId, connectionId: conn.id, title: 'New Chat', messages: [] }]);
+                               setOpenTabs(prev => { 
+                                   if (!prev.find(t => t.id === newChatId)) {
+                                       return [...prev, { type: 'chat', id: newChatId, title: 'New Chat', connectionId: conn.id }];
+                                   }
+                                   return prev;
+                               });
+                               setCurrentView(newChatId);
+                               setExpandedConns(prev => ({ ...prev, [conn.id]: true }));
+                               addLog("SUCCESS", `Connected to ${conn.name}.`);
+                            }}
+                            className="w-8 h-8 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-100 flex items-center justify-center transition-colors"
+                            title="Connect & Chat"
+                          >
+                            <span className="material-symbols-outlined text-[16px]">link</span>
+                          </button>
+                          <button 
+                            onClick={() => { 
+                               setEditingConnId(conn.id); 
+                               setConnForm({ ...conn, type: conn.type || (conn.authType ? 'Azure SQL' : 'PostgreSQL') }); 
+                               setCurrentView(conn.authType || conn.type === 'Azure SQL' ? 'connect_azuresql' : 'connect_postgres'); 
+                            }}
                             className="w-8 h-8 rounded-lg border border-zinc-200 bg-white text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50 flex items-center justify-center transition-colors"
                             title="Edit"
                           >
@@ -1264,7 +1543,7 @@ export function UnifiedChat() {
                                                                                         <YAxis tick={{fontSize: 12, fill: '#94a3b8'}} tickLine={false} axisLine={false} dx={-10} />
                                                                                         <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)', fontSize: '13px', padding: '12px 16px', fontWeight: 500}} />
                                                                                         <Legend wrapperStyle={{fontSize: '13px', paddingTop: '20px'}} iconType="circle" />
-                                                                                        <Bar dataKey={parsed.chart.y_axis} radius={[4, 4, 0, 0]} maxBarSize={50}>
+                                                                                        <Bar dataKey={parsed.chart.y_axis} radius={[4, 4, 0, 0]} maxBarSize={50} minPointSize={5}>
                                                                                             {msg.results.map((entry, index) => (
                                                                                                 <Cell key={`cell-${index}`} fill={['#6366f1', '#3b82f6', '#0ea5e9', '#06b6d4', '#14b8a6', '#10b981', '#84cc16', '#eab308', '#f59e0b'][index % 9]} />
                                                                                             ))}
@@ -1277,7 +1556,7 @@ export function UnifiedChat() {
                                                                                         <YAxis type="category" dataKey={parsed.chart.x_axis} tick={{fontSize: 12, fill: '#94a3b8'}} tickLine={false} axisLine={false} dx={-10} width={80} />
                                                                                         <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)', fontSize: '13px', padding: '12px 16px', fontWeight: 500}} />
                                                                                         <Legend wrapperStyle={{fontSize: '13px', paddingTop: '20px'}} iconType="circle" />
-                                                                                        <Bar dataKey={parsed.chart.y_axis} radius={[0, 4, 4, 0]} maxBarSize={30}>
+                                                                                        <Bar dataKey={parsed.chart.y_axis} radius={[0, 4, 4, 0]} maxBarSize={30} minPointSize={5}>
                                                                                             {msg.results.map((entry, index) => (
                                                                                                 <Cell key={`cell-${index}`} fill={['#6366f1', '#3b82f6', '#0ea5e9', '#06b6d4', '#14b8a6', '#10b981', '#84cc16', '#eab308', '#f59e0b'][index % 9]} />
                                                                                             ))}

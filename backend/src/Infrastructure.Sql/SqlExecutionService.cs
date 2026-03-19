@@ -6,7 +6,7 @@ using Microsoft.Extensions.Configuration;
 
 public interface ISqlExecutionService
 {
-    Task<List<Dictionary<string, object?>>> ExecuteQueryAsync(string sql);
+    Task<List<Dictionary<string, object?>>> ExecuteQueryAsync(string sql, DatabaseConfig? config = null);
     Task SaveAuditAsync(AuditTrailRecord audit);
     Task<List<Dictionary<string, object?>>> GetRecentAuditsAsync(int count);
 }
@@ -17,12 +17,53 @@ public sealed class SqlExecutionService(IConfiguration configuration) : ISqlExec
         configuration["SqlConnectionString"]
         ?? throw new InvalidOperationException("SqlConnectionString configuration is required.");
 
-    public async Task<List<Dictionary<string, object?>>> ExecuteQueryAsync(string sql)
+    public async Task<List<Dictionary<string, object?>>> ExecuteQueryAsync(string sql, DatabaseConfig? config = null)
     {
-        await using var connection = new SqlConnection(_connectionString);
-        await connection.OpenAsync();
+        string connectionString = _connectionString;
+        
+        if (config != null && !string.IsNullOrWhiteSpace(config.Host) && string.Equals(config.Type, "Azure SQL", StringComparison.OrdinalIgnoreCase))
+        {
+            var portPart = string.IsNullOrWhiteSpace(config.Port) ? "" : $",{config.Port}";
+            
+            if (string.Equals(config.AuthType, "AzureAD", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(config.Username))
+            {
+                // ActiveDirectoryPassword requires Username and Password of the Microsoft Entra ID user
+                connectionString = $"Server={config.Host}{portPart};Initial Catalog={config.Database};User ID={config.Username};Password={config.Password};Encrypt=True;TrustServerCertificate=False;Authentication=Active Directory Password;Connection Timeout=30;";
+            }
+            else if (string.IsNullOrWhiteSpace(config.Username))
+            {
+                connectionString = $"Server={config.Host}{portPart};Initial Catalog={config.Database};Encrypt=True;TrustServerCertificate=False;Authentication=Active Directory Default;Connection Timeout=30;";
+            }
+            else
+            {
+                connectionString = $"Server={config.Host}{portPart};Initial Catalog={config.Database};User ID={config.Username};Password={config.Password};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;";
+            }
+        }
 
-        await using var command = new SqlCommand(sql, connection)
+        SqlConnection connection;
+        try 
+        {
+            connection = new SqlConnection(connectionString);
+            await connection.OpenAsync();
+        } 
+        catch 
+        {
+            if (connectionString != _connectionString) 
+            {
+                // Fallback to default if custom connection fails
+                connectionString = _connectionString;
+                connection = new SqlConnection(connectionString);
+                await connection.OpenAsync();
+            }
+            else 
+            {
+                throw;
+            }
+        }
+
+        await using var cmdConnection = connection; // Ensure disposal
+        
+        await using var command = new SqlCommand(sql, cmdConnection)
         {
             CommandTimeout = 30
         };
