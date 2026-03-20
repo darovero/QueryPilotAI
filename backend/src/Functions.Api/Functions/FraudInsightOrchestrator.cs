@@ -259,12 +259,20 @@ public class FraudInsightOrchestrator
 
         if (request.SessionId is not null && Guid.TryParse(request.SessionId, out var saveSessionGuid))
         {
-            await context.CallActivityAsync(nameof(SaveConversationTurnActivity),
-                new ConversationTurnRecord(
-                    Guid.Empty, saveSessionGuid, request.UserId, "assistant",
-                    request.Question, validation.NormalizedSql,
-                    JsonSerializer.Serialize(interpretation),
-                    summary, null, null, DateTimeOffset.UtcNow));
+            try
+            {
+                await context.CallActivityAsync(nameof(SaveConversationTurnActivity),
+                    new ConversationTurnRecord(
+                        Guid.Empty, saveSessionGuid, request.UserId, "assistant",
+                        request.Question, validation.NormalizedSql,
+                        JsonSerializer.Serialize(interpretation),
+                        summary, null, null, DateTimeOffset.UtcNow));
+            }
+            catch (Exception ex)
+            {
+                // Don't crash the orchestration if saving the turn fails (e.g. FK constraint)
+                Console.WriteLine($"[WARNING] SaveConversationTurn failed: {ex.Message}");
+            }
         }
 
         await context.CallActivityAsync(nameof(SaveAuditTrailActivity), new AuditTrailRecord(
