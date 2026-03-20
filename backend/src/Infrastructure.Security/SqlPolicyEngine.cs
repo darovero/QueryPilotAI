@@ -8,16 +8,9 @@ public sealed class SqlPolicyEngine : ISqlPolicyEngine
 {
     private static readonly string[] ForbiddenTokens =
     [
-        "INSERT ", "UPDATE ", "DELETE ", "MERGE ", "DROP ", "ALTER ", "TRUNCATE ", "EXEC ", "CREATE "
-    ];
-
-    private static readonly string[] AllowedObjects =
-    [
-        "dbo.vw_daily_fraud_metrics",
-        "dbo.vw_merchant_chargeback_trends",
-        "dbo.vw_customer_risk_profile",
-        "dbo.vw_failed_then_successful_transactions",
-        "dbo.vw_high_risk_device_reuse"
+        "INSERT ", "UPDATE ", "DELETE ", "MERGE ", "DROP ", "ALTER ", "TRUNCATE ", "EXEC ", "CREATE ",
+        "GRANT ", "REVOKE ", "DENY ", "BACKUP ", "RESTORE ", "SHUTDOWN ", "KILL ", "OPENROWSET", "OPENDATASOURCE",
+        "xp_", "sp_", "DBCC "
     ];
 
     public SqlValidationResult Validate(string sql)
@@ -28,11 +21,14 @@ public sealed class SqlPolicyEngine : ISqlPolicyEngine
         }
 
         var normalized = sql.Trim().Replace("\r", " ").Replace("\n", " ");
+        // Strip trailing semicolon so it doesn't trigger multi-statement check
+        if (normalized.EndsWith(";"))
+            normalized = normalized[..^1].TrimEnd();
         var upper = normalized.ToUpperInvariant();
 
-        if (!upper.StartsWith("SELECT "))
+        if (!upper.StartsWith("SELECT ") && !upper.StartsWith("WITH "))
         {
-            return new SqlValidationResult(false, "Critical", false, ["Solo se permiten consultas SELECT."], normalized);
+            return new SqlValidationResult(false, "Critical", false, ["Solo se permiten consultas SELECT (o CTEs con WITH)."], normalized);
         }
 
         if (ForbiddenTokens.Any(token => upper.Contains(token)))
@@ -45,15 +41,7 @@ public sealed class SqlPolicyEngine : ISqlPolicyEngine
             return new SqlValidationResult(false, "Critical", false, ["No se permiten múltiples sentencias."], normalized);
         }
 
-        var fromMatches = Regex.Matches(normalized, @"(?i)\b(from|join)\s+([\[\]\w\.]+)");
-        var referencedObjects = fromMatches.Select(m => m.Groups[2].Value.Replace("[", "").Replace("]", "")).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
-
-        var unauthorized = referencedObjects.Where(o => !AllowedObjects.Contains(o, StringComparer.OrdinalIgnoreCase)).ToArray();
-        if (unauthorized.Length > 0)
-        {
-            return new SqlValidationResult(false, "High", false, [$"Objeto no autorizado: {string.Join(", ", unauthorized)}"], normalized);
-        }
-
+        // Flag queries that expose potentially sensitive fields
         var requiresApproval = upper.Contains("CUSTOMER_ID") || upper.Contains("FULL_NAME");
         var reasons = requiresApproval ? new[] { "La consulta expone detalle potencialmente sensible." } : Array.Empty<string>();
         var risk = requiresApproval ? "High" : "Medium";

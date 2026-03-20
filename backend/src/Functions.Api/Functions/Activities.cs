@@ -1,8 +1,44 @@
 using Core.Application.Contracts;
 using Core.Domain.Policies;
+using Infrastructure.AzureOpenAI;
+using Infrastructure.Sql;
 using Microsoft.Azure.Functions.Worker;
+using System.Text.Json;
 
 namespace Functions.Api.Functions;
+
+// --- Foundry Agent Activities (replaces old hardcoded services) ---
+
+public class ClassifyWithConciergeActivity(IFoundryAgentClient agentClient)
+{
+    [Function(nameof(ClassifyWithConciergeActivity))]
+    public Task<ConversationalClassification?> Run([ActivityTrigger] QueryRequest request) =>
+        agentClient.ClassifyMessageAsync(request.UserId, request.Question);
+}
+
+public class ExtractSchemaActivity(ISchemaExtractorService schemaExtractor)
+{
+    [Function(nameof(ExtractSchemaActivity))]
+    public Task<string> Run([ActivityTrigger] DatabaseConfig config) =>
+        schemaExtractor.ExtractSchemaAsync(config);
+}
+
+public class PlanSqlActivity(IFoundryAgentClient agentClient)
+{
+    [Function(nameof(PlanSqlActivity))]
+    public Task<SqlPlannerResponse> Run([ActivityTrigger] SqlPlannerInput input) =>
+        agentClient.PlanSqlAsync(input.Question, input.DbSchema, input.ConversationContext);
+}
+
+public class InterpretResultsActivity(IFoundryAgentClient agentClient)
+{
+    [Function(nameof(InterpretResultsActivity))]
+    public Task<ResultInterpretation> Run([ActivityTrigger] ResultInterpreterInput input) =>
+        agentClient.InterpretResultsAsync(
+            input.Question, input.IntentJson, input.Sql, input.Rows, input.GovernanceJson);
+}
+
+// --- Preserved Activities ---
 
 public class AnalyzePromptSafetyActivity(Infrastructure.Security.IPromptSafetyService safetyService)
 {
@@ -11,63 +47,21 @@ public class AnalyzePromptSafetyActivity(Infrastructure.Security.IPromptSafetySe
         safetyService.AnalyzeAsync(request.Question, request.Role);
 }
 
-public class ClassifyConversationActivity(Infrastructure.AzureOpenAI.IFoundryAgentService agentService)
-{
-    [Function(nameof(ClassifyConversationActivity))]
-    public Task<ConversationalClassification?> Run([ActivityTrigger] QueryRequest request) =>
-        agentService.ProcessUserMessageAsync(request.UserId, request.SessionId, request.Question);
-}
-
-public class DecomposeIntentActivity(Infrastructure.AzureOpenAI.IIntentService intentService)
-{
-    [Function(nameof(DecomposeIntentActivity))]
-    public Task<AnalyticalIntent> Run([ActivityTrigger] IntentParsingInput input) =>
-        intentService.ParseIntentAsync(input.Request, input.ConversationContext);
-}
-
-public class GetConversationContextActivity(Infrastructure.AzureOpenAI.IConversationMemoryService conversationMemoryService)
-{
-    [Function(nameof(GetConversationContextActivity))]
-    public Task<List<ConversationTurn>> Run([ActivityTrigger] ConversationContextRequest request) =>
-        conversationMemoryService.GetRecentTurnsAsync(request.UserId, request.SessionId, request.MaxTurns);
-}
-
-public class SaveConversationTurnActivity(Infrastructure.AzureOpenAI.IConversationMemoryService conversationMemoryService)
-{
-    [Function(nameof(SaveConversationTurnActivity))]
-    public Task Run([ActivityTrigger] ConversationTurnUpsert turn) =>
-        conversationMemoryService.AppendTurnAsync(turn);
-}
-
-public class GenerateSqlActivity(Infrastructure.AzureOpenAI.ISqlGenerationService sqlService)
-{
-    [Function(nameof(GenerateSqlActivity))]
-    public Task<string> Run([ActivityTrigger] AnalyticalIntent intent) =>
-        sqlService.GenerateSqlAsync(intent);
-}
-
-public class ValidateSqlPolicyActivity(Core.Domain.Policies.ISqlPolicyEngine sqlPolicyEngine)
+public class ValidateSqlPolicyActivity(ISqlPolicyEngine sqlPolicyEngine)
 {
     [Function(nameof(ValidateSqlPolicyActivity))]
     public Task<SqlValidationResult> Run([ActivityTrigger] string sql) =>
         Task.FromResult(sqlPolicyEngine.Validate(sql));
 }
 
-public class ExecuteSqlActivity(Infrastructure.Sql.ISqlExecutionService sqlExecutionService)
+public class ExecuteSqlActivity(ISqlExecutionService sqlExecutionService)
 {
     [Function(nameof(ExecuteSqlActivity))]
     public Task<List<Dictionary<string, object?>>> Run([ActivityTrigger] SqlExecutionInput input) =>
         sqlExecutionService.ExecuteQueryAsync(input.Sql, input.Config);
 }
 
-public class SummarizeInsightActivity(Infrastructure.AzureOpenAI.ISummaryService summaryService)
-{
-    [Function(nameof(SummarizeInsightActivity))]
-    public Task<string> Run([ActivityTrigger] SummaryInput input) =>
-        summaryService.SummarizeAsync(input.Question, input.Sql, input.Rows);
-}
-
-public class SaveAuditTrailActivity(Infrastructure.Sql.ISqlExecutionService sqlExecutionService)
+public class SaveAuditTrailActivity(ISqlExecutionService sqlExecutionService)
 {
     [Function(nameof(SaveAuditTrailActivity))]
     public async Task Run([ActivityTrigger] AuditTrailRecord audit)
@@ -75,3 +69,41 @@ public class SaveAuditTrailActivity(Infrastructure.Sql.ISqlExecutionService sqlE
         await sqlExecutionService.SaveAuditAsync(audit);
     }
 }
+
+public class GetSchemaFromCacheActivity(IAppDatabaseService appDb)
+{
+    [Function(nameof(GetSchemaFromCacheActivity))]
+    public async Task<string?> Run([ActivityTrigger] Guid connectionId)
+    {
+        var connection = await appDb.GetConnectionAsync(connectionId);
+        return connection?.SchemaCache;
+    }
+}
+
+public class SaveSchemaCacheActivity(IAppDatabaseService appDb)
+{
+    [Function(nameof(SaveSchemaCacheActivity))]
+    public Task Run([ActivityTrigger] SchemaCacheInput input) =>
+        appDb.UpdateSchemaCacheAsync(input.ConnectionId, input.SchemaJson);
+}
+
+public class SaveConversationTurnActivity(IAppDatabaseService appDb)
+{
+    [Function(nameof(SaveConversationTurnActivity))]
+    public Task Run([ActivityTrigger] ConversationTurnRecord turn) =>
+        appDb.AddTurnAsync(turn);
+}
+
+public class GetRecentTurnsActivity(IAppDatabaseService appDb)
+{
+    [Function(nameof(GetRecentTurnsActivity))]
+    public Task<List<ConversationTurnRecord>> Run([ActivityTrigger] RecentTurnsInput input) =>
+        appDb.GetRecentTurnsAsync(input.SessionId, input.MaxTurns);
+}
+
+// --- Input DTOs for Activities ---
+
+public sealed record SqlPlannerInput(string Question, string DbSchema, string? ConversationContext);
+public sealed record ResultInterpreterInput(string Question, string IntentJson, string Sql, List<Dictionary<string, object?>> Rows, string? GovernanceJson);
+public sealed record SchemaCacheInput(Guid ConnectionId, string SchemaJson);
+public sealed record RecentTurnsInput(Guid SessionId, int MaxTurns = 10);

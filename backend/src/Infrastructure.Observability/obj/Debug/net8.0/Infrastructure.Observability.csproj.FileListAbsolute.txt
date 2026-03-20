@@ -1,6 +1,6 @@
-C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.Observability\bin\Debug\net8.0\Infrastructure.Observability.deps.json
-C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.Observability\bin\Debug\net8.0\Infrastructure.Observability.dll
-C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.Observability\bin\Debug\net8.0\Infrastructure.Observability.pdb
+C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Functions.Api\bin\output\Infrastructure.Observability.deps.json
+C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Functions.Api\bin\output\Infrastructure.Observability.dll
+C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Functions.Api\bin\output\Infrastructure.Observability.pdb
 C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.Observability\obj\Debug\net8.0\Infrastructure.Observability.GeneratedMSBuildEditorConfig.editorconfig
 C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.Observability\obj\Debug\net8.0\Infrastructure.Observability.AssemblyInfoInputs.cache
 C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.Observability\obj\Debug\net8.0\Infrastructure.Observability.AssemblyInfo.cs
@@ -10,6 +10,3 @@ C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.Observab
 C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.Observability\obj\Debug\net8.0\refint\Infrastructure.Observability.dll
 C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.Observability\obj\Debug\net8.0\Infrastructure.Observability.pdb
 C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.Observability\obj\Debug\net8.0\ref\Infrastructure.Observability.dll
-C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Functions.Api\bin\output\Infrastructure.Observability.deps.json
-C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Functions.Api\bin\output\Infrastructure.Observability.dll
-C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Functions.Api\bin\output\Infrastructure.Observability.pdb

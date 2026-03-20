@@ -4,9 +4,14 @@
     "AzureWebJobsStorage": "DefaultEndpointsProtocol=https;EndpointSuffix=core.windows.net;AccountName=insightforge86253st;AccountKey=366/8yDmZ8guF1grgblIv0dkY1WGYVQPA5y8hRWW4tN9Bdy1q8bAsap2FLVKUfdKnvyOExPaIgYr+AStQ6XaJQ==;BlobEndpoint=https://insightforge86253st.blob.core.windows.net/;FileEndpoint=https://insightforge86253st.file.core.windows.net/;QueueEndpoint=https://insightforge86253st.queue.core.windows.net/;TableEndpoint=https://insightforge86253st.table.core.windows.net/",
     "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
     "SqlConnectionString": "Server=tcp:insightforge-sql3-86253.database.windows.net,1433;Initial Catalog=insightforge-sqldb;Encrypt=True;TrustServerCertificate=False;Authentication=Active Directory Default;",
+    "AppDbConnectionString": "Server=tcp:insightforge-sql3-86253.database.windows.net,1433;Initial Catalog=insightforge-appdb;Encrypt=True;TrustServerCertificate=False;Authentication=Active Directory Default;",
     "AzureOpenAI__Endpoint": "https://eastus.api.cognitive.microsoft.com/",
     "AzureOpenAI__Deployment": "gpt41mini-std",
     "AzureOpenAI__ApiKey": "2014DrxI4S9tJHnIXg1hR5FWaKLsxvNnsSQQJCoCH6QY2PfwHgtVJQQJ99CCACYeBjFXJ3w3AAABACOGddis",
-    "ContentSafety__Endpoint": "https://eastus.api.cognitive.microsoft.com/"
+    "ContentSafety__Endpoint": "https://eastus.api.cognitive.microsoft.com/",
+    "FoundryAgent__ProjectEndpoint": "https://eastus.api.azureml.ms/agents/v1.0/subscriptions/3b7c5634-e239-4029-af7f-0cf8e8aeb29c/resourceGroups/rg-insightforge-dev/providers/Microsoft.MachineLearningServices/workspaces/insightforge-ai-project",
+    "FoundryAgent__SqlPlannerAgentId": "asst_sViTKQcbeUeRanGQknDviYFZ",
+    "FoundryAgent__ResultInterpreterAgentId": "asst_SEjRH87jIXeHlMvqawfXj4LB",
+    "FoundryAgent__ConciergeAgentId": "asst_vkMN5mF0gM2EBBMz4W0Wr5h9"
   }
 }

@@ -1,10 +1,6 @@
-C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.Security\bin\Debug\net8.0\Infrastructure.Security.deps.json
-C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.Security\bin\Debug\net8.0\Infrastructure.Security.dll
-C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.Security\bin\Debug\net8.0\Infrastructure.Security.pdb
-C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.Security\bin\Debug\net8.0\Core.Application.dll
-C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.Security\bin\Debug\net8.0\Core.Domain.dll
-C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.Security\bin\Debug\net8.0\Core.Domain.pdb
-C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.Security\bin\Debug\net8.0\Core.Application.pdb
+C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Functions.Api\bin\output\Infrastructure.Security.deps.json
+C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Functions.Api\bin\output\Infrastructure.Security.dll
+C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Functions.Api\bin\output\Infrastructure.Security.pdb
 C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.Security\obj\Debug\net8.0\Infrastructure.Security.csproj.AssemblyReference.cache
 C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.Security\obj\Debug\net8.0\Infrastructure.Security.GeneratedMSBuildEditorConfig.editorconfig
 C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.Security\obj\Debug\net8.0\Infrastructure.Security.AssemblyInfoInputs.cache
@@ -16,6 +12,3 @@ C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.Security
 C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.Security\obj\Debug\net8.0\refint\Infrastructure.Security.dll
 C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.Security\obj\Debug\net8.0\Infrastructure.Security.pdb
 C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.Security\obj\Debug\net8.0\ref\Infrastructure.Security.dll
-C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Functions.Api\bin\output\Infrastructure.Security.deps.json
-C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Functions.Api\bin\output\Infrastructure.Security.dll
-C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Functions.Api\bin\output\Infrastructure.Security.pdb

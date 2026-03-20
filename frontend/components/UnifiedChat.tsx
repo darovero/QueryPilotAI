@@ -185,8 +185,8 @@ export function UnifiedChat() {
           setActivePoll(null);
           
           if (data.runtimeStatus === "Completed" && data.output) {
-             if (data.output.Status === "Conversational") {
-               addLog("SUCCESS", "Conversational response (no SQL pipeline needed).");
+             if (data.output.Status === "Conversational" || data.output.Status === "needs_clarification" || data.output.Status === "unsupported" || data.output.Status === "blocked" || data.output.Status === "Error") {
+               addLog("SUCCESS", "Early response: " + data.output.Status);
                setMessages((prev) => {
                    const newMsgs = [...prev];
                    const aiIdx = newMsgs.findIndex(m => m.instanceId === activePoll);
@@ -266,8 +266,9 @@ export function UnifiedChat() {
           question: userMsg.content,
           userId: "user@agent.com",
           role: "FraudAnalyst",
-          correlationId: "chat-" + Date.now(),
-          sessionId: "unified-session",
+          correlationId: crypto.randomUUID(),
+          sessionId: activeChatSession.id,
+          connectionId: activeConnection?.id,
           connection: activeConnection ? {
             type: activeConnection.type || "PostgreSQL",
             host: activeConnection.host,
@@ -385,21 +386,57 @@ export function UnifiedChat() {
 
         if (editingConnId) {
             setTestSuccess(true);
-            setTimeout(() => {
+            setTimeout(async () => {
                 setTestSuccess(false);
-                setConnections(prev => prev.map(c => c.id === editingConnId ? { ...c, ...connForm } : c));
+                const updatedConn = { ...connForm } as Connection;
+                setConnections(prev => prev.map(c => c.id === editingConnId ? { ...c, ...updatedConn } : c));
+                
+                await fetch('/api/connections', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                       id: editingConnId, 
+                       userId: "user@agent.com", 
+                       connectionName: updatedConn.name,
+                       dbType: updatedConn.type || "PostgreSQL",
+                       host: updatedConn.host,
+                       port: updatedConn.port,
+                       databaseName: updatedConn.database,
+                       username: updatedConn.username,
+                       encryptedPassword: updatedConn.password
+                    })
+                });
+
                 setConnError("");
                 setCurrentView('manage_connections');
                 addLog("SUCCESS", `Connection ${connForm.name} updated successfully.`);
             }, 1500);
         } else {
             setTestSuccess(true);
-            setTimeout(() => {
+            setTimeout(async () => {
                 setTestSuccess(false);
                 setConnError("");
-                const newConnId = 'conn-' + Date.now();
+                const newConnId = crypto.randomUUID();
                 const { id: _ignoreId, ...formWithoutId } = connForm;
-                setConnections(prev => [...prev, { ...formWithoutId, id: newConnId, name: connForm.name!.trim() } as Connection]);
+                const newConn = { ...formWithoutId, id: newConnId, name: connForm.name!.trim() } as Connection;
+                setConnections(prev => [...prev, newConn]);
+
+                await fetch('/api/connections', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                       id: newConnId, 
+                       userId: "user@agent.com", 
+                       connectionName: newConn.name,
+                       dbType: newConn.type || "PostgreSQL",
+                       host: newConn.host,
+                       port: newConn.port,
+                       databaseName: newConn.database,
+                       username: newConn.username,
+                       encryptedPassword: newConn.password
+                    })
+                });
+
                 setCurrentView('manage_connections');
                 addLog("SUCCESS", `Connected to ${connForm.name!.trim()} successfully.`);
             }, 1500);
@@ -497,7 +534,12 @@ export function UnifiedChat() {
                                <button 
                                   onClick={() => {
                                      if (chats.length === 0) {
-                                         const newChatId = 'chat-' + Date.now();
+                                         const newChatId = crypto.randomUUID();
+                                         fetch('/api/sessions', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ id: newChatId, userId: "user@agent.com", connectionId: conn.id, title: "New Chat" })
+                                         });
                                          setChatSessions(prev => [...prev, { id: newChatId, connectionId: conn.id, title: 'New Chat', messages: [] }]);
                                          setOpenTabs(prev => { 
                                              if (!prev.find(t => t.id === newChatId)) {
@@ -525,7 +567,12 @@ export function UnifiedChat() {
                                <button 
                                   onClick={(e) => {
                                       e.stopPropagation();
-                                      const newChatId = 'chat-' + Date.now();
+                                      const newChatId = crypto.randomUUID();
+                                      fetch('/api/sessions', {
+                                         method: 'POST',
+                                         headers: { 'Content-Type': 'application/json' },
+                                         body: JSON.stringify({ id: newChatId, userId: "user@agent.com", connectionId: conn.id, title: "New Chat" })
+                                      });
                                       setChatSessions(prev => [...prev, { id: newChatId, connectionId: conn.id, title: 'New Chat', messages: [] }]);
                                       setOpenTabs(prev => [...prev, { type: 'chat', id: newChatId, title: 'New Chat', connectionId: conn.id }]);
                                       setCurrentView(newChatId);

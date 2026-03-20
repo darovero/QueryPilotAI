@@ -13,15 +13,31 @@ var host = new HostBuilder()
         services.AddLogging();
         services.AddHttpClient();
 
+        // --- Core ---
         services.AddSingleton<Core.Application.Services.IClock, Core.Application.Services.SystemClock>();
         services.AddSingleton<Core.Domain.Policies.ISqlPolicyEngine, Infrastructure.Security.SqlPolicyEngine>();
+
+        // --- Database Services ---
         services.AddSingleton<Infrastructure.Sql.ISqlExecutionService, Infrastructure.Sql.SqlExecutionService>();
-        services.AddSingleton<Infrastructure.AzureOpenAI.IConversationMemoryService, Infrastructure.AzureOpenAI.ConversationMemoryService>();
-        services.AddSingleton<Infrastructure.AzureOpenAI.IIntentService, Infrastructure.AzureOpenAI.IntentService>();
-        services.AddSingleton<Infrastructure.AzureOpenAI.ISqlGenerationService, Infrastructure.AzureOpenAI.SqlGenerationService>();
-        services.AddSingleton<Infrastructure.AzureOpenAI.ISummaryService, Infrastructure.AzureOpenAI.SummaryService>();
+        services.AddSingleton<Infrastructure.Sql.IAppDatabaseService, Infrastructure.Sql.AppDatabaseService>();
+        services.AddSingleton<Infrastructure.Sql.ISchemaExtractorService, Infrastructure.Sql.SchemaExtractorService>();
+
+        // --- Security ---
         services.AddSingleton<Infrastructure.Security.IPromptSafetyService, Infrastructure.Security.PromptSafetyService>();
-        services.AddSingleton<Infrastructure.AzureOpenAI.IFoundryAgentService, Infrastructure.AzureOpenAI.FoundryAgentService>();
+
+        // --- Foundry Agent Client ---
+        var projectEndpoint = Environment.GetEnvironmentVariable("FoundryAgent__ProjectEndpoint")
+            ?? throw new InvalidOperationException("FoundryAgent__ProjectEndpoint is required.");
+        var sqlPlannerAgentId = Environment.GetEnvironmentVariable("FoundryAgent__SqlPlannerAgentId")
+            ?? throw new InvalidOperationException("FoundryAgent__SqlPlannerAgentId is required.");
+        var resultInterpreterAgentId = Environment.GetEnvironmentVariable("FoundryAgent__ResultInterpreterAgentId")
+            ?? throw new InvalidOperationException("FoundryAgent__ResultInterpreterAgentId is required.");
+        var conciergeAgentId = Environment.GetEnvironmentVariable("FoundryAgent__ConciergeAgentId")
+            ?? throw new InvalidOperationException("FoundryAgent__ConciergeAgentId is required.");
+
+        services.AddSingleton<Infrastructure.AzureOpenAI.IFoundryAgentClient>(
+            _ => new Infrastructure.AzureOpenAI.FoundryAgentClient(
+                projectEndpoint, sqlPlannerAgentId, resultInterpreterAgentId, conciergeAgentId));
     })
     .Build();
 

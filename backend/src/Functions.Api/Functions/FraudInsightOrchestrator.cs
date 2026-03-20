@@ -1,7 +1,10 @@
 using Core.Application.Contracts;
 using Core.Domain.Policies;
+using Infrastructure.AzureOpenAI;
+using Infrastructure.Sql;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.DurableTask;
+using System.Text.Json;
 
 namespace Functions.Api.Functions;
 
@@ -17,15 +20,17 @@ public class FraudInsightOrchestrator
             ? context.InstanceId[..32].Replace("-", "")
             : context.InstanceId.PadRight(32, '0'));
 
-        // --- Step 0: Foundry Agent (Conversational Concierge) ---
+        // =====================================================
+        // Step 0: Concierge (Foundry Agent) — Conversational vs Analytical
+        // =====================================================
         context.SetCustomStatus(new PipelineStep("concierge_routing", "El Agente Conversacional está analizando el contexto", "Active", context.CurrentUtcDateTime));
 
-        var classification = await context.CallActivityAsync<ConversationalClassification?>(nameof(ClassifyConversationActivity), request);
+        var classification = await context.CallActivityAsync<ConversationalClassification?>(
+            nameof(ClassifyWithConciergeActivity), request);
 
         if (classification is not null && !string.Equals(classification.Category, "analytical", StringComparison.OrdinalIgnoreCase))
         {
             context.SetCustomStatus(new PipelineStep("conversational", "El Agente respondió directamente", "Completed", context.CurrentUtcDateTime));
-
             return new InsightResponse(
                 context.InstanceId, "Conversational",
                 classification.FriendlyReply ?? "Hola, ¿en qué puedo ayudarte?",
@@ -34,9 +39,11 @@ public class FraudInsightOrchestrator
                 new AuditMetadata("None", null));
         }
 
-        context.SetCustomStatus(new PipelineStep("concierge_routing", "El Agente requiere análisis de datos, invocando Pipeline Especialista", "Completed", context.CurrentUtcDateTime));
+        context.SetCustomStatus(new PipelineStep("concierge_routing", "Requiere análisis de datos — invocando Pipeline", "Completed", context.CurrentUtcDateTime));
 
-        // --- Step 1: Prompt Safety ---
+        // =====================================================
+        // Step 1: Prompt Safety
+        // =====================================================
         context.SetCustomStatus(new PipelineStep("safety_check", "Verificando seguridad del prompt", "Active", context.CurrentUtcDateTime));
 
         var safety = await context.CallActivityAsync<PromptSafetyResult>(nameof(AnalyzePromptSafetyActivity), request);
@@ -44,11 +51,9 @@ public class FraudInsightOrchestrator
         if (!safety.IsSafe)
         {
             context.SetCustomStatus(new PipelineStep("safety_check", "Prompt bloqueado por seguridad", "Failed", context.CurrentUtcDateTime));
-
             await context.CallActivityAsync(nameof(SaveAuditTrailActivity), new AuditTrailRecord(
                 requestId, request.UserId, request.Role, request.Question,
                 null, null, null, "Blocked", context.CurrentUtcDateTime, context.CurrentUtcDateTime));
-
             return new InsightResponse(
                 context.InstanceId, "Blocked",
                 "La solicitud fue bloqueada por controles de seguridad.",
@@ -59,63 +64,129 @@ public class FraudInsightOrchestrator
 
         context.SetCustomStatus(new PipelineStep("safety_check", "Prompt seguro", "Completed", context.CurrentUtcDateTime));
 
-        // --- Step 2: Conversation Context ---
-        context.SetCustomStatus(new PipelineStep("conversation_context", "Recuperando contexto de conversación", "Active", context.CurrentUtcDateTime));
+        // =====================================================
+        // Step 2: Extract Database Schema (dynamic, from user's DB)
+        // =====================================================
+        string dbSchema;
 
-        var conversationContext = await context.CallActivityAsync<List<ConversationTurn>>(
-            nameof(GetConversationContextActivity),
-            new ConversationContextRequest(request.UserId, request.SessionId, 6));
+        if (request.Connection is not null)
+        {
+            context.SetCustomStatus(new PipelineStep("schema_extraction", "Extrayendo esquema de la base de datos del usuario", "Active", context.CurrentUtcDateTime));
 
-        context.SetCustomStatus(new PipelineStep("conversation_context", "Contexto recuperado", "Completed", context.CurrentUtcDateTime));
+            try
+            {
+                dbSchema = await context.CallActivityAsync<string>(nameof(ExtractSchemaActivity), request.Connection);
+            }
+            catch (Exception)
+            {
+                return new InsightResponse(
+                    context.InstanceId, "Error",
+                    "No fue posible conectarse a la base de datos indicada. Verifica la configuración de conexión.",
+                    new[] { "Error al extraer esquema de la BD" }, string.Empty, Array.Empty<string>(),
+                    new List<Dictionary<string, object?>>(),
+                    new AuditMetadata("High", null));
+            }
 
-        // --- Step 3: Intent Decomposition ---
-        context.SetCustomStatus(new PipelineStep("intent_parsing", "Descomponiendo intención analítica", "Active", context.CurrentUtcDateTime));
+            context.SetCustomStatus(new PipelineStep("schema_extraction", "Esquema extraído", "Completed", context.CurrentUtcDateTime));
+        }
+        else
+        {
+            dbSchema = "No se proporcionó conexión a base de datos. No hay esquema disponible.";
+        }
 
-        var intent = await context.CallActivityAsync<AnalyticalIntent>(
-            nameof(DecomposeIntentActivity),
-            new IntentParsingInput(request, conversationContext));
+        // =====================================================
+        // Step 3: Conversation Context (from persistent DB)
+        // =====================================================
+        string? conversationContext = null;
 
-        context.SetCustomStatus(new PipelineStep("intent_parsing", "Intención identificada", "Completed", context.CurrentUtcDateTime));
+        if (request.SessionId is not null && Guid.TryParse(request.SessionId, out var sessionGuid))
+        {
+            context.SetCustomStatus(new PipelineStep("conversation_context", "Recuperando contexto de conversación", "Active", context.CurrentUtcDateTime));
 
-        // --- Step 4: SQL Generation ---
-        context.SetCustomStatus(new PipelineStep("sql_generation", "Generando SQL restringido", "Active", context.CurrentUtcDateTime));
+            var recentTurns = await context.CallActivityAsync<List<ConversationTurnRecord>>(
+                nameof(GetRecentTurnsActivity), new RecentTurnsInput(sessionGuid, 6));
 
-        var sqlDraft = await context.CallActivityAsync<string>(nameof(GenerateSqlActivity), intent);
+            if (recentTurns.Count > 0)
+            {
+                conversationContext = JsonSerializer.Serialize(recentTurns.Select(t => new
+                {
+                    question = t.Question,
+                    summary = t.Summary,
+                    sql = t.SqlGenerated,
+                    intent = t.IntentType,
+                    timestamp = t.CreatedAt
+                }));
+            }
 
-        context.SetCustomStatus(new PipelineStep("sql_generation", "SQL generado", "Completed", context.CurrentUtcDateTime));
+            context.SetCustomStatus(new PipelineStep("conversation_context", "Contexto recuperado", "Completed", context.CurrentUtcDateTime));
+        }
 
-        // --- Step 5: SQL Policy Validation ---
+        // =====================================================
+        // Step 4: SQL Planner (Foundry Agent)
+        // — Replaces IntentService + SqlGenerationService
+        // =====================================================
+        context.SetCustomStatus(new PipelineStep("sql_planning", "El Agente SQL Planner está analizando la consulta", "Active", context.CurrentUtcDateTime));
+
+        var plannerResponse = await context.CallActivityAsync<SqlPlannerResponse>(
+            nameof(PlanSqlActivity),
+            new SqlPlannerInput(request.Question, dbSchema, conversationContext));
+
+        // Handle non-ready statuses
+        if (plannerResponse.Status != "ready")
+        {
+            var statusMessage = plannerResponse.Status switch
+            {
+                "needs_clarification" => plannerResponse.Clarification?.QuestionForUser ?? "Necesito más información para responder tu consulta.",
+                "unsupported" => "La consulta no puede resolverse con el esquema de datos disponible.",
+                "blocked" => "La solicitud fue bloqueada por políticas de seguridad del agente.",
+                _ => "No fue posible generar una consulta para esta solicitud."
+            };
+
+            return new InsightResponse(
+                context.InstanceId, plannerResponse.Status,
+                statusMessage,
+                Array.Empty<string>(), string.Empty, Array.Empty<string>(),
+                new List<Dictionary<string, object?>>(),
+                new AuditMetadata(plannerResponse.Governance?.RiskLevel ?? "low", null));
+        }
+
+        var sqlQuery = plannerResponse.Sql?.Query ?? string.Empty;
+        context.SetCustomStatus(new PipelineStep("sql_planning", "SQL planificado", "Completed", context.CurrentUtcDateTime));
+
+        // =====================================================
+        // Step 5: SQL Policy Validation
+        // =====================================================
         context.SetCustomStatus(new PipelineStep("sql_validation", "Aplicando políticas y scoring de riesgo", "Active", context.CurrentUtcDateTime));
 
-        var validation = await context.CallActivityAsync<SqlValidationResult>(nameof(ValidateSqlPolicyActivity), sqlDraft);
+        var validation = await context.CallActivityAsync<SqlValidationResult>(nameof(ValidateSqlPolicyActivity), sqlQuery);
 
         if (!validation.IsValid)
         {
             context.SetCustomStatus(new PipelineStep("sql_validation", "SQL rechazado por política", "Failed", context.CurrentUtcDateTime));
-
             await context.CallActivityAsync(nameof(SaveAuditTrailActivity), new AuditTrailRecord(
                 requestId, request.UserId, request.Role, request.Question,
-                intent.IntentType, sqlDraft, string.Join("; ", validation.Reasons),
+                plannerResponse.Status, sqlQuery, string.Join("; ", validation.Reasons),
                 "PolicyBlocked", context.CurrentUtcDateTime, context.CurrentUtcDateTime));
-
             return new InsightResponse(
                 context.InstanceId, "Blocked",
                 "La consulta generada no superó la validación de política.",
-                validation.Reasons, sqlDraft, Array.Empty<string>(),
+                validation.Reasons, sqlQuery, Array.Empty<string>(),
                 new List<Dictionary<string, object?>>(),
                 new AuditMetadata(validation.RiskLevel, null));
         }
 
         context.SetCustomStatus(new PipelineStep("sql_validation", "SQL validado", "Completed", context.CurrentUtcDateTime));
 
-        // --- Step 6: Approval Flow (if required) ---
+        // =====================================================
+        // Step 6: Approval Flow (if required)
+        // =====================================================
         if (validation.RequiresApproval)
         {
             context.SetCustomStatus(new PipelineStep("approval", "Esperando aprobación humana", "Active", context.CurrentUtcDateTime));
 
             await context.CallActivityAsync(nameof(SaveAuditTrailActivity), new AuditTrailRecord(
                 requestId, request.UserId, request.Role, request.Question,
-                intent.IntentType, validation.NormalizedSql, string.Join("; ", validation.Reasons),
+                plannerResponse.Status, validation.NormalizedSql, string.Join("; ", validation.Reasons),
                 "PendingApproval", context.CurrentUtcDateTime, null));
 
             ApprovalDecision decision;
@@ -126,7 +197,6 @@ public class FraudInsightOrchestrator
             catch (TaskCanceledException)
             {
                 context.SetCustomStatus(new PipelineStep("approval", "Tiempo de aprobación agotado", "Failed", context.CurrentUtcDateTime));
-
                 return new InsightResponse(
                     context.InstanceId, "TimedOut",
                     "La solicitud de aprobación expiró. El SQL no fue ejecutado.",
@@ -138,12 +208,10 @@ public class FraudInsightOrchestrator
             if (!string.Equals(decision.Decision, "Approved", StringComparison.OrdinalIgnoreCase))
             {
                 context.SetCustomStatus(new PipelineStep("approval", "Rechazado por " + decision.ApproverUserId, "Failed", context.CurrentUtcDateTime));
-
                 await context.CallActivityAsync(nameof(SaveAuditTrailActivity), new AuditTrailRecord(
                     requestId, request.UserId, request.Role, request.Question,
-                    intent.IntentType, validation.NormalizedSql, $"Rejected: {decision.Comments}",
+                    plannerResponse.Status, validation.NormalizedSql, $"Rejected: {decision.Comments}",
                     "Rejected", context.CurrentUtcDateTime, context.CurrentUtcDateTime));
-
                 return new InsightResponse(
                     context.InstanceId, "Rejected",
                     $"La consulta fue rechazada. Motivo: {decision.Comments ?? "Sin comentario"}",
@@ -155,37 +223,59 @@ public class FraudInsightOrchestrator
             context.SetCustomStatus(new PipelineStep("approval", "Aprobado por " + decision.ApproverUserId, "Completed", context.CurrentUtcDateTime));
         }
 
-        // --- Step 7: SQL Execution ---
-        context.SetCustomStatus(new PipelineStep("sql_execution", "Ejecutando SQL en Azure SQL", "Active", context.CurrentUtcDateTime));
+        // =====================================================
+        // Step 7: SQL Execution (on user's database)
+        // =====================================================
+        context.SetCustomStatus(new PipelineStep("sql_execution", "Ejecutando SQL", "Active", context.CurrentUtcDateTime));
 
-        var rows = await context.CallActivityAsync<List<Dictionary<string, object?>>>(nameof(ExecuteSqlActivity), new SqlExecutionInput(validation.NormalizedSql, request.Connection));
+        var rows = await context.CallActivityAsync<List<Dictionary<string, object?>>>(
+            nameof(ExecuteSqlActivity), new SqlExecutionInput(validation.NormalizedSql, request.Connection));
 
         context.SetCustomStatus(new PipelineStep("sql_execution", "Consulta ejecutada", "Completed", context.CurrentUtcDateTime));
 
-        // --- Step 8: Executive Summary ---
-        context.SetCustomStatus(new PipelineStep("summarize", "Generando resumen ejecutivo", "Active", context.CurrentUtcDateTime));
+        // =====================================================
+        // Step 8: Result Interpreter (Foundry Agent)
+        // — Replaces SummaryService
+        // =====================================================
+        context.SetCustomStatus(new PipelineStep("interpretation", "El Agente de Interpretación está analizando los resultados", "Active", context.CurrentUtcDateTime));
 
-        var summary = await context.CallActivityAsync<string>(nameof(SummarizeInsightActivity), new SummaryInput(request.Question, validation.NormalizedSql, rows));
+        var intentJson = plannerResponse.Intent.HasValue
+            ? plannerResponse.Intent.Value.GetRawText()
+            : "{}";
+        var governanceJson = plannerResponse.Governance != null
+            ? JsonSerializer.Serialize(plannerResponse.Governance)
+            : null;
 
-        context.SetCustomStatus(new PipelineStep("summarize", "Insight generado", "Completed", context.CurrentUtcDateTime));
+        var interpretation = await context.CallActivityAsync<ResultInterpretation>(
+            nameof(InterpretResultsActivity),
+            new ResultInterpreterInput(request.Question, intentJson, validation.NormalizedSql, rows, governanceJson));
 
-        // Save conversation turn
-        await context.CallActivityAsync(
-            nameof(SaveConversationTurnActivity),
-            new ConversationTurnUpsert(
-                request.UserId, request.SessionId, request.Question, summary,
-                validation.NormalizedSql, intent.IntentType, intent.Metric,
-                DateTimeOffset.UtcNow));
+        context.SetCustomStatus(new PipelineStep("interpretation", "Insight generado", "Completed", context.CurrentUtcDateTime));
 
-        // Save audit trail
+        // =====================================================
+        // Step 9: Save conversation turn + audit
+        // =====================================================
+        var summary = interpretation.ResponseForUser ?? interpretation.ExecutiveSummary ?? "Análisis completado.";
+
+        if (request.SessionId is not null && Guid.TryParse(request.SessionId, out var saveSessionGuid))
+        {
+            await context.CallActivityAsync(nameof(SaveConversationTurnActivity),
+                new ConversationTurnRecord(
+                    Guid.Empty, saveSessionGuid, request.UserId, "assistant",
+                    request.Question, validation.NormalizedSql,
+                    JsonSerializer.Serialize(interpretation),
+                    summary, null, null, DateTimeOffset.UtcNow));
+        }
+
         await context.CallActivityAsync(nameof(SaveAuditTrailActivity), new AuditTrailRecord(
             requestId, request.UserId, request.Role, request.Question,
-            intent.IntentType, validation.NormalizedSql, null,
+            plannerResponse.Status, validation.NormalizedSql, null,
             "Completed", context.CurrentUtcDateTime, context.CurrentUtcDateTime));
 
         return new InsightResponse(
             context.InstanceId, "Completed", summary,
-            Array.Empty<string>(), validation.NormalizedSql, Array.Empty<string>(),
-            rows, new AuditMetadata(validation.RiskLevel, null));
+            interpretation.KeyFindings?.Select(f => f.Title ?? "").ToArray() ?? Array.Empty<string>(),
+            validation.NormalizedSql, Array.Empty<string>(),
+            rows, new AuditMetadata(interpretation.Risk?.Level ?? "low", null));
     }
 }

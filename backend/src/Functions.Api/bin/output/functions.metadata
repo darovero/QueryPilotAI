@@ -1,8 +1,8 @@
 [
   {
-    "name": "AnalyzePromptSafetyActivity",
+    "name": "ClassifyWithConciergeActivity",
     "scriptFile": "Functions.Api.dll",
-    "entryPoint": "Functions.Api.Functions.AnalyzePromptSafetyActivity.Run",
+    "entryPoint": "Functions.Api.Functions.ClassifyWithConciergeActivity.Run",
     "language": "dotnet-isolated",
     "properties": {
       "IsCodeless": false
@@ -17,16 +17,16 @@
     ]
   },
   {
-    "name": "ClassifyConversationActivity",
+    "name": "ExtractSchemaActivity",
     "scriptFile": "Functions.Api.dll",
-    "entryPoint": "Functions.Api.Functions.ClassifyConversationActivity.Run",
+    "entryPoint": "Functions.Api.Functions.ExtractSchemaActivity.Run",
     "language": "dotnet-isolated",
     "properties": {
       "IsCodeless": false
     },
     "bindings": [
       {
-        "name": "request",
+        "name": "config",
         "direction": "In",
         "type": "activityTrigger",
         "properties": {}
@@ -34,9 +34,9 @@
     ]
   },
   {
-    "name": "DecomposeIntentActivity",
+    "name": "PlanSqlActivity",
     "scriptFile": "Functions.Api.dll",
-    "entryPoint": "Functions.Api.Functions.DecomposeIntentActivity.Run",
+    "entryPoint": "Functions.Api.Functions.PlanSqlActivity.Run",
     "language": "dotnet-isolated",
     "properties": {
       "IsCodeless": false
@@ -51,9 +51,26 @@
     ]
   },
   {
-    "name": "GetConversationContextActivity",
+    "name": "InterpretResultsActivity",
     "scriptFile": "Functions.Api.dll",
-    "entryPoint": "Functions.Api.Functions.GetConversationContextActivity.Run",
+    "entryPoint": "Functions.Api.Functions.InterpretResultsActivity.Run",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "input",
+        "direction": "In",
+        "type": "activityTrigger",
+        "properties": {}
+      }
+    ]
+  },
+  {
+    "name": "AnalyzePromptSafetyActivity",
+    "scriptFile": "Functions.Api.dll",
+    "entryPoint": "Functions.Api.Functions.AnalyzePromptSafetyActivity.Run",
     "language": "dotnet-isolated",
     "properties": {
       "IsCodeless": false
@@ -61,40 +78,6 @@
     "bindings": [
       {
         "name": "request",
-        "direction": "In",
-        "type": "activityTrigger",
-        "properties": {}
-      }
-    ]
-  },
-  {
-    "name": "SaveConversationTurnActivity",
-    "scriptFile": "Functions.Api.dll",
-    "entryPoint": "Functions.Api.Functions.SaveConversationTurnActivity.Run",
-    "language": "dotnet-isolated",
-    "properties": {
-      "IsCodeless": false
-    },
-    "bindings": [
-      {
-        "name": "turn",
-        "direction": "In",
-        "type": "activityTrigger",
-        "properties": {}
-      }
-    ]
-  },
-  {
-    "name": "GenerateSqlActivity",
-    "scriptFile": "Functions.Api.dll",
-    "entryPoint": "Functions.Api.Functions.GenerateSqlActivity.Run",
-    "language": "dotnet-isolated",
-    "properties": {
-      "IsCodeless": false
-    },
-    "bindings": [
-      {
-        "name": "intent",
         "direction": "In",
         "type": "activityTrigger",
         "properties": {}
@@ -137,9 +120,43 @@
     ]
   },
   {
-    "name": "SummarizeInsightActivity",
+    "name": "SaveAuditTrailActivity",
     "scriptFile": "Functions.Api.dll",
-    "entryPoint": "Functions.Api.Functions.SummarizeInsightActivity.Run",
+    "entryPoint": "Functions.Api.Functions.SaveAuditTrailActivity.Run",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "audit",
+        "direction": "In",
+        "type": "activityTrigger",
+        "properties": {}
+      }
+    ]
+  },
+  {
+    "name": "GetSchemaFromCacheActivity",
+    "scriptFile": "Functions.Api.dll",
+    "entryPoint": "Functions.Api.Functions.GetSchemaFromCacheActivity.Run",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "connectionId",
+        "direction": "In",
+        "type": "activityTrigger",
+        "properties": {}
+      }
+    ]
+  },
+  {
+    "name": "SaveSchemaCacheActivity",
+    "scriptFile": "Functions.Api.dll",
+    "entryPoint": "Functions.Api.Functions.SaveSchemaCacheActivity.Run",
     "language": "dotnet-isolated",
     "properties": {
       "IsCodeless": false
@@ -154,19 +171,144 @@
     ]
   },
   {
-    "name": "SaveAuditTrailActivity",
+    "name": "SaveConversationTurnActivity",
     "scriptFile": "Functions.Api.dll",
-    "entryPoint": "Functions.Api.Functions.SaveAuditTrailActivity.Run",
+    "entryPoint": "Functions.Api.Functions.SaveConversationTurnActivity.Run",
     "language": "dotnet-isolated",
     "properties": {
       "IsCodeless": false
     },
     "bindings": [
       {
-        "name": "audit",
+        "name": "turn",
         "direction": "In",
         "type": "activityTrigger",
         "properties": {}
+      }
+    ]
+  },
+  {
+    "name": "GetRecentTurnsActivity",
+    "scriptFile": "Functions.Api.dll",
+    "entryPoint": "Functions.Api.Functions.GetRecentTurnsActivity.Run",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "input",
+        "direction": "In",
+        "type": "activityTrigger",
+        "properties": {}
+      }
+    ]
+  },
+  {
+    "name": "SaveConnection",
+    "scriptFile": "Functions.Api.dll",
+    "entryPoint": "Functions.Api.Functions.AppDatabaseFunctions.SaveConnection",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Anonymous",
+        "methods": [
+          "post"
+        ],
+        "route": "connections",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "GetConnections",
+    "scriptFile": "Functions.Api.dll",
+    "entryPoint": "Functions.Api.Functions.AppDatabaseFunctions.GetConnections",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Anonymous",
+        "methods": [
+          "get"
+        ],
+        "route": "connections/{userId}",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "CreateSession",
+    "scriptFile": "Functions.Api.dll",
+    "entryPoint": "Functions.Api.Functions.AppDatabaseFunctions.CreateSession",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Anonymous",
+        "methods": [
+          "post"
+        ],
+        "route": "sessions",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "GetSessions",
+    "scriptFile": "Functions.Api.dll",
+    "entryPoint": "Functions.Api.Functions.AppDatabaseFunctions.GetSessions",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Anonymous",
+        "methods": [
+          "get"
+        ],
+        "route": "sessions/{userId}",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
       }
     ]
   },
