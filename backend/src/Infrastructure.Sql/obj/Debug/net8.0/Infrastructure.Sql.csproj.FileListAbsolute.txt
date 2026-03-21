@@ -1,6 +1,13 @@
 C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Functions.Api\bin\output\Infrastructure.Sql.deps.json
 C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Functions.Api\bin\output\Infrastructure.Sql.dll
 C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Functions.Api\bin\output\Infrastructure.Sql.pdb
+C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.Sql\bin\Debug\net8.0\Infrastructure.Sql.deps.json
+C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.Sql\bin\Debug\net8.0\Infrastructure.Sql.dll
+C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.Sql\bin\Debug\net8.0\Infrastructure.Sql.pdb
+C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.Sql\bin\Debug\net8.0\Core.Application.dll
+C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.Sql\bin\Debug\net8.0\Core.Domain.dll
+C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.Sql\bin\Debug\net8.0\Core.Application.pdb
+C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.Sql\bin\Debug\net8.0\Core.Domain.pdb
 C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.Sql\obj\Debug\net8.0\Infrastructure.Sql.csproj.AssemblyReference.cache
 C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.Sql\obj\Debug\net8.0\Infrastructure.Sql.GeneratedMSBuildEditorConfig.editorconfig
 C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.Sql\obj\Debug\net8.0\Infrastructure.Sql.AssemblyInfoInputs.cache
@@ -12,10 +19,3 @@ C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.Sql\obj\
 C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.Sql\obj\Debug\net8.0\refint\Infrastructure.Sql.dll
 C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.Sql\obj\Debug\net8.0\Infrastructure.Sql.pdb
 C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.Sql\obj\Debug\net8.0\ref\Infrastructure.Sql.dll
-C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.Sql\bin\Debug\net8.0\Infrastructure.Sql.deps.json
-C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.Sql\bin\Debug\net8.0\Infrastructure.Sql.dll
-C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.Sql\bin\Debug\net8.0\Infrastructure.Sql.pdb
-C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.Sql\bin\Debug\net8.0\Core.Application.dll
-C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.Sql\bin\Debug\net8.0\Core.Domain.dll
-C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.Sql\bin\Debug\net8.0\Core.Application.pdb
-C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.Sql\bin\Debug\net8.0\Core.Domain.pdb

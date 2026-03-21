@@ -28,7 +28,7 @@ CREATE TABLE dbo.user_connections (
 CREATE TABLE dbo.chat_sessions (
     id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
     user_id NVARCHAR(256) NOT NULL,
-    connection_id UNIQUEIDENTIFIER NULL REFERENCES dbo.user_connections(id),
+    connection_id UNIQUEIDENTIFIER NULL REFERENCES dbo.user_connections(id) ON DELETE CASCADE,
     title NVARCHAR(200),
     created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
     last_activity DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
@@ -38,7 +38,7 @@ CREATE TABLE dbo.chat_sessions (
 -- Conversation turns (replaces in-memory ConcurrentDictionary)
 CREATE TABLE dbo.conversation_turns (
     id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
-    session_id UNIQUEIDENTIFIER NOT NULL REFERENCES dbo.chat_sessions(id),
+    session_id UNIQUEIDENTIFIER NOT NULL REFERENCES dbo.chat_sessions(id) ON DELETE CASCADE,
     user_id NVARCHAR(256) NOT NULL,
     role NVARCHAR(20) NOT NULL DEFAULT 'user',   -- 'user' or 'assistant'
     question NVARCHAR(MAX) NOT NULL,

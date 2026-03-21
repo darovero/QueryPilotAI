@@ -25,7 +25,7 @@ public class AppDatabaseFunctions(
             var body = await new StreamReader(req.Body).ReadToEndAsync();
             var config = JsonSerializer.Deserialize<UserConnectionRecord>(body, _jsonOptions);
 
-            var authenticatedUserId = req.FunctionContext.Items["UserId"]?.ToString();
+            var authenticatedUserId = req.FunctionContext.Items.TryGetValue("UserId", out var uid) ? uid?.ToString() : null;
             
             if (config == null || string.IsNullOrWhiteSpace(config.ConnectionName))
                 return req.CreateResponse(HttpStatusCode.BadRequest);
@@ -39,7 +39,6 @@ public class AppDatabaseFunctions(
             {
                 return req.CreateResponse(HttpStatusCode.Unauthorized);
             }
-                return req.CreateResponse(HttpStatusCode.BadRequest);
 
             var id = await appDb.SaveConnectionAsync(config);
             var res = req.CreateResponse(HttpStatusCode.OK);
@@ -59,7 +58,7 @@ public class AppDatabaseFunctions(
     {
         try
         {
-            var authenticatedUserId = req.FunctionContext.Items["UserId"]?.ToString();
+            var authenticatedUserId = req.FunctionContext.Items.TryGetValue("UserId", out var uid) ? uid?.ToString() : null;
             if (string.IsNullOrEmpty(authenticatedUserId))
             {
                 return req.CreateResponse(HttpStatusCode.Unauthorized);
@@ -67,7 +66,8 @@ public class AppDatabaseFunctions(
 
             var list = await appDb.GetConnectionsByUserAsync(authenticatedUserId);
             var res = req.CreateResponse(HttpStatusCode.OK);
-            await res.WriteAsJsonAsync(list);
+            res.Headers.Add("Content-Type", "application/json");
+            await res.WriteStringAsync(JsonSerializer.Serialize(list, _jsonOptions));
             return res;
         }
         catch (Exception ex)
@@ -83,7 +83,7 @@ public class AppDatabaseFunctions(
     {
         try
         {
-            var authenticatedUserId = req.FunctionContext.Items["UserId"]?.ToString();
+            var authenticatedUserId = req.FunctionContext.Items.TryGetValue("UserId", out var uid) ? uid?.ToString() : null;
             if (string.IsNullOrEmpty(authenticatedUserId))
                 return req.CreateResponse(HttpStatusCode.Unauthorized);
 
@@ -106,7 +106,7 @@ public class AppDatabaseFunctions(
     {
         try
         {
-            var authenticatedUserId = req.FunctionContext.Items["UserId"]?.ToString();
+            var authenticatedUserId = req.FunctionContext.Items.TryGetValue("UserId", out var uid) ? uid?.ToString() : null;
             if (string.IsNullOrEmpty(authenticatedUserId))
                 return req.CreateResponse(HttpStatusCode.Unauthorized);
 
@@ -129,7 +129,7 @@ public class AppDatabaseFunctions(
             var body = await new StreamReader(req.Body).ReadToEndAsync();
             var config = JsonSerializer.Deserialize<UserConnectionRecord>(body, _jsonOptions);
 
-            var authenticatedUserId = req.FunctionContext.Items["UserId"]?.ToString();
+            var authenticatedUserId = req.FunctionContext.Items.TryGetValue("UserId", out var uid) ? uid?.ToString() : null;
             if (string.IsNullOrEmpty(authenticatedUserId))
                 return req.CreateResponse(HttpStatusCode.Unauthorized);
 
@@ -171,13 +171,20 @@ public class AppDatabaseFunctions(
                 success = true;
             }
 
+            if (!success)
+            {
+                var fail = req.CreateResponse(HttpStatusCode.BadRequest);
+                await fail.WriteAsJsonAsync(new { success = false, error });
+                return fail;
+            }
             var res = req.CreateResponse(HttpStatusCode.OK);
-            await res.WriteAsJsonAsync(new { success = success, error = success ? null : error });
+            await res.WriteAsJsonAsync(new { success = true });
             return res;
         }
         catch (Exception ex)
         {
-            var res = req.CreateResponse(HttpStatusCode.OK);
+            logger.LogWarning(ex, "Connection test failed.");
+            var res = req.CreateResponse(HttpStatusCode.BadRequest);
             await res.WriteAsJsonAsync(new { success = false, error = ex.InnerException?.Message ?? ex.Message });
             return res;
         }
@@ -196,7 +203,7 @@ public class AppDatabaseFunctions(
             var body = await new StreamReader(req.Body).ReadToEndAsync();
             var payload = JsonSerializer.Deserialize<CreateSessionRequest>(body, _jsonOptions);
 
-            var authenticatedUserId = req.FunctionContext.Items["UserId"]?.ToString();
+            var authenticatedUserId = req.FunctionContext.Items.TryGetValue("UserId", out var uid) ? uid?.ToString() : null;
             if (string.IsNullOrEmpty(authenticatedUserId))
             {
                 return req.CreateResponse(HttpStatusCode.Unauthorized);
@@ -227,7 +234,8 @@ public class AppDatabaseFunctions(
         {
             var list = await appDb.GetSessionsByUserAsync(userId);
             var res = req.CreateResponse(HttpStatusCode.OK);
-            await res.WriteAsJsonAsync(list);
+            res.Headers.Add("Content-Type", "application/json");
+            await res.WriteStringAsync(JsonSerializer.Serialize(list, _jsonOptions));
             return res;
         }
         catch (Exception ex)
@@ -243,7 +251,7 @@ public class AppDatabaseFunctions(
     {
         try
         {
-            var authenticatedUserId = req.FunctionContext.Items["UserId"]?.ToString();
+            var authenticatedUserId = req.FunctionContext.Items.TryGetValue("UserId", out var uid) ? uid?.ToString() : null;
             if (string.IsNullOrEmpty(authenticatedUserId))
                 return req.CreateResponse(HttpStatusCode.Unauthorized);
 
@@ -260,24 +268,25 @@ public class AppDatabaseFunctions(
         }
     }
 
-    [Function("GetOrganization")]
-    public async Task<HttpResponseData> GetOrganization(
+    [Function("GetOrganizations")]
+    public async Task<HttpResponseData> GetOrganizations(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "organizations/me")] HttpRequestData req)
     {
         try
         {
-            var authenticatedUserId = req.FunctionContext.Items["UserId"]?.ToString();
+            var authenticatedUserId = req.FunctionContext.Items.TryGetValue("UserId", out var uid) ? uid?.ToString() : null;
             if (string.IsNullOrEmpty(authenticatedUserId))
                 return req.CreateResponse(HttpStatusCode.Unauthorized);
 
-            var org = await appDb.GetOrganizationByUserIdAsync(authenticatedUserId);
+            var orgs = await appDb.GetOrganizationsByUserIdAsync(authenticatedUserId);
             var res = req.CreateResponse(HttpStatusCode.OK);
-            await res.WriteAsJsonAsync(org);
+            res.Headers.Add("Content-Type", "application/json");
+            await res.WriteStringAsync(JsonSerializer.Serialize(orgs, _jsonOptions));
             return res;
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to get organization.");
+            logger.LogError(ex, "Failed to get organizations.");
             return req.CreateResponse(HttpStatusCode.InternalServerError);
         }
     }
@@ -288,7 +297,7 @@ public class AppDatabaseFunctions(
     {
         try
         {
-            var authenticatedUserId = req.FunctionContext.Items["UserId"]?.ToString();
+            var authenticatedUserId = req.FunctionContext.Items.TryGetValue("UserId", out var uid) ? uid?.ToString() : null;
             if (string.IsNullOrEmpty(authenticatedUserId))
                 return req.CreateResponse(HttpStatusCode.Unauthorized);
 
@@ -298,6 +307,14 @@ public class AppDatabaseFunctions(
             if (org == null || string.IsNullOrWhiteSpace(org.Name))
                 return req.CreateResponse(HttpStatusCode.BadRequest);
 
+            var count = await appDb.GetOrganizationCountAsync(authenticatedUserId);
+            if (count >= 3)
+            {
+                var badRes = req.CreateResponse(HttpStatusCode.BadRequest);
+                await badRes.WriteAsJsonAsync(new { error = "Maximum of 3 organizations allowed per user." });
+                return badRes;
+            }
+
             var id = await appDb.CreateOrganizationAsync(org, authenticatedUserId);
             var res = req.CreateResponse(HttpStatusCode.OK);
             await res.WriteAsJsonAsync(new { id });
@@ -306,6 +323,32 @@ public class AppDatabaseFunctions(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to create organization.");
+            return req.CreateResponse(HttpStatusCode.InternalServerError);
+        }
+    }
+
+    [Function("DeleteOrganization")]
+    public async Task<HttpResponseData> DeleteOrganization(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "organizations/{id}")] HttpRequestData req, string id)
+    {
+        try
+        {
+            var authenticatedUserId = req.FunctionContext.Items.TryGetValue("UserId", out var uid) ? uid?.ToString() : null;
+            if (string.IsNullOrEmpty(authenticatedUserId))
+                return req.CreateResponse(HttpStatusCode.Unauthorized);
+            
+            if (!Guid.TryParse(id, out var orgId))
+                return req.CreateResponse(HttpStatusCode.BadRequest);
+
+            await appDb.DeleteOrganizationAsync(orgId, authenticatedUserId);
+            
+            var res = req.CreateResponse(HttpStatusCode.OK);
+            await res.WriteAsJsonAsync(new { success = true });
+            return res;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to delete organization.");
             return req.CreateResponse(HttpStatusCode.InternalServerError);
         }
     }

@@ -32,7 +32,9 @@ public interface IAppDatabaseService
 
     // --- Organizations ---
     Task<Guid> CreateOrganizationAsync(OrganizationRecord org, string adminUserId);
-    Task<OrganizationRecord?> GetOrganizationByUserIdAsync(string userId);
+    Task<List<OrganizationRecord>> GetOrganizationsByUserIdAsync(string userId);
+    Task<int> GetOrganizationCountAsync(string userId);
+    Task DeleteOrganizationAsync(Guid orgId, string userId);
 }
 
 public sealed record OrganizationRecord(
@@ -361,7 +363,7 @@ VALUES (@Id, @SessionId, @UserId, @Role, @Question, @SqlGenerated, @AgentRespons
         }
     }
 
-    public async Task<OrganizationRecord?> GetOrganizationByUserIdAsync(string userId)
+    public async Task<List<OrganizationRecord>> GetOrganizationsByUserIdAsync(string userId)
     {
         const string sql = @"
             SELECT o.* FROM dbo.organizations o
@@ -374,13 +376,53 @@ VALUES (@Id, @SessionId, @UserId, @Role, @Question, @SqlGenerated, @AgentRespons
         cmd.Parameters.AddWithValue("@UserId", userId);
         
         await using var reader = await cmd.ExecuteReaderAsync();
-        if (!await reader.ReadAsync()) return null;
+        var list = new List<OrganizationRecord>();
+        while (await reader.ReadAsync())
+        {
+            list.Add(new OrganizationRecord(
+                reader.GetGuid(reader.GetOrdinal("id")),
+                reader.GetString(reader.GetOrdinal("name")),
+                reader.IsDBNull(reader.GetOrdinal("industry")) ? null : reader.GetString(reader.GetOrdinal("industry")),
+                reader.GetDateTimeOffset(reader.GetOrdinal("created_at"))));
+        }
+        return list;
+    }
 
-        return new OrganizationRecord(
-            reader.GetGuid(reader.GetOrdinal("id")),
-            reader.GetString(reader.GetOrdinal("name")),
-            reader.IsDBNull(reader.GetOrdinal("industry")) ? null : reader.GetString(reader.GetOrdinal("industry")),
-            reader.GetDateTimeOffset(reader.GetOrdinal("created_at")));
+    public async Task DeleteOrganizationAsync(Guid orgId, string userId)
+    {
+        const string sql = @"
+            BEGIN TRANSACTION;
+            DECLARE @IsAdmin BIT;
+            SELECT @IsAdmin = 1 FROM dbo.organization_members WHERE user_id = @UserId AND organization_id = @OrgId AND role = 'Admin';
+            
+            IF @IsAdmin = 1
+            BEGIN
+                DELETE FROM dbo.organizations WHERE id = @OrgId;
+            END
+            COMMIT TRANSACTION;
+        ";
+        
+        await using var conn = new SqlConnection(_connectionString);
+        await conn.OpenAsync();
+        await using var cmd = new SqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("@UserId", userId);
+        cmd.Parameters.AddWithValue("@OrgId", orgId);
+        await cmd.ExecuteNonQueryAsync();
+    }
+
+    public async Task<int> GetOrganizationCountAsync(string userId)
+    {
+        const string sql = @"
+            SELECT COUNT(*) FROM dbo.organizations o
+            INNER JOIN dbo.organization_members m ON o.id = m.organization_id
+            WHERE m.user_id = @UserId";
+        
+        await using var conn = new SqlConnection(_connectionString);
+        await conn.OpenAsync();
+        await using var cmd = new SqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("@UserId", userId);
+        var count = (int)await cmd.ExecuteScalarAsync();
+        return count;
     }
 }
 

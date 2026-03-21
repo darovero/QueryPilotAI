@@ -13,6 +13,7 @@ export function OnboardingFlow({ userName, onComplete }: OnboardingFlowProps) {
   const [orgName, setOrgName] = useState('');
   const [industry, setIndustry] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   const handleNext = () => setStep(prev => prev + 1);
   const handleBack = () => setStep(prev => prev - 1);
@@ -126,23 +127,35 @@ export function OnboardingFlow({ userName, onComplete }: OnboardingFlowProps) {
               Your workspace <strong>{orgName}</strong> is ready. You can now connect your first database and start generating insights.
             </p>
 
+            <div className="mt-8 flex items-start gap-3 bg-zinc-50 border border-zinc-200 p-4 rounded-2xl text-left">
+              <input 
+                type="checkbox" 
+                id="terms" 
+                checked={acceptedTerms} 
+                onChange={e => setAcceptedTerms(e.target.checked)}
+                className="mt-1 w-4 h-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900 cursor-pointer accent-zinc-900"
+              />
+              <label htmlFor="terms" className="text-zinc-600 text-[13px] leading-relaxed cursor-pointer select-none">
+                I have read and agree to the <a href="#" className="font-semibold text-zinc-900 hover:underline">Terms of Service</a>, 
+                and <a href="#" className="font-semibold text-zinc-900 hover:underline">Privacy Policy</a>, 
+                and consent to the secure processing of my data.
+              </label>
+            </div>
+
             <button 
               onClick={handleSubmit}
-              disabled={isSubmitting}
-              className="mt-10 w-full bg-zinc-900 text-white font-semibold py-4 rounded-2xl hover:bg-zinc-800 transition-all shadow-lg flex items-center justify-center gap-3"
+              disabled={isSubmitting || !acceptedTerms}
+              className="mt-6 w-full bg-zinc-900 text-white font-semibold py-4 rounded-2xl hover:bg-zinc-800 transition-all shadow-lg flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed group"
             >
               {isSubmitting ? (
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
                 <>
                   Enter Dashboard
-                  <span className="material-symbols-outlined text-[20px]">rocket_launch</span>
+                  <span className="material-symbols-outlined text-[20px] group-hover:translate-x-1 transition-transform">rocket_launch</span>
                 </>
               )}
             </button>
-            <p className="mt-6 text-zinc-400 text-[12px]">
-              By entering, you agree to our Terms of Service and Privacy Policy.
-            </p>
           </div>
         )}
       </div>

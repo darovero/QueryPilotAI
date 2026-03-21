@@ -26,7 +26,7 @@
     },
     "bindings": [
       {
-        "name": "config",
+        "name": "connection",
         "direction": "In",
         "type": "activityTrigger",
         "properties": {}
@@ -421,9 +421,9 @@
     ]
   },
   {
-    "name": "GetOrganization",
+    "name": "GetOrganizations",
     "scriptFile": "Functions.Api.dll",
-    "entryPoint": "Functions.Api.Functions.AppDatabaseFunctions.GetOrganization",
+    "entryPoint": "Functions.Api.Functions.AppDatabaseFunctions.GetOrganizations",
     "language": "dotnet-isolated",
     "properties": {
       "IsCodeless": false
@@ -465,6 +465,33 @@
           "post"
         ],
         "route": "organizations",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "DeleteOrganization",
+    "scriptFile": "Functions.Api.dll",
+    "entryPoint": "Functions.Api.Functions.AppDatabaseFunctions.DeleteOrganization",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Anonymous",
+        "methods": [
+          "delete"
+        ],
+        "route": "organizations/{id}",
         "properties": {}
       },
       {

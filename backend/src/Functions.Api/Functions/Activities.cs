@@ -19,8 +19,20 @@ public class ClassifyWithConciergeActivity(IFoundryAgentClient agentClient)
 public class ExtractSchemaActivity(ISchemaExtractorService schemaExtractor)
 {
     [Function(nameof(ExtractSchemaActivity))]
-    public Task<string> Run([ActivityTrigger] DatabaseConfig config) =>
-        schemaExtractor.ExtractSchemaAsync(config);
+    public async Task<string> Run([ActivityTrigger] UserConnectionRecord connection) 
+    {
+        var config = new DatabaseConfig(
+            connection.DbType, connection.Host, connection.Port, 
+            connection.DatabaseName, connection.Username, connection.EncryptedPassword, connection.AuthType);
+        try 
+        {
+            return await schemaExtractor.ExtractSchemaAsync(config);
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"SQL ERROR: {ex.Message} | Inner: {ex.InnerException?.Message}");
+        }
+    }
 }
 
 public class PlanSqlActivity(IFoundryAgentClient agentClient)

@@ -33,5 +33,6 @@ export const msalConfig: Configuration = {
 };
 
 export const loginRequest = {
-    scopes: ['openid', 'profile', 'offline_access']
+    scopes: ['openid', 'profile', 'offline_access'],
+    prompt: 'select_account'
 };

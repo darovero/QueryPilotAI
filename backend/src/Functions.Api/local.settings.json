@@ -10,8 +10,8 @@
     "AzureOpenAI__ApiKey": "1flrAyIIaBxztuaCvRbpPkc8jIJE6pAdLS4tmBMAgNcW67pDZFddJQQJ99CCACHYHv6XJ3w3AAAAACOGyKFo",
     "ContentSafety__Endpoint": "https://eastus.api.cognitive.microsoft.com/",
     "FoundryAgent__ProjectEndpoint": "https://marianagonzalez-6489-resource.services.ai.azure.com/api/projects/marianagonzalez-6489",
-    "FoundryAgent__SqlPlannerAgentId": "asst_Neodm9cMUApZ9una8VF475lc",
-    "FoundryAgent__ResultInterpreterAgentId": "asst_ntTxnxy8GJDl5ic0oDABly3n",
-    "FoundryAgent__ConciergeAgentId": "asst_jvVXqbDsnwn7wQ7XVPI0vPea"
+    "FoundryAgent__SqlPlannerAgentId": "asst_sVfTKQcbeUeRanGQkNDviYFZ",
+    "FoundryAgent__ResultInterpreterAgentId": "asst_SEjRH87jIXeHlMvqawfXj4LB",
+    "FoundryAgent__ConciergeAgentId": "asst_vkMN5rnF0gM2EBBMz4W0Wr5h9"
   }
 }

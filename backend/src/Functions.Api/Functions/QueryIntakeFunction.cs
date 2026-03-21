@@ -20,7 +20,7 @@ public class QueryIntakeFunction
             PropertyNameCaseInsensitive = true
         });
 
-        var authenticatedUserId = req.FunctionContext.Items["UserId"]?.ToString();
+        var authenticatedUserId = req.FunctionContext.Items.TryGetValue("UserId", out var uid) ? uid?.ToString() : null;
         if (string.IsNullOrEmpty(authenticatedUserId))
         {
             return req.CreateResponse(HttpStatusCode.Unauthorized);

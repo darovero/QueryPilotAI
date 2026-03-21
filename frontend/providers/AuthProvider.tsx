@@ -13,6 +13,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         const initializeMsal = async () => {
             await msalInstance.initialize();
+            await msalInstance.handleRedirectPromise();
             setIsMsalInitialized(true);
         };
         initializeMsal();

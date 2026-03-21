@@ -126,11 +126,12 @@ public class FraudInsightOrchestrator
                         await context.CallActivityAsync(nameof(SaveSchemaCacheActivity), new SchemaCacheInput(request.ConnectionId.Value, dbSchema));
                     }
                 }
-                catch (Exception)
+                catch (TaskFailedException ex)
                 {
+                    var msg = ex.FailureDetails?.ErrorMessage ?? ex.Message;
                     return new InsightResponse(
                         context.InstanceId, "Error",
-                        "No fue posible conectarse a la base de datos indicada. Verifica la configuración de conexión.",
+                        $"No fue posible conectarse a la base de datos. Detalle: {msg}",
                         new[] { "Error al extraer esquema de la BD" }, string.Empty, Array.Empty<string>(),
                         new List<Dictionary<string, object?>>(),
                         new AuditMetadata("High", null));

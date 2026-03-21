@@ -76,16 +76,20 @@ export function UnifiedChat() {
   const [testSuccess, setTestSuccess] = useState(false);
   const { instance, accounts } = useMsal();
   const { fetchWithAuth, userId, account } = useApi();
+  const [organizations, setOrganizations] = useState<{ id: string; name: string; industry?: string }[]>([]);
   const [organization, setOrganization] = useState<{ id: string; name: string; industry?: string } | null>(null);
   const [isLoadingOrg, setIsLoadingOrg] = useState(true);
+  const [isAddingWorkspace, setIsAddingWorkspace] = useState(false);
 
   // Fetch organization on load
   useEffect(() => {
     if (userId) {
       fetchWithAuth('/api/organizations/me')
-        .then(res => res.ok ? res.json() : null)
+        .then(res => res.ok ? res.json() : [])
         .then(data => {
-           setOrganization(data);
+           const orgs = Array.isArray(data) ? data : (data ? [data] : []);
+           setOrganizations(orgs);
+           setOrganization(orgs[0] || null);
            setIsLoadingOrg(false);
         })
         .catch(() => setIsLoadingOrg(false));
@@ -96,20 +100,47 @@ export function UnifiedChat() {
     try {
       const res = await fetchWithAuth('/api/organizations', {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify(orgData)
       });
       if (res.ok) {
         const data = await res.json();
-        setOrganization({ id: data.id, ...orgData });
+        const newOrg = { id: data.id, ...orgData };
+        setOrganizations(prev => [...prev, newOrg]);
+        setOrganization(newOrg);
+        setIsAddingWorkspace(false);
         toast.success("Workspace created successfully!");
       } else {
-        toast.error("Failed to create workspace.");
+        const err = await res.json();
+        toast.error(err.error || "Failed to create workspace.");
       }
     } catch (err) {
       toast.error("Error creating workspace.");
     }
   };
   
+  const handleDeleteWorkspace = async () => {
+    if (!organization) return;
+    if (!confirm("Are you sure you want to delete this workspace? This cannot be undone.")) return;
+    try {
+      const res = await fetchWithAuth(`/api/organizations/${organization.id}`, { method: 'DELETE' });
+      if (res.ok) {
+        toast.success("Workspace deleted successfully.");
+        setOrganizations(prev => {
+            const nextOrgs = prev.filter(o => o.id !== organization.id);
+            setOrganization(nextOrgs[0] || null);
+            return nextOrgs;
+        });
+      } else {
+        toast.error("Failed to delete workspace.");
+      }
+    } catch {
+      toast.error("Error deleting workspace.");
+    }
+  };
+
   const handleMsalLogin = async () => {
     try {
       const loginResponse = await instance.loginPopup({
@@ -184,7 +215,7 @@ export function UnifiedChat() {
     if (!userId || hasHydrated) return;
     const hydrate = async () => {
       try {
-        const connRes = await fetchWithAuth(`/api/connections/${userId}`);
+        const connRes = await fetchWithAuth('/api/connections');
         if (connRes.ok) {
           const serverConns = await connRes.json();
           if (Array.isArray(serverConns) && serverConns.length > 0) {
@@ -589,8 +620,19 @@ export function UnifiedChat() {
           <p className="text-[14px] text-zinc-500 mt-2">Securing your workspace...</p>
         </div>
       )}
-      {userId && !isLoadingOrg && !organization && (
-        <OnboardingFlow userName={userName} onComplete={handleOnboardingComplete} />
+      {userId && !isLoadingOrg && (!organization || isAddingWorkspace) && (
+        <div className="relative w-full h-full">
+          {isAddingWorkspace && organizations.length > 0 && (
+            <button 
+              onClick={() => setIsAddingWorkspace(false)} 
+              className="absolute top-6 right-6 z-[120] text-zinc-500 hover:text-zinc-900 bg-white shadow-sm border border-zinc-200 rounded-full w-10 h-10 flex items-center justify-center transition-colors"
+              title="Cancel"
+            >
+               <span className="material-symbols-outlined text-[20px]">close</span>
+            </button>
+          )}
+          <OnboardingFlow userName={userName!} onComplete={handleOnboardingComplete} />
+        </div>
       )}
     <div className="flex h-screen overflow-hidden bg-[var(--bg)] text-[var(--text)] font-sans antialiased selection:bg-zinc-900 selection:text-white">
       
@@ -876,7 +918,7 @@ export function UnifiedChat() {
                   onClick={() => setIsProfileMenuOpen(prev => !prev)}
                   className="w-8 h-8 rounded-full bg-zinc-900 flex items-center justify-center text-[12px] font-medium text-white shadow-inner hover:ring-2 hover:ring-zinc-200 transition-all focus:outline-none"
                 >
-                  J
+                  {userInitial}
                 </button>
 
                 {isProfileMenuOpen && (
@@ -884,8 +926,8 @@ export function UnifiedChat() {
                     <div className="fixed inset-0 z-40" onClick={() => setIsProfileMenuOpen(false)}></div>
                     <div className="absolute top-12 right-0 w-[240px] bg-white rounded-2xl shadow-xl border border-zinc-200 py-1 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                        <div className="px-4 py-3 border-b border-zinc-100 flex flex-col items-start">
-                          <p className="text-[14px] font-semibold text-zinc-900">Jessy</p>
-                          <p className="text-[12px] text-zinc-500 truncate w-full">quintojessy@gmail.com</p>
+                          <p className="text-[14px] font-semibold text-zinc-900">{userName}</p>
+                          <p className="text-[12px] text-zinc-500 truncate w-full">{userEmail}</p>
                        </div>
                        <div className="py-1">
                           <button onClick={() => setIsProfileMenuOpen(false)} className="w-full text-left px-4 py-2 text-[13px] text-zinc-700 hover:bg-zinc-50 transition-colors flex items-center gap-3">
@@ -899,7 +941,7 @@ export function UnifiedChat() {
                           <button 
                             onClick={() => {
                                setIsProfileMenuOpen(false);
-                               window.location.href = '/login';
+                               handleLogout();
                             }}
                             className="w-full text-left px-4 py-2 text-[13px] text-red-600 hover:bg-red-50 transition-colors flex items-center gap-3"
                           >
@@ -918,7 +960,7 @@ export function UnifiedChat() {
           {currentView === 'welcome' && (
             <div className="h-full flex flex-col items-center justify-center max-w-[600px] mx-auto space-y-12 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="text-center space-y-3">
-                <h2 className="text-xl text-zinc-500 tracking-tight font-medium">Hello Jessy</h2>
+                <h2 className="text-xl text-zinc-500 tracking-tight font-medium">Hello {userName}</h2>
                 <h1 className="text-4xl font-semibold text-zinc-900 tracking-tight">Let's get you started.</h1>
               </div>
               
@@ -1349,18 +1391,41 @@ export function UnifiedChat() {
                       <p className="text-[14px] text-zinc-500 mt-2">Manage your account and preferences.</p>
                    </div>
                    
-                   <div className="bg-zinc-50 border border-zinc-200 rounded-2xl p-6 mb-8 flex flex-col md:flex-row md:items-center gap-6">
+                   <div className="bg-zinc-50 border border-zinc-200 rounded-2xl p-6 mb-8 flex flex-col md:flex-row md:items-center gap-6 relative">
                       <div className="w-16 h-16 rounded-xl bg-purple-600 flex items-center justify-center text-white text-2xl font-medium shadow-sm shrink-0">{userInitial}</div>
                       <div className="flex-1">
-                         <h2 className="text-[18px] font-semibold text-zinc-900">{organization?.name || `${userName}'s Workspace`}</h2>
-                         <p className="text-[14px] text-zinc-500 mt-1">{organization ? 'Organization Account' : 'Personal Account'}</p>
+                         <h2 className="text-[18px] font-semibold text-zinc-900 flex items-center gap-2">
+                            {organization?.name || `${userName}'s Workspace`}
+                            {organizations.length > 1 && (
+                              <select 
+                                className="text-sm bg-transparent border-none text-zinc-500 cursor-pointer focus:ring-0 p-0"
+                                value={organization?.id || ''}
+                                onChange={(e) => setOrganization(organizations.find(o => o.id === e.target.value) || null)}
+                              >
+                                {organizations.map(o => (
+                                  <option key={o.id} value={o.id}>{o.name}</option>
+                                ))}
+                              </select>
+                            )}
+                         </h2>
+                         <p className="text-[14px] text-zinc-500 mt-1">{organization ? 'Organization Account' : 'Personal Account'} · {organizations.length}/3 Workspaces</p>
                       </div>
-                      <button 
-                        onClick={handleLogout}
-                        className="bg-white border border-zinc-200 text-zinc-700 hover:bg-zinc-50 hover:text-zinc-900 px-5 py-2.5 rounded-xl text-[13px] font-medium transition-colors shadow-sm self-start md:self-center flex items-center gap-2">
-                         <span className="material-symbols-outlined text-[18px]">logout</span>
-                         Sign Out
-                      </button>
+                      <div className="flex items-center gap-3">
+                         {organizations.length < 3 && (
+                           <button 
+                             onClick={() => setIsAddingWorkspace(true)}
+                             className="text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-xl text-[13px] font-medium transition-colors"
+                           >
+                              + Add Workspace
+                           </button>
+                         )}
+                         <button 
+                           onClick={handleLogout}
+                           className="bg-white border border-zinc-200 text-zinc-700 hover:bg-zinc-50 hover:text-zinc-900 px-5 py-2.5 rounded-xl text-[13px] font-medium transition-colors shadow-sm flex items-center gap-2">
+                            <span className="material-symbols-outlined text-[18px]">logout</span>
+                            Sign Out
+                         </button>
+                      </div>
                    </div>
 
                    <div className="space-y-10">
@@ -1404,17 +1469,34 @@ export function UnifiedChat() {
                       </div>
 
                       <div className="border-t border-red-100 pt-10">
-                         <div className="bg-red-50 border border-red-200 rounded-2xl p-6">
-                            <h3 className="text-[15px] font-semibold text-red-900 mb-2">Danger Zone</h3>
-                            <p className="text-[13px] text-red-700 mb-6 max-w-2xl">
-                               Permanently delete your account and all of its contents. This action is not reversible, so please continue with caution. All your connected databases and chat history will be wiped from InsightForge AI.
-                            </p>
-                            <button 
-                                onClick={handleDeleteAccount}
-                                className="bg-white border border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 font-medium px-5 py-2.5 rounded-xl text-[13px] transition-colors shadow-sm"
-                            >
-                                Delete Account
-                            </button>
+                         <div className="bg-red-50 border border-red-200 rounded-2xl p-6 space-y-8">
+                            
+                            <div>
+                               <h3 className="text-[15px] font-semibold text-red-900 mb-2">Delete Workspace</h3>
+                               <p className="text-[13px] text-red-700 mb-4 max-w-2xl">
+                                  Permanently delete this organization workspace. All members will lose access immediately.
+                               </p>
+                               <button 
+                                   onClick={handleDeleteWorkspace}
+                                   className="bg-white border border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 font-medium px-5 py-2.5 rounded-xl text-[13px] transition-colors shadow-sm"
+                               >
+                                   Delete Workspace
+                               </button>
+                            </div>
+
+                            <div className="border-t border-red-200/50 pt-8">
+                               <h3 className="text-[15px] font-semibold text-red-900 mb-2">Delete Account</h3>
+                               <p className="text-[13px] text-red-700 mb-4 max-w-2xl">
+                                  Permanently delete your account and all of its contents. This action is not reversible. All your connected databases and chat history will be wiped from InsightForge AI.
+                               </p>
+                               <button 
+                                   onClick={handleDeleteAccount}
+                                   className="bg-white border border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 font-medium px-5 py-2.5 rounded-xl text-[13px] transition-colors shadow-sm"
+                               >
+                                   Delete Account
+                               </button>
+                            </div>
+
                          </div>
                       </div>
                    </div>
@@ -1510,7 +1592,7 @@ export function UnifiedChat() {
                  <div className="h-full flex flex-col justify-center items-center w-full px-6 text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <div className="w-full max-w-xl space-y-10 mb-16">
                       <div className="space-y-3">
-                         <h2 className="text-lg text-zinc-400 font-medium tracking-tight">Welcome, Jessy</h2>
+                         <h2 className="text-lg text-zinc-400 font-medium tracking-tight">Welcome, {userName}</h2>
                          <h1 className="text-3xl font-semibold tracking-tight text-zinc-900">What would you like to explore?</h1>
                       </div>
                       

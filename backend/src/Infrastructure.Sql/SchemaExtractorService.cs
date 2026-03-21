@@ -205,20 +205,20 @@ ORDER BY table_schema, table_name, index_name";
             {
                 return $"Server={config.Host}{portPart};Initial Catalog={config.Database};" +
                        $"User ID={config.Username};Password={config.Password};" +
-                       "Encrypt=True;TrustServerCertificate=False;Authentication=Active Directory Password;Connection Timeout=30;";
+                       "Encrypt=True;TrustServerCertificate=True;Authentication=Active Directory Password;Connection Timeout=30;";
             }
             return $"Server={config.Host}{portPart};Initial Catalog={config.Database};" +
-                   "Encrypt=True;TrustServerCertificate=False;Authentication=Active Directory Default;Connection Timeout=30;";
+                   "Encrypt=True;TrustServerCertificate=True;Authentication=Active Directory Default;Connection Timeout=30;";
         }
 
         if (!string.IsNullOrWhiteSpace(config.Username))
         {
             return $"Server={config.Host}{portPart};Initial Catalog={config.Database};" +
                    $"User ID={config.Username};Password={config.Password};" +
-                   "Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;";
+                   "Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;";
         }
 
         return $"Server={config.Host}{portPart};Initial Catalog={config.Database};" +
-               "Encrypt=True;TrustServerCertificate=False;Authentication=Active Directory Default;Connection Timeout=30;";
+               "Encrypt=True;TrustServerCertificate=True;Authentication=Active Directory Default;Connection Timeout=30;";
     }
 }

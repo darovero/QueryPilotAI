@@ -36,12 +36,21 @@ public class JwtValidationMiddleware : IFunctionsWorkerMiddleware
                     {
                         var token = handler.ReadJwtToken(tokenStr);
                         
-                        // En Entra ID External típicamente se usa 'oid' o 'sub' para identificar al usuario único
-                        var userId = token.Claims.FirstOrDefault(c => c.Type == "oid" || c.Type == "sub")?.Value;
+                        // Try multiple claim types used by Microsoft Entra ID
+                        var userId = token.Claims.FirstOrDefault(c => 
+                            c.Type == "oid" || 
+                            c.Type == "sub" ||
+                            c.Type == "http://schemas.microsoft.com/identity/claims/objectidentifier" ||
+                            c.Type == "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value;
                         
                         if (!string.IsNullOrEmpty(userId))
                         {
                             context.Items["UserId"] = userId;
+                            _logger.LogInformation($"JWT UserId extracted: {userId}");
+                        }
+                        else
+                        {
+                            _logger.LogWarning($"JWT token present but no UserId claim found. Available claims: {string.Join(", ", token.Claims.Select(c => c.Type))}");
                         }
                     }
                 }

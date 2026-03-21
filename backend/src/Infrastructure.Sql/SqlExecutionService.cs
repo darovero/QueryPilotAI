@@ -28,15 +28,15 @@ public sealed class SqlExecutionService(IConfiguration configuration) : ISqlExec
             if (string.Equals(config.AuthType, "AzureAD", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(config.Username))
             {
                 // ActiveDirectoryPassword requires Username and Password of the Microsoft Entra ID user
-                connectionString = $"Server={config.Host}{portPart};Initial Catalog={config.Database};User ID={config.Username};Password={config.Password};Encrypt=True;TrustServerCertificate=False;Authentication=Active Directory Password;Connection Timeout=30;";
+                connectionString = $"Server={config.Host}{portPart};Initial Catalog={config.Database};User ID={config.Username};Password={config.Password};Encrypt=True;TrustServerCertificate=True;Authentication=Active Directory Password;Connection Timeout=30;";
             }
             else if (string.IsNullOrWhiteSpace(config.Username))
             {
-                connectionString = $"Server={config.Host}{portPart};Initial Catalog={config.Database};Encrypt=True;TrustServerCertificate=False;Authentication=Active Directory Default;Connection Timeout=30;";
+                connectionString = $"Server={config.Host}{portPart};Initial Catalog={config.Database};Encrypt=True;TrustServerCertificate=True;Authentication=Active Directory Default;Connection Timeout=30;";
             }
             else
             {
-                connectionString = $"Server={config.Host}{portPart};Initial Catalog={config.Database};User ID={config.Username};Password={config.Password};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;";
+                connectionString = $"Server={config.Host}{portPart};Initial Catalog={config.Database};User ID={config.Username};Password={config.Password};Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;";
             }
         }
 
