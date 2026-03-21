@@ -1,0 +1,573 @@
+{
+  "format": 1,
+  "restore": {
+    "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Functions.Api\\Functions.Api.csproj": {}
+  },
+  "projects": {
+    "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Core.Application\\Core.Application.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Core.Application\\Core.Application.csproj",
+        "projectName": "Core.Application",
+        "projectPath": "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Core.Application\\Core.Application.csproj",
+        "packagesPath": "C:\\Users\\Jessy\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Core.Application\\obj\\",
+        "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
+        "configFilePaths": [
+          "C:\\Users\\Jessy\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Core.Domain\\Core.Domain.csproj": {
+                "projectPath": "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Core.Domain\\Core.Domain.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "10.0.200"
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.200/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Core.Domain\\Core.Domain.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Core.Domain\\Core.Domain.csproj",
+        "projectName": "Core.Domain",
+        "projectPath": "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Core.Domain\\Core.Domain.csproj",
+        "packagesPath": "C:\\Users\\Jessy\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Core.Domain\\obj\\",
+        "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
+        "configFilePaths": [
+          "C:\\Users\\Jessy\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "10.0.200"
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.200/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Functions.Api\\Functions.Api.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Functions.Api\\Functions.Api.csproj",
+        "projectName": "Functions.Api",
+        "projectPath": "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Functions.Api\\Functions.Api.csproj",
+        "packagesPath": "C:\\Users\\Jessy\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Functions.Api\\obj\\",
+        "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
+        "configFilePaths": [
+          "C:\\Users\\Jessy\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Core.Application\\Core.Application.csproj": {
+                "projectPath": "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Core.Application\\Core.Application.csproj"
+              },
+              "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Core.Domain\\Core.Domain.csproj": {
+                "projectPath": "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Core.Domain\\Core.Domain.csproj"
+              },
+              "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Infrastructure.AzureOpenAI\\Infrastructure.AzureOpenAI.csproj": {
+                "projectPath": "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Infrastructure.AzureOpenAI\\Infrastructure.AzureOpenAI.csproj"
+              },
+              "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Infrastructure.Observability\\Infrastructure.Observability.csproj": {
+                "projectPath": "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Infrastructure.Observability\\Infrastructure.Observability.csproj"
+              },
+              "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Infrastructure.Security\\Infrastructure.Security.csproj": {
+                "projectPath": "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Infrastructure.Security\\Infrastructure.Security.csproj"
+              },
+              "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Infrastructure.Sql\\Infrastructure.Sql.csproj": {
+                "projectPath": "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Infrastructure.Sql\\Infrastructure.Sql.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "10.0.200"
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "Microsoft.ApplicationInsights.WorkerService": {
+              "target": "Package",
+              "version": "[2.23.0, )"
+            },
+            "Microsoft.Azure.Functions.Worker": {
+              "target": "Package",
+              "version": "[1.21.0, )"
+            },
+            "Microsoft.Azure.Functions.Worker.ApplicationInsights": {
+              "target": "Package",
+              "version": "[1.2.0, )"
+            },
+            "Microsoft.Azure.Functions.Worker.Extensions.DurableTask": {
+              "target": "Package",
+              "version": "[1.2.2, )"
+            },
+            "Microsoft.Azure.Functions.Worker.Extensions.Http": {
+              "target": "Package",
+              "version": "[3.2.0, )"
+            },
+            "Microsoft.Azure.Functions.Worker.Sdk": {
+              "target": "Package",
+              "version": "[1.17.2, )"
+            },
+            "Npgsql": {
+              "target": "Package",
+              "version": "[10.0.2, )"
+            },
+            "System.IdentityModel.Tokens.Jwt": {
+              "target": "Package",
+              "version": "[8.16.0, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.200/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Infrastructure.AzureOpenAI\\Infrastructure.AzureOpenAI.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Infrastructure.AzureOpenAI\\Infrastructure.AzureOpenAI.csproj",
+        "projectName": "Infrastructure.AzureOpenAI",
+        "projectPath": "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Infrastructure.AzureOpenAI\\Infrastructure.AzureOpenAI.csproj",
+        "packagesPath": "C:\\Users\\Jessy\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Infrastructure.AzureOpenAI\\obj\\",
+        "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
+        "configFilePaths": [
+          "C:\\Users\\Jessy\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Core.Application\\Core.Application.csproj": {
+                "projectPath": "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Core.Application\\Core.Application.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "10.0.200"
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "Azure.AI.Agents.Persistent": {
+              "target": "Package",
+              "version": "[1.2.0-beta.9, )"
+            },
+            "Azure.AI.OpenAI": {
+              "target": "Package",
+              "version": "[2.1.0-beta.2, )"
+            },
+            "Azure.AI.Projects": {
+              "target": "Package",
+              "version": "[2.0.0-beta.2, )"
+            },
+            "Azure.AI.Projects.Agents": {
+              "target": "Package",
+              "version": "[2.0.0-beta.1, )"
+            },
+            "Azure.Identity": {
+              "target": "Package",
+              "version": "[1.19.0, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.200/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Infrastructure.Observability\\Infrastructure.Observability.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Infrastructure.Observability\\Infrastructure.Observability.csproj",
+        "projectName": "Infrastructure.Observability",
+        "projectPath": "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Infrastructure.Observability\\Infrastructure.Observability.csproj",
+        "packagesPath": "C:\\Users\\Jessy\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Infrastructure.Observability\\obj\\",
+        "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
+        "configFilePaths": [
+          "C:\\Users\\Jessy\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "10.0.200"
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.200/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Infrastructure.Security\\Infrastructure.Security.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Infrastructure.Security\\Infrastructure.Security.csproj",
+        "projectName": "Infrastructure.Security",
+        "projectPath": "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Infrastructure.Security\\Infrastructure.Security.csproj",
+        "packagesPath": "C:\\Users\\Jessy\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Infrastructure.Security\\obj\\",
+        "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
+        "configFilePaths": [
+          "C:\\Users\\Jessy\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Core.Application\\Core.Application.csproj": {
+                "projectPath": "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Core.Application\\Core.Application.csproj"
+              },
+              "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Core.Domain\\Core.Domain.csproj": {
+                "projectPath": "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Core.Domain\\Core.Domain.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "10.0.200"
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "System.IdentityModel.Tokens.Jwt": {
+              "target": "Package",
+              "version": "[8.16.0, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.200/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Infrastructure.Sql\\Infrastructure.Sql.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Infrastructure.Sql\\Infrastructure.Sql.csproj",
+        "projectName": "Infrastructure.Sql",
+        "projectPath": "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Infrastructure.Sql\\Infrastructure.Sql.csproj",
+        "packagesPath": "C:\\Users\\Jessy\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Infrastructure.Sql\\obj\\",
+        "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
+        "configFilePaths": [
+          "C:\\Users\\Jessy\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Core.Application\\Core.Application.csproj": {
+                "projectPath": "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Core.Application\\Core.Application.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "10.0.200"
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "Microsoft.Data.SqlClient": {
+              "target": "Package",
+              "version": "[5.2.2, )"
+            },
+            "Microsoft.Extensions.Configuration.Abstractions": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.200/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    }
+  }
+}

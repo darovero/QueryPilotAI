@@ -1,23 +1,47 @@
 using Microsoft.Azure.Functions.Worker;
-using Microsoft.Azure.Functions.Worker.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
-var builder = FunctionsApplication.CreateBuilder(args);
+var host = new HostBuilder()
+    .ConfigureFunctionsWorkerDefaults(builder =>
+    {
+        builder.UseMiddleware<Functions.Api.Middleware.JwtValidationMiddleware>();
+    })
+    .ConfigureServices(services =>
+    {
+        services
+            .AddApplicationInsightsTelemetryWorkerService()
+            .ConfigureFunctionsApplicationInsights();
 
-builder.Services
-    .AddApplicationInsightsTelemetryWorkerService()
-    .ConfigureFunctionsApplicationInsights();
+        services.AddLogging();
+        services.AddHttpClient();
 
-builder.Services.AddLogging();
-builder.Services.AddHttpClient();
+        // --- Core ---
+        services.AddSingleton<Core.Application.Services.IClock, Core.Application.Services.SystemClock>();
+        services.AddSingleton<Core.Domain.Policies.ISqlPolicyEngine, Infrastructure.Security.SqlPolicyEngine>();
 
-builder.Services.AddSingleton<Core.Application.Services.IClock, Core.Application.Services.SystemClock>();
-builder.Services.AddSingleton<Core.Domain.Policies.ISqlPolicyEngine, Infrastructure.Security.SqlPolicyEngine>();
-builder.Services.AddSingleton<Infrastructure.Sql.ISqlExecutionService, Infrastructure.Sql.SqlExecutionService>();
-builder.Services.AddSingleton<Infrastructure.AzureOpenAI.IIntentService, Infrastructure.AzureOpenAI.IntentService>();
-builder.Services.AddSingleton<Infrastructure.AzureOpenAI.ISqlGenerationService, Infrastructure.AzureOpenAI.SqlGenerationService>();
-builder.Services.AddSingleton<Infrastructure.AzureOpenAI.ISummaryService, Infrastructure.AzureOpenAI.SummaryService>();
-builder.Services.AddSingleton<Infrastructure.Security.IPromptSafetyService, Infrastructure.Security.PromptSafetyService>();
+        // --- Database Services ---
+        services.AddSingleton<Infrastructure.Sql.ISqlExecutionService, Infrastructure.Sql.SqlExecutionService>();
+        services.AddSingleton<Infrastructure.Sql.IAppDatabaseService, Infrastructure.Sql.AppDatabaseService>();
+        services.AddSingleton<Infrastructure.Sql.ISchemaExtractorService, Infrastructure.Sql.SchemaExtractorService>();
 
-builder.Build().Run();
+        // --- Security ---
+        services.AddSingleton<Infrastructure.Security.IPromptSafetyService, Infrastructure.Security.PromptSafetyService>();
+
+        // --- Foundry Agent Client ---
+        var projectEndpoint = Environment.GetEnvironmentVariable("FoundryAgent__ProjectEndpoint")
+            ?? throw new InvalidOperationException("FoundryAgent__ProjectEndpoint is required.");
+        var sqlPlannerAgentId = Environment.GetEnvironmentVariable("FoundryAgent__SqlPlannerAgentId")
+            ?? throw new InvalidOperationException("FoundryAgent__SqlPlannerAgentId is required.");
+        var resultInterpreterAgentId = Environment.GetEnvironmentVariable("FoundryAgent__ResultInterpreterAgentId")
+            ?? throw new InvalidOperationException("FoundryAgent__ResultInterpreterAgentId is required.");
+        var conciergeAgentId = Environment.GetEnvironmentVariable("FoundryAgent__ConciergeAgentId")
+            ?? throw new InvalidOperationException("FoundryAgent__ConciergeAgentId is required.");
+
+        services.AddSingleton<Infrastructure.AzureOpenAI.IFoundryAgentClient>(
+            _ => new Infrastructure.AzureOpenAI.FoundryAgentClient(
+                projectEndpoint, sqlPlannerAgentId, resultInterpreterAgentId, conciergeAgentId));
+    })
+    .Build();
+
+host.Run();

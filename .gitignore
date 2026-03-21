@@ -1,0 +1,33 @@
+### Frontend (Next.js)
+frontend/.next/
+frontend/node_modules/
+frontend/out/
+
+### .NET / C#
+**/bin/
+**/obj/
+*.user
+*.rsuser
+*.suo
+
+### Azure Functions local
+**/local.settings.json
+**/bin/output/
+
+### Local environments and secrets
+.env
+.env.*
+!.env.example
+!.env.local.example
+
+### VS Code / IDE
+.vscode/
+!.vscode/settings.json
+!.vscode/extensions.json
+
+### OS files
+.DS_Store
+Thumbs.db
+
+### Azurite local storage
+.azurite/
