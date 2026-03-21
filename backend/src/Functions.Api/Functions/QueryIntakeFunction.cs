@@ -20,12 +20,20 @@ public class QueryIntakeFunction
             PropertyNameCaseInsensitive = true
         });
 
+        var authenticatedUserId = req.FunctionContext.Items["UserId"]?.ToString();
+        if (string.IsNullOrEmpty(authenticatedUserId))
+        {
+            return req.CreateResponse(HttpStatusCode.Unauthorized);
+        }
+
         if (request is null || string.IsNullOrWhiteSpace(request.Question))
         {
             var bad = req.CreateResponse(HttpStatusCode.BadRequest);
             await bad.WriteStringAsync("Invalid request payload.");
             return bad;
         }
+
+        request = request with { UserId = authenticatedUserId };
 
         var instanceId = await durableClient.ScheduleNewOrchestrationInstanceAsync(
             nameof(FraudInsightOrchestrator),

@@ -65,38 +65,9 @@ public class FraudInsightOrchestrator
         context.SetCustomStatus(new PipelineStep("safety_check", "Prompt seguro", "Completed", context.CurrentUtcDateTime));
 
         // =====================================================
-        // Step 2: Extract Database Schema (dynamic, from user's DB)
+        // Step 2: Conversation Context (from persistent DB)
         // =====================================================
-        string dbSchema;
-
-        if (request.Connection is not null)
-        {
-            context.SetCustomStatus(new PipelineStep("schema_extraction", "Extrayendo esquema de la base de datos del usuario", "Active", context.CurrentUtcDateTime));
-
-            try
-            {
-                dbSchema = await context.CallActivityAsync<string>(nameof(ExtractSchemaActivity), request.Connection);
-            }
-            catch (Exception)
-            {
-                return new InsightResponse(
-                    context.InstanceId, "Error",
-                    "No fue posible conectarse a la base de datos indicada. Verifica la configuración de conexión.",
-                    new[] { "Error al extraer esquema de la BD" }, string.Empty, Array.Empty<string>(),
-                    new List<Dictionary<string, object?>>(),
-                    new AuditMetadata("High", null));
-            }
-
-            context.SetCustomStatus(new PipelineStep("schema_extraction", "Esquema extraído", "Completed", context.CurrentUtcDateTime));
-        }
-        else
-        {
-            dbSchema = "No se proporcionó conexión a base de datos. No hay esquema disponible.";
-        }
-
-        // =====================================================
-        // Step 3: Conversation Context (from persistent DB)
-        // =====================================================
+        int turnCount = 0;
         string? conversationContext = null;
 
         if (request.SessionId is not null && Guid.TryParse(request.SessionId, out var sessionGuid))
@@ -105,6 +76,8 @@ public class FraudInsightOrchestrator
 
             var recentTurns = await context.CallActivityAsync<List<ConversationTurnRecord>>(
                 nameof(GetRecentTurnsActivity), new RecentTurnsInput(sessionGuid, 6));
+
+            turnCount = recentTurns.Count;
 
             if (recentTurns.Count > 0)
             {
@@ -119,6 +92,56 @@ public class FraudInsightOrchestrator
             }
 
             context.SetCustomStatus(new PipelineStep("conversation_context", "Contexto recuperado", "Completed", context.CurrentUtcDateTime));
+        }
+
+        // =====================================================
+        // Step 3: Extract Database Schema (dynamic, from user's DB)
+        // =====================================================
+        string dbSchema = "";
+        bool extractFresh = true;
+
+        if (request.Connection is not null)
+        {
+            if (request.ConnectionId.HasValue && turnCount % 3 != 0)
+            {
+                var cachedSchema = await context.CallActivityAsync<string?>(nameof(GetSchemaFromCacheActivity), request.ConnectionId.Value);
+                if (!string.IsNullOrEmpty(cachedSchema))
+                {
+                    dbSchema = cachedSchema;
+                    extractFresh = false;
+                    context.SetCustomStatus(new PipelineStep("schema_extraction", "Esquema recuperado desde caché", "Completed", context.CurrentUtcDateTime));
+                }
+            }
+
+            if (extractFresh)
+            {
+                context.SetCustomStatus(new PipelineStep("schema_extraction", "Extrayendo esquema desde la base de datos origen", "Active", context.CurrentUtcDateTime));
+
+                try
+                {
+                    dbSchema = await context.CallActivityAsync<string>(nameof(ExtractSchemaActivity), request.Connection);
+                    
+                    if (request.ConnectionId.HasValue)
+                    {
+                        await context.CallActivityAsync(nameof(SaveSchemaCacheActivity), new SchemaCacheInput(request.ConnectionId.Value, dbSchema));
+                    }
+                }
+                catch (Exception)
+                {
+                    return new InsightResponse(
+                        context.InstanceId, "Error",
+                        "No fue posible conectarse a la base de datos indicada. Verifica la configuración de conexión.",
+                        new[] { "Error al extraer esquema de la BD" }, string.Empty, Array.Empty<string>(),
+                        new List<Dictionary<string, object?>>(),
+                        new AuditMetadata("High", null));
+                }
+
+                context.SetCustomStatus(new PipelineStep("schema_extraction", "Esquema extraído y cacheado", "Completed", context.CurrentUtcDateTime));
+            }
+        }
+        else
+        {
+            dbSchema = "No se proporcionó conexión a base de datos. No hay esquema disponible.";
         }
 
         // =====================================================

@@ -248,7 +248,88 @@
         "methods": [
           "get"
         ],
-        "route": "connections/{userId}",
+        "route": "connections",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "DeleteConnection",
+    "scriptFile": "Functions.Api.dll",
+    "entryPoint": "Functions.Api.Functions.AppDatabaseFunctions.DeleteConnection",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Anonymous",
+        "methods": [
+          "delete"
+        ],
+        "route": "connections/{id}",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "DeleteAccount",
+    "scriptFile": "Functions.Api.dll",
+    "entryPoint": "Functions.Api.Functions.AppDatabaseFunctions.DeleteAccount",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Anonymous",
+        "methods": [
+          "delete"
+        ],
+        "route": "users/me",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "TestConnection",
+    "scriptFile": "Functions.Api.dll",
+    "entryPoint": "Functions.Api.Functions.AppDatabaseFunctions.TestConnection",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Anonymous",
+        "methods": [
+          "post"
+        ],
+        "route": "connections/test",
         "properties": {}
       },
       {
@@ -303,6 +384,87 @@
           "get"
         ],
         "route": "sessions/{userId}",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "DeleteSession",
+    "scriptFile": "Functions.Api.dll",
+    "entryPoint": "Functions.Api.Functions.AppDatabaseFunctions.DeleteSession",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Anonymous",
+        "methods": [
+          "delete"
+        ],
+        "route": "sessions/{sessionId}",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "GetOrganization",
+    "scriptFile": "Functions.Api.dll",
+    "entryPoint": "Functions.Api.Functions.AppDatabaseFunctions.GetOrganization",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Anonymous",
+        "methods": [
+          "get"
+        ],
+        "route": "organizations/me",
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "CreateOrganization",
+    "scriptFile": "Functions.Api.dll",
+    "entryPoint": "Functions.Api.Functions.AppDatabaseFunctions.CreateOrganization",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Anonymous",
+        "methods": [
+          "post"
+        ],
+        "route": "organizations",
         "properties": {}
       },
       {
@@ -446,33 +608,6 @@
           "get"
         ],
         "route": "history",
-        "properties": {}
-      },
-      {
-        "name": "$return",
-        "type": "http",
-        "direction": "Out"
-      }
-    ]
-  },
-  {
-    "name": "TestConnection",
-    "scriptFile": "Functions.Api.dll",
-    "entryPoint": "Functions.Api.Functions.TestConnectionFunction.Run",
-    "language": "dotnet-isolated",
-    "properties": {
-      "IsCodeless": false
-    },
-    "bindings": [
-      {
-        "name": "req",
-        "direction": "In",
-        "type": "httpTrigger",
-        "authLevel": "Anonymous",
-        "methods": [
-          "post"
-        ],
-        "route": "test-connection",
         "properties": {}
       },
       {

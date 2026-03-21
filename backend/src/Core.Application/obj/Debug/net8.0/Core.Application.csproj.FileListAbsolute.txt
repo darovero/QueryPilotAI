@@ -12,3 +12,8 @@ C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Core.Application\obj\De
 C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Core.Application\obj\Debug\net8.0\refint\Core.Application.dll
 C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Core.Application\obj\Debug\net8.0\Core.Application.pdb
 C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Core.Application\obj\Debug\net8.0\ref\Core.Application.dll
+C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Core.Application\bin\Debug\net8.0\Core.Application.deps.json
+C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Core.Application\bin\Debug\net8.0\Core.Application.dll
+C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Core.Application\bin\Debug\net8.0\Core.Application.pdb
+C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Core.Application\bin\Debug\net8.0\Core.Domain.dll
+C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Core.Application\bin\Debug\net8.0\Core.Domain.pdb

@@ -2,11 +2,14 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useMsal } from "@azure/msal-react";
+import { useApi } from "../hooks/useApi";
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { prism } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { ResponsiveContainer, BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { toast } from 'sonner';
+import { OnboardingFlow } from "./OnboardingFlow";
 import "./UnifiedChat.css";
 
 type ProgressEvent = { label: string; status: string; time: string };
@@ -56,6 +59,7 @@ export function UnifiedChat() {
     }
   }, []);
 
+
   const [isInsightPanelOpen, setIsInsightPanelOpen] = useState(false);
   const [selectedMessageForPanel, setSelectedMessageForPanel] = useState<Message | null>(null);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
@@ -70,7 +74,41 @@ export function UnifiedChat() {
   const [connError, setConnError] = useState("");
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [testSuccess, setTestSuccess] = useState(false);
-  const { instance } = useMsal();
+  const { instance, accounts } = useMsal();
+  const { fetchWithAuth, userId, account } = useApi();
+  const [organization, setOrganization] = useState<{ id: string; name: string; industry?: string } | null>(null);
+  const [isLoadingOrg, setIsLoadingOrg] = useState(true);
+
+  // Fetch organization on load
+  useEffect(() => {
+    if (userId) {
+      fetchWithAuth('/api/organizations/me')
+        .then(res => res.ok ? res.json() : null)
+        .then(data => {
+           setOrganization(data);
+           setIsLoadingOrg(false);
+        })
+        .catch(() => setIsLoadingOrg(false));
+    }
+  }, [userId]);
+
+  const handleOnboardingComplete = async (orgData: { name: string; industry: string }) => {
+    try {
+      const res = await fetchWithAuth('/api/organizations', {
+        method: 'POST',
+        body: JSON.stringify(orgData)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setOrganization({ id: data.id, ...orgData });
+        toast.success("Workspace created successfully!");
+      } else {
+        toast.error("Failed to create workspace.");
+      }
+    } catch (err) {
+      toast.error("Error creating workspace.");
+    }
+  };
   
   const handleMsalLogin = async () => {
     try {
@@ -129,9 +167,9 @@ export function UnifiedChat() {
   }, []);
 
   // localStorage persistence (skipped on initial empty render)
-  useEffect(() => { if (connections.length > 0) localStorage.setItem('qp_connections', JSON.stringify(connections)); }, [connections]);
-  useEffect(() => { if (chatSessions.length > 0) localStorage.setItem('qp_chatSessions', JSON.stringify(chatSessions)); }, [chatSessions]);
-  useEffect(() => { if (openTabs.length > 0) localStorage.setItem('qp_openTabs', JSON.stringify(openTabs)); }, [openTabs]);
+  useEffect(() => { localStorage.setItem('qp_connections', JSON.stringify(connections)); }, [connections]);
+  useEffect(() => { localStorage.setItem('qp_chatSessions', JSON.stringify(chatSessions)); }, [chatSessions]);
+  useEffect(() => { localStorage.setItem('qp_openTabs', JSON.stringify(openTabs)); }, [openTabs]);
 
   const addLog = (level: LogEntry["level"], msg: string) => {
     setTerminalLogs((prev) => [
@@ -139,6 +177,49 @@ export function UnifiedChat() {
       { id: Math.random().toString(), timestamp: new Date().toISOString(), level, message: msg },
     ]);
   };
+
+  // Server-side hydration: fetch connections & sessions from backend
+  const [hasHydrated, setHasHydrated] = useState(false);
+  useEffect(() => {
+    if (!userId || hasHydrated) return;
+    const hydrate = async () => {
+      try {
+        const connRes = await fetchWithAuth(`/api/connections/${userId}`);
+        if (connRes.ok) {
+          const serverConns = await connRes.json();
+          if (Array.isArray(serverConns) && serverConns.length > 0) {
+            const mapped: Connection[] = serverConns.map((c: any) => ({
+              id: c.id, name: c.connectionName, host: c.host, port: c.port,
+              database: c.databaseName, username: c.username, password: c.encryptedPassword,
+              type: c.dbType, authType: c.authType
+            }));
+            setConnections(mapped);
+          }
+        }
+        const sessRes = await fetchWithAuth(`/api/sessions/${userId}`);
+        if (sessRes.ok) {
+          const serverSessions = await sessRes.json();
+          if (Array.isArray(serverSessions) && serverSessions.length > 0) {
+            setChatSessions(prev => {
+              const existingIds = new Set(prev.map(s => s.id));
+              const newSessions: ChatSession[] = serverSessions
+                .filter((s: any) => !existingIds.has(s.id))
+                .map((s: any) => ({
+                  id: s.id, connectionId: s.connectionId || '', title: s.title || 'Chat', messages: []
+                }));
+              return [...prev, ...newSessions];
+            });
+          }
+        }
+        setHasHydrated(true);
+        addLog("SUCCESS", "Workspace synced from server.");
+      } catch (err) {
+        console.warn("Backend hydration failed, using localStorage.", err);
+        setHasHydrated(true);
+      }
+    };
+    hydrate();
+  }, [userId]);
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -151,7 +232,7 @@ export function UnifiedChat() {
 
     const interval = setInterval(async () => {
       try {
-        const res = await fetch("/api/query/" + activePoll);
+        const res = await fetchWithAuth("/api/query/" + activePoll);
         if (!res.ok) throw new Error("Fetch failed");
         
         const data = await res.json();
@@ -259,12 +340,12 @@ export function UnifiedChat() {
     const activeConnection = connections.find(c => c.id === activeChatSession.connectionId);
     
     try {
-      const response = await fetch("/api/query", {
+      const response = await fetchWithAuth("/api/query", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           question: userMsg.content,
-          userId: "user@agent.com",
+          userId: userId,
           role: "FraudAnalyst",
           correlationId: crypto.randomUUID(),
           sessionId: activeChatSession.id,
@@ -307,7 +388,7 @@ export function UnifiedChat() {
       const res = await fetch(`/api/query/${msg.instanceId}/approve`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ decision, approverUserId: "user@agent.com", comments: comments || "" }),
+        body: JSON.stringify({ decision, approverUserId: userId, comments: comments || "" }),
       });
       if (!res.ok) throw new Error("Approval failed");
       setMessages((prev) => {
@@ -357,16 +438,16 @@ export function UnifiedChat() {
     try {
         setConnError("");
         setIsTestingConnection(true);
-        const res = await fetch("/api/test-connection", {
+        const res = await fetchWithAuth("/api/connections/test", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                type: connForm.type || "Azure SQL",
+                dbType: connForm.type || "Azure SQL",
                 host: connForm.host,
                 port: connForm.port,
-                database: connForm.database,
+                databaseName: connForm.database,
                 username: connForm.username,
-                password: connForm.password,
+                encryptedPassword: connForm.password,
                 authType: connForm.authType
             })
         });
@@ -374,13 +455,14 @@ export function UnifiedChat() {
         if (!res.ok) {
             let errorMsg = "Failed to connect to the database.";
             try {
-                const errBody = await res.json();
-                if (errBody.error) errorMsg = errBody.error;
-            } catch (jsonErr) {
-                // If the response is empty or not JSON (e.g. 404 or 500 from proxy), just use text
-                const textBody = await res.text();
-                if (textBody) errorMsg = textBody;
-            }
+                const bodyText = await res.text();
+                try {
+                    const errBody = JSON.parse(bodyText);
+                    if (errBody.error) errorMsg = errBody.error;
+                } catch {
+                    if (bodyText) errorMsg = bodyText;
+                }
+            } catch {}
             throw new Error(errorMsg);
         }
 
@@ -391,12 +473,12 @@ export function UnifiedChat() {
                 const updatedConn = { ...connForm } as Connection;
                 setConnections(prev => prev.map(c => c.id === editingConnId ? { ...c, ...updatedConn } : c));
                 
-                await fetch('/api/connections', {
+                await fetchWithAuth('/api/connections', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
                        id: editingConnId, 
-                       userId: "user@agent.com", 
+                       userId: userId, 
                        connectionName: updatedConn.name,
                        dbType: updatedConn.type || "PostgreSQL",
                        host: updatedConn.host,
@@ -410,6 +492,7 @@ export function UnifiedChat() {
                 setConnError("");
                 setCurrentView('manage_connections');
                 addLog("SUCCESS", `Connection ${connForm.name} updated successfully.`);
+                toast.success(`Connection ${connForm.name} updated successfully.`);
             }, 1500);
         } else {
             setTestSuccess(true);
@@ -421,12 +504,12 @@ export function UnifiedChat() {
                 const newConn = { ...formWithoutId, id: newConnId, name: connForm.name!.trim() } as Connection;
                 setConnections(prev => [...prev, newConn]);
 
-                await fetch('/api/connections', {
+                await fetchWithAuth('/api/connections', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
                        id: newConnId, 
-                       userId: "user@agent.com", 
+                       userId: userId, 
                        connectionName: newConn.name,
                        dbType: newConn.type || "PostgreSQL",
                        host: newConn.host,
@@ -439,11 +522,13 @@ export function UnifiedChat() {
 
                 setCurrentView('manage_connections');
                 addLog("SUCCESS", `Connected to ${connForm.name!.trim()} successfully.`);
+                toast.success(`Connected to ${connForm.name!.trim()} successfully.`);
             }, 1500);
         }
     } catch (e: any) {
         setConnError(e.message);
         addLog("ERROR", "Connection test failed: " + e.message);
+        toast.error(e.message);
     } finally {
         setIsTestingConnection(false);
     }
@@ -459,7 +544,54 @@ export function UnifiedChat() {
     setCurrentView(chatId);
   };
 
+  const activeAccount = accounts[0];
+  const userName = activeAccount?.name || 'User';
+  const userEmail = activeAccount?.username || '';
+  const userInitial = userName.charAt(0).toUpperCase();
+
+  const handleLogout = () => {
+    instance.logoutRedirect({
+      postLogoutRedirectUri: window.location.origin
+    });
+  };
+
+  const handleDeleteAccount = async () => {
+    if (confirm("Are you sure you want to delete all your data and chat history? This action cannot be undone.")) {
+      try {
+        toast.promise(
+          fetchWithAuth("/api/users/me", { method: "DELETE" }).then(res => {
+            if (!res.ok) throw new Error("Failed to delete account");
+            return res;
+          }),
+          {
+            loading: 'Deleting account data...',
+            success: () => {
+              setTimeout(() => handleLogout(), 1500);
+              return 'Account data deleted. Signing out...';
+            },
+            error: 'Failed to delete account data.'
+          }
+        );
+      } catch (err: any) {
+        toast.error("Error initiating deletion: " + err.message);
+      }
+    }
+  };
+
   return (
+    <>
+      {userId && isLoadingOrg && (
+        <div className="fixed inset-0 z-[200] bg-white flex flex-col items-center justify-center animate-out fade-out duration-1000 fill-mode-forwards">
+          <div className="w-16 h-16 bg-zinc-900 rounded-2xl flex items-center justify-center mb-6 shadow-2xl animate-pulse">
+            <span className="material-symbols-outlined text-white text-[32px] animate-spin" style={{ animationDuration: '3s' }}>hourglass_empty</span>
+          </div>
+          <h2 className="text-xl font-bold text-zinc-900 tracking-tight animate-pulse">InsightForge AI</h2>
+          <p className="text-[14px] text-zinc-500 mt-2">Securing your workspace...</p>
+        </div>
+      )}
+      {userId && !isLoadingOrg && !organization && (
+        <OnboardingFlow userName={userName} onComplete={handleOnboardingComplete} />
+      )}
     <div className="flex h-screen overflow-hidden bg-[var(--bg)] text-[var(--text)] font-sans antialiased selection:bg-zinc-900 selection:text-white">
       
       {/* Sidebar - Clean Light Minimalist */}
@@ -471,7 +603,9 @@ export function UnifiedChat() {
               <div className="w-5 h-5 rounded bg-black flex items-center justify-center shadow-sm">
                  <div className="w-2 h-2 bg-white rounded-full"></div>
               </div>
-              <span className="text-[13px] font-medium tracking-wide text-zinc-900 transition-colors">Jessy's workspace</span>
+              <span className="text-[13px] font-medium tracking-wide text-zinc-900 transition-colors">
+                {organization?.name || `${userName}'s Workspace`}
+              </span>
             </div>
             <span className="material-symbols-outlined text-sm text-zinc-400 group-hover:text-zinc-900 transition-colors">unfold_more</span>
           </button>
@@ -480,23 +614,23 @@ export function UnifiedChat() {
           <div className="flex-1 overflow-y-auto w-full">
             <div className="px-4 py-4 space-y-1 border-b border-zinc-200/50">
               <button 
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] transition-colors ${currentView === 'welcome' || currentView === 'integrations' || currentView === 'connect_postgres' ? 'bg-zinc-100 text-zinc-900 font-medium' : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'}`}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] transition-all duration-200 group active:scale-[0.98] ${currentView === 'welcome' || currentView === 'integrations' || currentView === 'connect_postgres' ? 'bg-zinc-100 text-zinc-900 font-medium shadow-sm' : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-50'}`}
                 onClick={() => setCurrentView('welcome')}
               >
-                <span className="material-symbols-outlined text-[24px]">grid_view</span>
-                Data Sources
+                <span className="material-symbols-outlined text-[20px] group-hover:scale-110 transition-transform text-zinc-400 group-hover:text-zinc-900">grid_view</span>
+                <span className="group-hover:translate-x-1 transition-transform duration-200">Data Sources</span>
               </button>
               <button 
                 onClick={() => setCurrentView('settings')}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-colors ${currentView === 'settings' ? 'bg-zinc-100 text-zinc-900' : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'}`}>
-                <span className="material-symbols-outlined text-[24px]">tune</span>
-                Workspace Settings
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] transition-all duration-200 group active:scale-[0.98] ${currentView === 'settings' ? 'bg-zinc-100 text-zinc-900 font-medium shadow-sm' : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-50'}`}>
+                <span className="material-symbols-outlined text-[20px] group-hover:scale-110 transition-transform text-zinc-400 group-hover:text-zinc-900">tune</span>
+                <span className="group-hover:translate-x-1 transition-transform duration-200">Workspace Settings</span>
               </button>
               <button 
-                onClick={async () => { setCurrentView('history'); try { const r = await fetch('/api/history'); if(r.ok) { const d = await r.json(); setHistoryData(d); } } catch {} }}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-colors ${currentView === 'history' ? 'bg-zinc-100 text-zinc-900' : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'}`}>
-                <span className="material-symbols-outlined text-[24px]">history</span>
-                History
+                onClick={async () => { setCurrentView('history'); try { const r = await fetchWithAuth(`/api/sessions/${userId}`); if(r.ok) { const d = await r.json(); setHistoryData(d); } } catch {} }}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] transition-all duration-200 group active:scale-[0.98] ${currentView === 'history' ? 'bg-zinc-100 text-zinc-900 font-medium shadow-sm' : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-50'}`}>
+                <span className="material-symbols-outlined text-[20px] group-hover:scale-110 transition-transform text-zinc-400 group-hover:text-zinc-900">history</span>
+                <span className="group-hover:translate-x-1 transition-transform duration-200">History</span>
               </button>
             </div>
             
@@ -535,10 +669,10 @@ export function UnifiedChat() {
                                   onClick={() => {
                                      if (chats.length === 0) {
                                          const newChatId = crypto.randomUUID();
-                                         fetch('/api/sessions', {
+                                         fetchWithAuth('/api/sessions', {
                                             method: 'POST',
                                             headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify({ id: newChatId, userId: "user@agent.com", connectionId: conn.id, title: "New Chat" })
+                                            body: JSON.stringify({ id: newChatId, userId: userId, connectionId: conn.id, title: "New Chat" })
                                          });
                                          setChatSessions(prev => [...prev, { id: newChatId, connectionId: conn.id, title: 'New Chat', messages: [] }]);
                                          setOpenTabs(prev => { 
@@ -568,10 +702,10 @@ export function UnifiedChat() {
                                   onClick={(e) => {
                                       e.stopPropagation();
                                       const newChatId = crypto.randomUUID();
-                                      fetch('/api/sessions', {
+                                      fetchWithAuth('/api/sessions', {
                                          method: 'POST',
                                          headers: { 'Content-Type': 'application/json' },
-                                         body: JSON.stringify({ id: newChatId, userId: "user@agent.com", connectionId: conn.id, title: "New Chat" })
+                                         body: JSON.stringify({ id: newChatId, userId: userId, connectionId: conn.id, title: "New Chat" })
                                       });
                                       setChatSessions(prev => [...prev, { id: newChatId, connectionId: conn.id, title: 'New Chat', messages: [] }]);
                                       setOpenTabs(prev => [...prev, { type: 'chat', id: newChatId, title: 'New Chat', connectionId: conn.id }]);
@@ -585,13 +719,18 @@ export function UnifiedChat() {
                                 <button 
                                   onClick={(e) => {
                                       e.stopPropagation();
-                                      if (confirm(`Are you sure you want to delete ${conn.name}?`)) {
-                                          setConnections(prev => prev.filter(c => c.id !== conn.id));
-                                          setChatSessions(prev => prev.filter(c => c.connectionId !== conn.id));
-                                          setOpenTabs(prev => prev.filter(t => t.connectionId !== conn.id));
-                                          if (currentView === conn.id) setCurrentView('welcome');
-                                          addLog("SUCCESS", `Connection ${conn.name} removed.`);
-                                      }
+                                       if (confirm(`Are you sure you want to delete ${conn.name}?`)) {
+                                           fetchWithAuth(`/api/connections/${conn.id}`, { method: 'DELETE' }).then(r => {
+                                             if (r.ok) {
+                                               setConnections(prev => prev.filter(c => c.id !== conn.id));
+                                               setChatSessions(prev => prev.filter(c => c.connectionId !== conn.id));
+                                               setOpenTabs(prev => prev.filter(t => t.connectionId !== conn.id));
+                                               if (currentView === conn.id) setCurrentView('welcome');
+                                               addLog("SUCCESS", `Connection ${conn.name} removed.`);
+                                               toast.success(`Connection ${conn.name} deleted.`);
+                                             } else { toast.error(`Failed to delete ${conn.name}.`); }
+                                           }).catch(() => toast.error(`Failed to delete ${conn.name}.`));
+                                       }
                                   }}
                                   className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-red-50 rounded text-zinc-400 hover:text-red-500 transition-all shrink-0 ml-1" 
                                   title="Delete Connection">
@@ -609,17 +748,23 @@ export function UnifiedChat() {
                                           {chat.title}
                                        </button>
                                        <button 
-                                          onClick={(e) => {
-                                              e.stopPropagation();
-                                              setChatSessions(prev => prev.filter(c => c.id !== chat.id));
-                                              setOpenTabs(prev => {
-                                                  const newTabs = prev.filter(t => t.id !== chat.id);
-                                                  if (currentView === chat.id) {
-                                                      setCurrentView(newTabs.length > 0 ? newTabs[newTabs.length - 1].id : 'welcome');
-                                                  }
-                                                  return newTabs;
-                                              });
-                                          }}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (!confirm('Are you sure you want to delete this chat? All messages will be lost.')) return;
+                                                fetchWithAuth(`/api/sessions/${chat.id}`, { method: 'DELETE' }).then(r => {
+                                                  if (r.ok) {
+                                                    setChatSessions(prev => prev.filter(c => c.id !== chat.id));
+                                                    setOpenTabs(prev => {
+                                                        const newTabs = prev.filter(t => t.id !== chat.id);
+                                                        if (currentView === chat.id) {
+                                                            setCurrentView(newTabs.length > 0 ? newTabs[newTabs.length - 1].id : 'welcome');
+                                                        }
+                                                        return newTabs;
+                                                    });
+                                                    toast.success('Chat deleted.');
+                                                  } else { toast.error('Failed to delete chat.'); }
+                                                }).catch(() => toast.error('Failed to delete chat.'));
+                                            }}
                                           className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-50 text-red-400 hover:text-red-600 rounded transition-all shrink-0 ml-1"
                                           title="Delete Chat"
                                        >
@@ -770,9 +915,8 @@ export function UnifiedChat() {
         {/* Dynamic View Content */}
         <div className="flex-1 overflow-y-auto w-full relative scroll-smooth">
           
-          {/* VIEW: WELCOME */}
           {currentView === 'welcome' && (
-            <div className="h-full flex flex-col items-center justify-center max-w-[600px] mx-auto space-y-12 pb-20">
+            <div className="h-full flex flex-col items-center justify-center max-w-[600px] mx-auto space-y-12 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="text-center space-y-3">
                 <h2 className="text-xl text-zinc-500 tracking-tight font-medium">Hello Jessy</h2>
                 <h1 className="text-4xl font-semibold text-zinc-900 tracking-tight">Let's get you started.</h1>
@@ -781,7 +925,7 @@ export function UnifiedChat() {
               <div className="w-full space-y-4">
                 <button 
                   onClick={() => setCurrentView('integrations')}
-                  className="w-full text-left bg-white border border-zinc-200 hover:border-zinc-300 rounded-2xl p-6 flex items-center justify-between transition-colors group"
+                  className="w-full text-left bg-white border border-zinc-200 hover:border-zinc-300 rounded-2xl p-6 flex items-center justify-between transition-all group active:scale-[0.99] hover:shadow-md"
                 >
                   <div className="flex items-center gap-6">
                     <div className="w-12 h-12 rounded-xl bg-zinc-50 border border-zinc-100 flex items-center justify-center shadow-inner group-hover:bg-zinc-100 transition-colors">
@@ -792,12 +936,12 @@ export function UnifiedChat() {
                       <p className="text-[13px] text-zinc-500 font-medium">Start asking questions and create charts from your data seamlessly.</p>
                     </div>
                   </div>
-                  <div className="w-8 h-8 rounded-full bg-zinc-50 flex items-center justify-center group-hover:bg-zinc-900 transition-colors border border-zinc-200 group-hover:border-zinc-900">
-                    <span className="material-symbols-outlined text-[18px] text-zinc-400 group-hover:text-white">arrow_forward</span>
+                  <div className="w-8 h-8 rounded-full bg-zinc-50 flex items-center justify-center group-hover:bg-zinc-900 transition-all border border-zinc-200 group-hover:border-zinc-900 shadow-sm group-hover:shadow-zinc-900/20">
+                    <span className="material-symbols-outlined text-[18px] text-zinc-400 group-hover:text-white group-hover:translate-x-0.5 transition-transform">arrow_forward</span>
                   </div>
                 </button>
 
-                <button className="w-full text-left bg-white border border-zinc-200 hover:border-zinc-300 rounded-2xl p-6 flex items-center justify-between transition-colors group">
+                <button className="w-full text-left bg-white border border-zinc-200 hover:border-zinc-300 rounded-2xl p-6 flex items-center justify-between transition-all group active:scale-[0.99] hover:shadow-md">
                   <div className="flex items-center gap-6">
                     <div className="w-12 h-12 rounded-xl bg-zinc-50 border border-zinc-100 flex items-center justify-center shadow-inner group-hover:bg-zinc-100 transition-colors">
                       <span className="material-symbols-outlined text-[24px] text-zinc-700">menu_book</span>
@@ -807,8 +951,8 @@ export function UnifiedChat() {
                       <p className="text-[13px] text-zinc-500 font-medium">Learn how to connect your data source with our robust API guides.</p>
                     </div>
                   </div>
-                  <div className="w-8 h-8 rounded-full bg-zinc-50 flex items-center justify-center group-hover:bg-zinc-900 transition-colors border border-zinc-200 group-hover:border-zinc-900">
-                    <span className="material-symbols-outlined text-[18px] text-zinc-400 group-hover:text-white">arrow_forward</span>
+                  <div className="w-8 h-8 rounded-full bg-zinc-50 flex items-center justify-center group-hover:bg-zinc-900 transition-all border border-zinc-200 group-hover:border-zinc-900 shadow-sm group-hover:shadow-zinc-900/20">
+                    <span className="material-symbols-outlined text-[18px] text-zinc-400 group-hover:text-white group-hover:translate-x-0.5 transition-transform">arrow_forward</span>
                   </div>
                 </button>
               </div>
@@ -817,7 +961,7 @@ export function UnifiedChat() {
 
           {/* VIEW: INTEGRATIONS */}
           {currentView === 'integrations' && (
-            <div className="py-16 px-10 max-w-5xl mx-auto">
+            <div className="py-16 px-10 max-w-5xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="space-y-2 mb-10 text-center md:text-left">
                 <h1 className="text-3xl font-semibold text-zinc-900 tracking-tight">Add New Integration</h1>
                 <p className="text-[14px] text-zinc-500 font-medium">Connect your databases to start querying securely.</p>
@@ -851,7 +995,7 @@ export function UnifiedChat() {
                             setCurrentView('connect_postgres');
                         }
                     }}
-                    className={`bg-white border border-zinc-200 hover:border-zinc-300 rounded-2xl p-5 flex items-center gap-4 transition-colors group ${item.name !== 'Azure SQL' && 'opacity-50 cursor-not-allowed hover:border-zinc-200'}`}
+                    className={`bg-white border border-zinc-200 hover:border-zinc-300 rounded-2xl p-5 flex items-center gap-4 transition-all active:scale-[0.98] group hover:shadow-sm ${item.name !== 'Azure SQL' && 'opacity-50 cursor-not-allowed hover:border-zinc-200 active:scale-100 hover:shadow-none'}`}
                   >
                     <div className={`w-10 h-10 rounded-lg flex items-center justify-center transition-transform ${item.name === 'Azure SQL' ? 'bg-zinc-50 group-hover:bg-zinc-100 group-hover:scale-105' : 'bg-zinc-50'}`}>
                        {item.icon.includes('.svg') ? (
@@ -872,7 +1016,7 @@ export function UnifiedChat() {
 
           {/* VIEW: CONNECT AZURE SQL */}
           {currentView === 'connect_azuresql' && (
-            <div className="flex h-full">
+            <div className="flex h-full animate-in fade-in slide-in-from-bottom-4 duration-500">
                <div className="flex-1 flex justify-center py-12 px-8 overflow-y-auto">
                   <div className="w-full max-w-[480px]">
                      
@@ -1085,7 +1229,7 @@ export function UnifiedChat() {
 
           {/* VIEW: MANAGE CONNECTIONS */}
           {currentView === 'manage_connections' && (
-            <div className="py-16 px-10 max-w-5xl mx-auto">
+            <div className="py-16 px-10 max-w-5xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="flex justify-between items-center mb-10">
                 <div className="space-y-2">
                   <h1 className="text-3xl font-semibold text-zinc-900 tracking-tight">Manage Connections</h1>
@@ -1162,11 +1306,24 @@ export function UnifiedChat() {
                           <button 
                             onClick={() => {
                                if (confirm(`Are you sure you want to delete ${conn.name}?`)) {
-                                  setConnections(prev => prev.filter(c => c.id !== conn.id));
-                                  setChatSessions(prev => prev.filter(c => c.connectionId !== conn.id));
-                                  setOpenTabs(prev => prev.filter(t => t.connectionId !== conn.id));
-                                  if (currentView === conn.id) setCurrentView('manage_connections');
-                                  addLog("SUCCESS", `Connection ${conn.name} deleted.`);
+                                  toast.promise(
+                                    fetchWithAuth(`/api/connections/${conn.id}`, { method: 'DELETE' }).then(res => {
+                                      if (!res.ok) throw new Error("Failed to delete connection.");
+                                      return res;
+                                    }),
+                                    {
+                                      loading: `Deleting ${conn.name}...`,
+                                      success: () => {
+                                        setConnections(prev => prev.filter(c => c.id !== conn.id));
+                                        setChatSessions(prev => prev.filter(c => c.connectionId !== conn.id));
+                                        setOpenTabs(prev => prev.filter(t => t.connectionId !== conn.id));
+                                        if (currentView === conn.id) setCurrentView('manage_connections');
+                                        addLog("SUCCESS", `Connection ${conn.name} deleted.`);
+                                        return `Connection ${conn.name} deleted successfully.`;
+                                      },
+                                      error: `Failed to delete ${conn.name}.`
+                                    }
+                                  );
                                }
                             }}
                             className="w-8 h-8 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:text-red-700 hover:bg-red-100 flex items-center justify-center transition-colors"
@@ -1185,21 +1342,24 @@ export function UnifiedChat() {
 
           {/* VIEW: SETTINGS */}
           {currentView === 'settings' && (
-             <div className="flex bg-white h-full text-zinc-900">
+             <div className="flex bg-white h-full text-zinc-900 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="flex-1 p-10 max-w-4xl mx-auto overflow-y-auto">
                    <div className="mb-8 border-b border-zinc-200 pb-6 text-center">
-                      <h1 className="text-3xl font-semibold text-zinc-900 tracking-tight">Workspace Settings</h1>
-                      <p className="text-[14px] text-zinc-500 mt-2">Manage your team workspace and preferences.</p>
+                      <h1 className="text-3xl font-semibold text-zinc-900 tracking-tight">Personal Settings</h1>
+                      <p className="text-[14px] text-zinc-500 mt-2">Manage your account and preferences.</p>
                    </div>
                    
                    <div className="bg-zinc-50 border border-zinc-200 rounded-2xl p-6 mb-8 flex flex-col md:flex-row md:items-center gap-6">
-                      <div className="w-16 h-16 rounded-xl bg-purple-600 flex items-center justify-center text-white text-2xl font-medium shadow-sm shrink-0">J</div>
+                      <div className="w-16 h-16 rounded-xl bg-purple-600 flex items-center justify-center text-white text-2xl font-medium shadow-sm shrink-0">{userInitial}</div>
                       <div className="flex-1">
-                         <h2 className="text-[18px] font-semibold text-zinc-900">Jessy's workspace</h2>
-                         <p className="text-[14px] text-zinc-500 mt-1">1 Members active</p>
+                         <h2 className="text-[18px] font-semibold text-zinc-900">{organization?.name || `${userName}'s Workspace`}</h2>
+                         <p className="text-[14px] text-zinc-500 mt-1">{organization ? 'Organization Account' : 'Personal Account'}</p>
                       </div>
-                      <button className="bg-white border border-zinc-200 text-zinc-700 hover:bg-zinc-50 hover:text-zinc-900 px-5 py-2.5 rounded-xl text-[13px] font-medium transition-colors shadow-sm self-start md:self-center">
-                         Leave Workspace
+                      <button 
+                        onClick={handleLogout}
+                        className="bg-white border border-zinc-200 text-zinc-700 hover:bg-zinc-50 hover:text-zinc-900 px-5 py-2.5 rounded-xl text-[13px] font-medium transition-colors shadow-sm self-start md:self-center flex items-center gap-2">
+                         <span className="material-symbols-outlined text-[18px]">logout</span>
+                         Sign Out
                       </button>
                    </div>
 
@@ -1211,8 +1371,8 @@ export function UnifiedChat() {
                                <p className="text-[13px] text-zinc-500 mt-1 max-w-md">Change the name of your workspace. This will be visible to all members associated with this workspace.</p>
                              </div>
                              <div className="flex gap-2 w-full md:w-auto">
-                                 <input type="text" defaultValue="Jessy's workspace" className="bg-white border border-zinc-200 text-zinc-900 rounded-xl px-4 py-2.5 text-[14px] font-medium w-full md:w-[260px] focus:outline-none focus:border-zinc-400 focus:ring-2 focus:ring-zinc-100 transition-all shadow-sm" />
-                                 <button className="bg-zinc-900 text-white font-medium rounded-xl px-5 text-[13px] hover:bg-zinc-800 transition-colors shadow-sm border border-transparent whitespace-nowrap">Save</button>
+                                 <input type="text" value={organization?.name || `${userName}'s Workspace`} readOnly className="bg-zinc-100 border border-zinc-200 text-zinc-600 rounded-xl px-4 py-2.5 text-[14px] font-medium w-full md:w-[260px] focus:outline-none transition-all shadow-sm cursor-not-allowed" />
+                                 <button disabled className="opacity-50 bg-zinc-900 text-white font-medium rounded-xl px-5 text-[13px] shadow-sm border border-transparent whitespace-nowrap cursor-not-allowed">Save</button>
                              </div>
                          </div>
                       </div>
@@ -1220,29 +1380,41 @@ export function UnifiedChat() {
                       <div className="border-t border-zinc-200 pt-10">
                          <div className="flex justify-between items-center mb-6">
                              <div>
-                               <h3 className="text-[15px] font-medium text-zinc-900">Members</h3>
-                               <p className="text-[13px] text-zinc-500 mt-1">Manage users and roles in your workspace</p>
+                               <h3 className="text-[15px] font-medium text-zinc-900">Account Identity</h3>
+                               <p className="text-[13px] text-zinc-500 mt-1">Your personal details authenticated through Azure AD</p>
                              </div>
-                             <button className="bg-white hover:bg-zinc-50 text-zinc-700 hover:text-zinc-900 border border-zinc-200 px-4 py-2.5 rounded-xl text-[13px] font-medium flex items-center gap-2 transition-colors shadow-sm">
-                                <span className="material-symbols-outlined text-[16px]">person_add</span> Invite Colleague
-                             </button>
                          </div>
                          <div className="bg-white border border-zinc-200 rounded-2xl overflow-hidden shadow-sm">
-                             <div className="flex items-center justify-between p-5 hover:bg-zinc-50/50 transition-colors">
+                             <div className="flex items-center justify-between p-5">
                                 <div className="flex items-center gap-4">
                                    <div className="relative">
-                                     <div className="w-10 h-10 rounded-full bg-orange-100 border border-orange-200 flex items-center justify-center text-orange-600 text-[15px] font-bold shadow-sm">J</div>
+                                     <div className="w-10 h-10 rounded-full bg-orange-100 border border-orange-200 flex items-center justify-center text-orange-600 text-[15px] font-bold shadow-sm">{userInitial}</div>
                                      <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-white rounded-full flex items-center justify-center shrink-0">
                                        <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full"></div>
                                      </div>
                                    </div>
                                    <div className="flex items-center gap-3">
-                                      <span className="text-[15px] font-medium text-zinc-900">Jessy (You)</span>
-                                      <span className="text-[10px] font-bold uppercase tracking-wider bg-zinc-100 text-zinc-500 border border-zinc-200 px-2 py-0.5 rounded-md">Admin</span>
+                                      <span className="text-[15px] font-medium text-zinc-900">{userName}</span>
+                                      <span className="text-[10px] font-bold uppercase tracking-wider bg-blue-50 text-blue-600 border border-blue-200 px-2 py-0.5 rounded-md">Entra ID</span>
                                    </div>
                                 </div>
-                                <span className="text-[14px] text-zinc-500 font-medium">quintojessy@gmail.com</span>
+                                <span className="text-[14px] text-zinc-500 font-medium">{userEmail}</span>
                              </div>
+                         </div>
+                      </div>
+
+                      <div className="border-t border-red-100 pt-10">
+                         <div className="bg-red-50 border border-red-200 rounded-2xl p-6">
+                            <h3 className="text-[15px] font-semibold text-red-900 mb-2">Danger Zone</h3>
+                            <p className="text-[13px] text-red-700 mb-6 max-w-2xl">
+                               Permanently delete your account and all of its contents. This action is not reversible, so please continue with caution. All your connected databases and chat history will be wiped from InsightForge AI.
+                            </p>
+                            <button 
+                                onClick={handleDeleteAccount}
+                                className="bg-white border border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 font-medium px-5 py-2.5 rounded-xl text-[13px] transition-colors shadow-sm"
+                            >
+                                Delete Account
+                            </button>
                          </div>
                       </div>
                    </div>
@@ -1252,52 +1424,78 @@ export function UnifiedChat() {
 
           {/* VIEW: HISTORY */}
           {currentView === 'history' && (
-             <div className="flex bg-white h-full text-zinc-900">
-                <div className="flex-1 p-8 overflow-y-auto">
-                   <div className="mb-6">
-                      <h1 className="text-2xl font-semibold text-zinc-900 tracking-tight">Activity History</h1>
-                      <p className="text-[13px] text-zinc-500 mt-1">Audit log of all queries and orchestrations.</p>
+             <div className="flex bg-white h-full text-zinc-900 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="flex-1 p-8 overflow-y-auto max-w-5xl mx-auto">
+                   <div className="mb-8">
+                      <h1 className="text-3xl font-semibold text-zinc-900 tracking-tight">Chat History</h1>
+                      <p className="text-[14px] text-zinc-500 mt-2">Your previous conversations and query sessions.</p>
                    </div>
                    
                    {historyData.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-20 text-zinc-400">
                          <span className="material-symbols-outlined text-[48px] mb-3">history</span>
-                         <p className="text-[14px] font-medium">No activity recorded yet</p>
-                         <p className="text-[12px] mt-1">Queries and orchestration events will appear here.</p>
+                         <p className="text-[14px] font-medium">No sessions yet</p>
+                         <p className="text-[12px] mt-1">Start a conversation to see your history here.</p>
                       </div>
                    ) : (
-                      <div className="border border-zinc-200 rounded-xl overflow-hidden">
-                         <table className="w-full text-[13px]">
-                            <thead className="bg-zinc-50 border-b border-zinc-200">
-                               <tr>
-                                  <th className="text-left px-4 py-3 font-bold text-zinc-600 uppercase tracking-wider text-[10px]">Status</th>
-                                  <th className="text-left px-4 py-3 font-bold text-zinc-600 uppercase tracking-wider text-[10px]">Question</th>
-                                  <th className="text-left px-4 py-3 font-bold text-zinc-600 uppercase tracking-wider text-[10px]">Intent</th>
-                                  <th className="text-left px-4 py-3 font-bold text-zinc-600 uppercase tracking-wider text-[10px]">User</th>
-                                  <th className="text-left px-4 py-3 font-bold text-zinc-600 uppercase tracking-wider text-[10px]">Time</th>
-                               </tr>
-                            </thead>
-                            <tbody>
-                               {historyData.map((item: any, idx: number) => (
-                                  <tr key={idx} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-zinc-50/50'} hover:bg-blue-50/30 transition-colors border-b border-zinc-100`}>
-                                     <td className="px-4 py-3">
-                                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                                           item.Status === 'Completed' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
-                                           item.Status === 'Blocked' || item.Status === 'PolicyBlocked' ? 'bg-red-50 text-red-600 border border-red-200' :
-                                           item.Status === 'PendingApproval' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
-                                           'bg-zinc-100 text-zinc-500 border border-zinc-200'
-                                        }`}>
-                                           {item.Status || 'Unknown'}
-                                        </span>
-                                     </td>
-                                     <td className="px-4 py-3 max-w-[300px] truncate font-medium text-zinc-800">{item.OriginalQuestion || item.Question || '-'}</td>
-                                     <td className="px-4 py-3 text-zinc-500">{item.AnalyticalIntent || item.IntentType || '-'}</td>
-                                     <td className="px-4 py-3 text-zinc-500 font-mono text-[11px]">{item.UserId || '-'}</td>
-                                     <td className="px-4 py-3 text-zinc-400 text-[11px] whitespace-nowrap">{item.CreatedAt ? new Date(item.CreatedAt).toLocaleString() : '-'}</td>
-                                  </tr>
-                               ))}
-                            </tbody>
-                         </table>
+                      <div className="bg-white border border-zinc-200 rounded-2xl overflow-hidden shadow-sm">
+                         <div className="grid grid-cols-12 gap-4 p-4 border-b border-zinc-200 bg-zinc-50 text-[12px] font-semibold text-zinc-500 uppercase tracking-widest">
+                           <div className="col-span-4">Session</div>
+                           <div className="col-span-3">Connection</div>
+                           <div className="col-span-2">Created</div>
+                           <div className="col-span-2">Last Activity</div>
+                           <div className="col-span-1 text-right">Action</div>
+                         </div>
+                         <div className="divide-y divide-zinc-100">
+                           {historyData.map((session: any) => {
+                              const conn = connections.find(c => c.id === session.connectionId);
+                              return (
+                                 <div key={session.id} className="grid grid-cols-12 gap-4 p-4 items-center text-[14px] hover:bg-zinc-50/50 transition-colors text-zinc-700">
+                                    <div className="col-span-4 font-medium text-zinc-900 truncate flex items-center gap-3">
+                                       <div className="w-8 h-8 rounded-lg bg-zinc-100 flex items-center justify-center shrink-0">
+                                          <span className="material-symbols-outlined text-[18px] text-zinc-600">chat_bubble</span>
+                                       </div>
+                                       {session.title || 'Untitled Chat'}
+                                    </div>
+                                    <div className="col-span-3 truncate text-zinc-500 flex items-center gap-2">
+                                       {conn ? (
+                                          <>
+                                             <div className="w-5 h-5 flex items-center justify-center shrink-0">
+                                                {conn.type === 'Azure SQL' && <img src="/assets/iconos sql/DeviconAzuresqldatabase.svg" className="w-4 h-4 object-contain" alt="Azure" />}
+                                                {conn.type === 'PostgreSQL' && <img src="/assets/iconos sql/DeviconPostgresqlWordmark.svg" className="w-4 h-4 object-contain" alt="Postgres" />}
+                                                {(!conn.type || !['Azure SQL', 'PostgreSQL'].includes(conn.type)) && <span className="material-symbols-outlined text-[14px]">database</span>}
+                                             </div>
+                                             <span className="truncate">{conn.name}</span>
+                                          </>
+                                       ) : (
+                                          <span className="text-zinc-400 italic">Disconnected</span>
+                                       )}
+                                    </div>
+                                    <div className="col-span-2 text-zinc-400 text-[12px]">
+                                       {session.createdAt ? new Date(session.createdAt).toLocaleDateString() : '-'}
+                                    </div>
+                                    <div className="col-span-2 text-zinc-400 text-[12px]">
+                                       {session.lastActivity ? new Date(session.lastActivity).toLocaleString() : '-'}
+                                    </div>
+                                    <div className="col-span-1 flex justify-end">
+                                       <button
+                                          onClick={() => {
+                                             const existingSession = chatSessions.find(s => s.id === session.id);
+                                             if (!existingSession) {
+                                                setChatSessions(prev => [...prev, { id: session.id, connectionId: session.connectionId || '', title: session.title || 'Chat', messages: [] }]);
+                                             }
+                                             openChat(session.id);
+                                          }}
+                                          className="w-8 h-8 rounded-lg border border-zinc-200 bg-white text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50 flex items-center justify-center transition-colors"
+                                          title="Open Chat"
+                                       >
+                                          <span className="material-symbols-outlined text-[16px]">open_in_new</span>
+                                       </button>
+                                    </div>
+                                 </div>
+                              );
+                           })}
+                         </div>
                       </div>
                    )}
                 </div>
@@ -1306,10 +1504,10 @@ export function UnifiedChat() {
 
           {/* VIEW: CHAT */}
           {openTabs.find(t => t.id === currentView && t.type === 'chat') && (
-            <div className="flex flex-col h-full w-full relative">
+            <div className="flex flex-col h-full w-full relative animate-in fade-in duration-300">
                
                {messages.length === 0 && (
-                 <div className="h-full flex flex-col justify-center items-center w-full px-6 text-center">
+                 <div className="h-full flex flex-col justify-center items-center w-full px-6 text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <div className="w-full max-w-xl space-y-10 mb-16">
                       <div className="space-y-3">
                          <h2 className="text-lg text-zinc-400 font-medium tracking-tight">Welcome, Jessy</h2>
@@ -1359,7 +1557,7 @@ export function UnifiedChat() {
                  <div className="w-full flex-1 overflow-y-auto px-6 md:px-10 lg:px-16 pt-6 pb-28">
                     <div className="w-full space-y-6">
                        {messages.map((msg) => (
-                         <div key={msg.id} className="w-full">
+                         <div key={msg.id} className="w-full animate-in fade-in slide-in-from-bottom-2 duration-300">
                             
                             {msg.role === 'user' && (
                                <div className="flex justify-end w-full">
@@ -1840,6 +2038,8 @@ export function UnifiedChat() {
       )}
 
     </div>
+    </>
   );
 }
+
 

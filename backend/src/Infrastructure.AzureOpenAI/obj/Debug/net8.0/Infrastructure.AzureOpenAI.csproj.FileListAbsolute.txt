@@ -12,3 +12,10 @@ C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.AzureOpe
 C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.AzureOpenAI\obj\Debug\net8.0\refint\Infrastructure.AzureOpenAI.dll
 C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.AzureOpenAI\obj\Debug\net8.0\Infrastructure.AzureOpenAI.pdb
 C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.AzureOpenAI\obj\Debug\net8.0\ref\Infrastructure.AzureOpenAI.dll
+C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.AzureOpenAI\bin\Debug\net8.0\Infrastructure.AzureOpenAI.deps.json
+C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.AzureOpenAI\bin\Debug\net8.0\Infrastructure.AzureOpenAI.dll
+C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.AzureOpenAI\bin\Debug\net8.0\Infrastructure.AzureOpenAI.pdb
+C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.AzureOpenAI\bin\Debug\net8.0\Core.Application.dll
+C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.AzureOpenAI\bin\Debug\net8.0\Core.Domain.dll
+C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.AzureOpenAI\bin\Debug\net8.0\Core.Application.pdb
+C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Infrastructure.AzureOpenAI\bin\Debug\net8.0\Core.Domain.pdb

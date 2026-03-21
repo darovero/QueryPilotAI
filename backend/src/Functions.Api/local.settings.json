@@ -5,13 +5,13 @@
     "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
     "SqlConnectionString": "Server=tcp:insightforge-sql3-86253.database.windows.net,1433;Initial Catalog=insightforge-sqldb;Encrypt=True;TrustServerCertificate=False;Authentication=Active Directory Default;",
     "AppDbConnectionString": "Server=tcp:insightforge-sql3-86253.database.windows.net,1433;Initial Catalog=insightforge-appdb;Encrypt=True;TrustServerCertificate=False;Authentication=Active Directory Default;",
-    "AzureOpenAI__Endpoint": "https://eastus.api.cognitive.microsoft.com/",
-    "AzureOpenAI__Deployment": "gpt41mini-std",
-    "AzureOpenAI__ApiKey": "2014DrxI4S9tJHnIXg1hR5FWaKLsxvNnsSQQJCoCH6QY2PfwHgtVJQQJ99CCACYeBjFXJ3w3AAABACOGddis",
+    "AzureOpenAI__Endpoint": "https://marianagonzalez-6489-resource.openai.azure.com/openai/v1",
+    "AzureOpenAI__Deployment": "gpt-4o-mini",
+    "AzureOpenAI__ApiKey": "1flrAyIIaBxztuaCvRbpPkc8jIJE6pAdLS4tmBMAgNcW67pDZFddJQQJ99CCACHYHv6XJ3w3AAAAACOGyKFo",
     "ContentSafety__Endpoint": "https://eastus.api.cognitive.microsoft.com/",
-    "FoundryAgent__ProjectEndpoint": "https://eastus.api.azureml.ms/agents/v1.0/subscriptions/3b7c5634-e239-4029-af7f-0cf8e8aeb29c/resourceGroups/rg-insightforge-dev/providers/Microsoft.MachineLearningServices/workspaces/insightforge-ai-project",
-    "FoundryAgent__SqlPlannerAgentId": "asst_sViTKQcbeUeRanGQknDviYFZ",
-    "FoundryAgent__ResultInterpreterAgentId": "asst_SEjRH87jIXeHlMvqawfXj4LB",
-    "FoundryAgent__ConciergeAgentId": "asst_vkMN5mF0gM2EBBMz4W0Wr5h9"
+    "FoundryAgent__ProjectEndpoint": "https://marianagonzalez-6489-resource.services.ai.azure.com/api/projects/marianagonzalez-6489",
+    "FoundryAgent__SqlPlannerAgentId": "asst_Neodm9cMUApZ9una8VF475lc",
+    "FoundryAgent__ResultInterpreterAgentId": "asst_ntTxnxy8GJDl5ic0oDABly3n",
+    "FoundryAgent__ConciergeAgentId": "asst_jvVXqbDsnwn7wQ7XVPI0vPea"
   }
 }

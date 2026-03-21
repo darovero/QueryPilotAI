@@ -17,16 +17,36 @@ public interface IAppDatabaseService
     Task<UserConnectionRecord?> GetConnectionAsync(Guid connectionId);
     Task<List<UserConnectionRecord>> GetConnectionsByUserAsync(string userId);
     Task UpdateSchemaCacheAsync(Guid connectionId, string schemaJson);
+    Task DeleteConnectionAsync(Guid connectionId, string userId);
+    Task DeleteUserAccountAsync(string userId);
 
     // --- Chat Sessions ---
     Task<Guid> CreateSessionAsync(Guid id, string userId, Guid? connectionId, string? title);
     Task<List<ChatSessionRecord>> GetSessionsByUserAsync(string userId);
     Task TouchSessionAsync(Guid sessionId);
+    Task DeleteSessionAsync(Guid sessionId, string userId);
 
     // --- Conversation Turns ---
     Task<Guid> AddTurnAsync(ConversationTurnRecord turn);
     Task<List<ConversationTurnRecord>> GetRecentTurnsAsync(Guid sessionId, int maxTurns = 10);
+
+    // --- Organizations ---
+    Task<Guid> CreateOrganizationAsync(OrganizationRecord org, string adminUserId);
+    Task<OrganizationRecord?> GetOrganizationByUserIdAsync(string userId);
 }
+
+public sealed record OrganizationRecord(
+    Guid Id,
+    string Name,
+    string? Industry,
+    DateTimeOffset CreatedAt);
+
+public sealed record OrganizationMemberRecord(
+    Guid OrganizationId,
+    string UserId,
+    string Role,
+    DateTimeOffset JoinedAt);
+
 
 public sealed record UserConnectionRecord(
     Guid Id,
@@ -196,6 +216,19 @@ VALUES (@Id, @UserId, @ConnectionId, @Title)";
         await cmd.ExecuteNonQueryAsync();
     }
 
+    public async Task DeleteSessionAsync(Guid sessionId, string userId)
+    {
+        const string sql = @"
+DELETE FROM dbo.conversation_turns WHERE session_id = @SessionId;
+DELETE FROM dbo.chat_sessions WHERE id = @SessionId AND user_id = @UserId;";
+        await using var conn = new SqlConnection(_connectionString);
+        await conn.OpenAsync();
+        await using var cmd = new SqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("@SessionId", sessionId);
+        cmd.Parameters.AddWithValue("@UserId", userId);
+        await cmd.ExecuteNonQueryAsync();
+    }
+
     // --- Conversation Turns ---
 
     public async Task<Guid> AddTurnAsync(ConversationTurnRecord turn)
@@ -267,4 +300,87 @@ VALUES (@Id, @SessionId, @UserId, @Role, @Question, @SqlGenerated, @AgentRespons
             reader.GetDateTime(reader.GetOrdinal("created_at")),
             reader.GetBoolean(reader.GetOrdinal("is_active")));
     }
+
+    public async Task DeleteConnectionAsync(Guid connectionId, string userId)
+    {
+        await using var conn = new SqlConnection(_connectionString);
+        await conn.OpenAsync();
+        const string sql = "UPDATE dbo.user_connections SET is_active = 0 WHERE id = @Id AND user_id = @UserId";
+        await using var cmd = new SqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("@Id", connectionId);
+        cmd.Parameters.AddWithValue("@UserId", userId);
+        await cmd.ExecuteNonQueryAsync();
+    }
+
+    public async Task DeleteUserAccountAsync(string userId)
+    {
+        await using var conn = new SqlConnection(_connectionString);
+        await conn.OpenAsync();
+        
+        const string sql = @"
+            DELETE FROM dbo.conversation_turns WHERE user_id = @UserId;
+            DELETE FROM dbo.chat_sessions WHERE user_id = @UserId;
+            DELETE FROM dbo.user_connections WHERE user_id = @UserId;
+        ";
+        await using var cmd = new SqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("@UserId", userId);
+        await cmd.ExecuteNonQueryAsync();
+    }
+
+    // --- Organizations ---
+
+    public async Task<Guid> CreateOrganizationAsync(OrganizationRecord org, string adminUserId)
+    {
+        var id = org.Id == Guid.Empty ? Guid.NewGuid() : org.Id;
+        await using var conn = new SqlConnection(_connectionString);
+        await conn.OpenAsync();
+        
+        await using var transaction = conn.BeginTransaction();
+        try
+        {
+            const string sqlOrg = "INSERT INTO dbo.organizations (id, name, industry) VALUES (@Id, @Name, @Industry)";
+            await using var cmdOrg = new SqlCommand(sqlOrg, conn, transaction);
+            cmdOrg.Parameters.AddWithValue("@Id", id);
+            cmdOrg.Parameters.AddWithValue("@Name", org.Name);
+            cmdOrg.Parameters.AddWithValue("@Industry", (object?)org.Industry ?? DBNull.Value);
+            await cmdOrg.ExecuteNonQueryAsync();
+
+            const string sqlMember = "INSERT INTO dbo.organization_members (organization_id, user_id, role) VALUES (@OrgId, @UserId, 'Admin')";
+            await using var cmdMember = new SqlCommand(sqlMember, conn, transaction);
+            cmdMember.Parameters.AddWithValue("@OrgId", id);
+            cmdMember.Parameters.AddWithValue("@UserId", adminUserId);
+            await cmdMember.ExecuteNonQueryAsync();
+
+            await transaction.CommitAsync();
+            return id;
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
+
+    public async Task<OrganizationRecord?> GetOrganizationByUserIdAsync(string userId)
+    {
+        const string sql = @"
+            SELECT o.* FROM dbo.organizations o
+            INNER JOIN dbo.organization_members m ON o.id = m.organization_id
+            WHERE m.user_id = @UserId";
+        
+        await using var conn = new SqlConnection(_connectionString);
+        await conn.OpenAsync();
+        await using var cmd = new SqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("@UserId", userId);
+        
+        await using var reader = await cmd.ExecuteReaderAsync();
+        if (!await reader.ReadAsync()) return null;
+
+        return new OrganizationRecord(
+            reader.GetGuid(reader.GetOrdinal("id")),
+            reader.GetString(reader.GetOrdinal("name")),
+            reader.IsDBNull(reader.GetOrdinal("industry")) ? null : reader.GetString(reader.GetOrdinal("industry")),
+            reader.GetDateTimeOffset(reader.GetOrdinal("created_at")));
+    }
 }
+
