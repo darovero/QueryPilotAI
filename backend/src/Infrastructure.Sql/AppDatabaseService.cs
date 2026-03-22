@@ -2,7 +2,6 @@ using Core.Application.Contracts;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using System.Text;
-using System.Text.Json;
 
 namespace Infrastructure.Sql;
 
@@ -421,7 +420,8 @@ VALUES (@Id, @SessionId, @UserId, @Role, @Question, @SqlGenerated, @AgentRespons
         await conn.OpenAsync();
         await using var cmd = new SqlCommand(sql, conn);
         cmd.Parameters.AddWithValue("@UserId", userId);
-        var count = (int)await cmd.ExecuteScalarAsync();
+        var result = await cmd.ExecuteScalarAsync();
+        var count = result is int c ? c : 0;
         return count;
     }
 }

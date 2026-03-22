@@ -19,9 +19,12 @@ public sealed class SqlExecutionService(IConfiguration configuration) : ISqlExec
 
     public async Task<List<Dictionary<string, object?>>> ExecuteQueryAsync(string sql, DatabaseConfig? config = null)
     {
-        string connectionString = _connectionString;
+        if (config == null || string.IsNullOrWhiteSpace(config.Host))
+            throw new InvalidOperationException("A valid database connection configuration is required to execute queries.");
+
+        string connectionString;
         
-        if (config != null && !string.IsNullOrWhiteSpace(config.Host) && string.Equals(config.Type, "Azure SQL", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(config.Type, "Azure SQL", StringComparison.OrdinalIgnoreCase))
         {
             var portPart = string.IsNullOrWhiteSpace(config.Port) ? "" : $",{config.Port}";
             
@@ -38,6 +41,10 @@ public sealed class SqlExecutionService(IConfiguration configuration) : ISqlExec
             {
                 connectionString = $"Server={config.Host}{portPart};Initial Catalog={config.Database};User ID={config.Username};Password={config.Password};Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;";
             }
+        }
+        else
+        {
+            throw new NotSupportedException($"Database type '{config.Type}' is not supported for query execution.");
         }
 
         var connection = new SqlConnection(connectionString);
@@ -108,9 +115,10 @@ WHEN NOT MATCHED THEN
 
             await command.ExecuteNonQueryAsync();
         }
-        catch
+        catch (Exception)
         {
-            // Audit persistence should not break the orchestration
+            // Audit persistence should not break the orchestration.
+            // Failures are silently ignored to keep the main pipeline running.
         }
     }
 
