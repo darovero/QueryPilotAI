@@ -9,14 +9,10 @@ English | [Español](#) | [Documentation](./docs)
 
 [Architecture](#-architecture) • [Key Features](#-key-features) • [Getting Started](#-getting-started) • [Operational Guide](#-operational-guide)
 
-[![issues](https://img.shields.io/github/issues/darovero/QueryPilotAI?color=FAD02C&logo=github)](https://github.com/darovero/QueryPilotAI/issues)
-[![pull requests](https://img.shields.io/github/issues-pr/darovero/QueryPilotAI?color=FAD02C&logo=github)](https://github.com/darovero/QueryPilotAI/pulls)
-[![License](https://img.shields.io/badge/License-MIT-FAD02C.svg)](https://opensource.org/licenses/MIT)
-[![Innovation Challenger](https://img.shields.io/badge/Microsoft-Innovation_Challenger-0078D4?logo=microsoft)](https://innovation.microsoft.com/)
+[![issues](https://img.shields.io/github/issues/darovero/QueryPilotAI?style=for-the-badge&color=24292e&logo=github)](https://github.com/darovero/QueryPilotAI/issues) [![pull requests](https://img.shields.io/github/issues-pr/darovero/QueryPilotAI?style=for-the-badge&color=24292e&logo=github)](https://github.com/darovero/QueryPilotAI/pulls) [![License](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](https://opensource.org/licenses/MIT) 
+[![Innovation Challenger](https://img.shields.io/badge/Hackathon-Microsoft_Innovation_Challenger-0078D4?style=for-the-badge&logo=microsoft)](https://innovation.microsoft.com/)
 
-[![Next.js](https://img.shields.io/badge/Frontend-Next.js_15-black?logo=next.js)](https://nextjs.org/)
-[![Azure Functions](https://img.shields.io/badge/Backend-.NET_8_Isolated-0062AD?logo=azure-functions)](https://azure.microsoft.com/)
-[![Azure OpenAI](https://img.shields.io/badge/AI-GPT--4o--mini-10A37F?logo=openai)](https://azure.microsoft.com/)
+[![Next.js](https://img.shields.io/badge/Next.js_15-black?style=for-the-badge&logo=next.js)](https://nextjs.org/) [![Azure Functions](https://img.shields.io/badge/.NET_8_Isolated-0062AD?style=for-the-badge&logo=azure-functions)](https://azure.microsoft.com/) [![Azure OpenAI](https://img.shields.io/badge/GPT--4o--mini-10A37F?style=for-the-badge&logo=openai)](https://azure.microsoft.com/)
 
 <br/>
 
