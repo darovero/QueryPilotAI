@@ -31,3 +31,10 @@ Thumbs.db
 
 ### Azurite local storage
 .azurite/
+
+### One-off scripts and credentials
+payload.json
+*.pyc
+
+### Logs
+.logs/
