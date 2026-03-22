@@ -1,7 +1,7 @@
 ﻿{
-    "Username":  "sqladminif",
-    "Host":  "insightforge-sql3-86253.database.windows.net",
-    "DbType":  "Azure SQL",
-    "DatabaseName":  "insightforge-sqldb",
-    "EncryptedPassword":  "QueryPilot@2026!"
+    "Username": "sqladminif",
+    "Host": "tcp:insightforge-sql3-86253.database.windows.net",
+    "DbType": "Azure SQL",
+    "DatabaseName": "insightforge-sqldb",
+    "EncryptedPassword": "QueryPilot@2026!"
 }

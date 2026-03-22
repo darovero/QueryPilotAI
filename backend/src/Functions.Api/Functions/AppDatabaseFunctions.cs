@@ -157,16 +157,31 @@ public class AppDatabaseFunctions(
             else if (config.DbType?.Equals("SQLServer", StringComparison.OrdinalIgnoreCase) == true
                   || config.DbType?.Equals("Azure SQL", StringComparison.OrdinalIgnoreCase) == true)
             {
-                var builder = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder
+                var portPart = string.IsNullOrWhiteSpace(config.Port) ? "" : $",{config.Port}";
+                string connectionString;
+
+                if (string.Equals(config.AuthType, "AzureADToken", StringComparison.OrdinalIgnoreCase) || 
+                    string.Equals(config.AuthType, "AzureAD", StringComparison.OrdinalIgnoreCase))
                 {
-                    DataSource = string.IsNullOrWhiteSpace(config.Port) ? config.Host : $"{config.Host},{config.Port}",
-                    InitialCatalog = config.DatabaseName,
-                    UserID = config.Username,
-                    Password = config.EncryptedPassword,
-                    ConnectTimeout = 5,
-                    TrustServerCertificate = true
-                };
-                using var conn = new Microsoft.Data.SqlClient.SqlConnection(builder.ConnectionString);
+                    if (!string.IsNullOrWhiteSpace(config.Username) && !string.IsNullOrWhiteSpace(config.EncryptedPassword))
+                    {
+                        connectionString = $"Server={config.Host}{portPart};Initial Catalog={config.DatabaseName};User ID={config.Username};Password={config.EncryptedPassword};Encrypt=True;TrustServerCertificate=True;Authentication=Active Directory Password;Connection Timeout=5;";
+                    }
+                    else
+                    {
+                        connectionString = $"Server={config.Host}{portPart};Initial Catalog={config.DatabaseName};Encrypt=True;TrustServerCertificate=True;Authentication=Active Directory Default;Connection Timeout=5;";
+                    }
+                }
+                else if (string.IsNullOrWhiteSpace(config.Username))
+                {
+                    connectionString = $"Server={config.Host}{portPart};Initial Catalog={config.DatabaseName};Encrypt=True;TrustServerCertificate=True;Authentication=Active Directory Default;Connection Timeout=5;";
+                }
+                else
+                {
+                    connectionString = $"Server={config.Host}{portPart};Initial Catalog={config.DatabaseName};User ID={config.Username};Password={config.EncryptedPassword};Encrypt=True;TrustServerCertificate=True;Connection Timeout=5;";
+                }
+
+                using var conn = new Microsoft.Data.SqlClient.SqlConnection(connectionString);
                 await conn.OpenAsync();
                 success = true;
             }
@@ -174,7 +189,7 @@ public class AppDatabaseFunctions(
             if (!success)
             {
                 var fail = req.CreateResponse(HttpStatusCode.BadRequest);
-                await fail.WriteAsJsonAsync(new { success = false, error });
+                await fail.WriteAsJsonAsync(new { success = false, error }, HttpStatusCode.BadRequest);
                 return fail;
             }
             var res = req.CreateResponse(HttpStatusCode.OK);
@@ -185,7 +200,24 @@ public class AppDatabaseFunctions(
         {
             logger.LogWarning(ex, "Connection test failed.");
             var res = req.CreateResponse(HttpStatusCode.BadRequest);
-            await res.WriteAsJsonAsync(new { success = false, error = ex.InnerException?.Message ?? ex.Message });
+            
+            string friendlyMessage = "No se pudo establecer la conexión. Por favor revisa que toda la información ingresada (Host, Base de datos, Credenciales) sea correcta.";
+            if (ex is Microsoft.Data.SqlClient.SqlException sqlEx)
+            {
+                if (sqlEx.Number == 53 || sqlEx.Number == 40)
+                    friendlyMessage = "No se encontró el servidor. Verifica que el 'Host' sea exacto y que el firewall permita la conexión.";
+                else if (sqlEx.Number == 18456)
+                    friendlyMessage = "Autenticación fallida. Revisa tu Usuario y Contraseña o asegúrate de elegir el método de autenticación correcto.";
+                else if (sqlEx.Number == 40615)
+                    friendlyMessage = "Tu IP actual no tiene permitido el acceso. Debes agregar esta IP al firewall de Azure SQL.";
+            }
+            else if (ex is ArgumentException)
+            {
+                friendlyMessage = "La estructura de la conexión tiene un error de formato. Revisa campos vacíos o caracteres inválidos.";
+            }
+
+            string finalError = $"{friendlyMessage}\n\n(Detalle técnico: {ex.InnerException?.Message ?? ex.Message})";
+            await res.WriteAsJsonAsync(new { success = false, error = finalError }, HttpStatusCode.BadRequest);
             return res;
         }
     }
