@@ -26,7 +26,6 @@ export function useApi() {
         // Use idToken (a proper JWT with oid/sub claims) instead of accessToken
         // (which is opaque when only requesting openid/profile scopes)
         const token = tokenResponse.idToken || tokenResponse.accessToken;
-        console.log('[fetchWithAuth] Token type used:', tokenResponse.idToken ? 'idToken' : 'accessToken', 'Token starts with:', token?.substring(0, 20));
 
         const headers: Record<string, string> = {
             ...(options.headers as Record<string, string>),
