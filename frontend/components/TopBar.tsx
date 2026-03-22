@@ -20,7 +20,7 @@ type TopBarProps = {
 
 export function TopBar({
   currentView, setCurrentView, openTabs, setOpenTabs,
-  isSidebarOpen, setIsSidebarOpen, editingConnId,
+  setIsSidebarOpen, editingConnId,
   userName, userEmail, userInitial,
   isProfileMenuOpen, setIsProfileMenuOpen, handleLogout,
 }: TopBarProps) {

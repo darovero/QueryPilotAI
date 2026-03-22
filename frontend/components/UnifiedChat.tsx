@@ -13,7 +13,7 @@ import { HistoryView } from "./views/HistoryView";
 import { ChatPanel } from "./chat/ChatPanel";
 import { InsightPanel } from "./chat/InsightPanel";
 import { IdeEditor } from "./IdeEditor";
-import "./UnifiedChat.css";
+
 
 export function UnifiedChat() {
   const engine = useChatEngine();

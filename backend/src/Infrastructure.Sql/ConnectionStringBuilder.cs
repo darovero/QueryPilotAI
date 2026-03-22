@@ -5,7 +5,7 @@ namespace Infrastructure.Sql;
 
 /// <summary>
 /// Centralizes the construction of SQL connection strings from a DatabaseConfig.
-/// Used by SqlExecutionService, SchemaExtractorService, and AppDatabaseFunctions
+/// Used by SqlExecutionService, SchemaExtractorService, and ConnectionFunctions
 /// to avoid code duplication and subtle inconsistencies.
 /// </summary>
 public static class ConnectionStringBuilder
