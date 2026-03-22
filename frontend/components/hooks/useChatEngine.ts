@@ -5,6 +5,7 @@ import { useMsal } from "@azure/msal-react";
 import { useApi } from "../../hooks/useApi";
 import { toast } from "sonner";
 import { getErrorMessage } from "../utils";
+import { logger } from "../../lib/logger";
 import type {
   Message, LogEntry, Connection, ChatSession, DashboardTab,
   ServerConnectionRecord, ServerSessionRecord, HistorySession,
@@ -155,8 +156,11 @@ export function useChatEngine() {
         }
         setHasHydrated(true);
         addLog("SUCCESS", "Workspace synced from server.");
+        logger.info("Hydration complete", { connections: connections.length });
       } catch (err) {
-        console.warn("Backend hydration failed, using localStorage.", err);
+        logger.warn("Backend hydration failed, using localStorage", {
+          error: err instanceof Error ? err.message : String(err),
+        });
         setHasHydrated(true);
       }
     };
@@ -271,6 +275,7 @@ export function useChatEngine() {
     setInput("");
     setIsTyping(true);
     addLog("INFO", "Received user query: " + userMsg.content);
+    logger.info("Query submitted", { sessionId: activeChatSession.id, queryLength: (userMsg.content ?? '').length });
     const activeConnection = connections.find(c => c.id === activeChatSession.connectionId);
     try {
       const response = await fetchWithAuth("/api/query", {
@@ -443,7 +448,7 @@ export function useChatEngine() {
         addLog("INFO", "Microsoft Entra ID token acquired via MSAL.");
       }
     } catch (err: unknown) {
-      console.error(err);
+      logger.error("MSAL login failed", { error: getErrorMessage(err) });
       setConnError("Microsoft login failed: " + getErrorMessage(err));
     }
   };
