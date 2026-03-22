@@ -10,7 +10,19 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { toast } from 'sonner';
 import { OnboardingFlow } from "./OnboardingFlow";
-import "./UnifiedChat.css";
+import { useChatEngine } from "./hooks/useChatEngine";
+import { Sidebar } from "./Sidebar";
+import { TopBar } from "./TopBar";
+import { WelcomeView } from "./views/WelcomeView";
+import { IntegrationsView } from "./views/IntegrationsView";
+import { ConnectionForm } from "./views/ConnectionForm";
+import { ManageConnections } from "./views/ManageConnections";
+import { SettingsView } from "./views/SettingsView";
+import { HistoryView } from "./views/HistoryView";
+import { ChatPanel } from "./chat/ChatPanel";
+import { InsightPanel } from "./chat/InsightPanel";
+import { IdeEditor } from "./IdeEditor";
+
 
 type ProgressEvent = { label: string; status: string; time: string };
 
