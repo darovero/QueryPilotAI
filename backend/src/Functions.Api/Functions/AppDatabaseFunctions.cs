@@ -1,4 +1,5 @@
 using Core.Application.Contracts;
+using Infrastructure.Security;
 using Infrastructure.Sql;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
@@ -10,6 +11,7 @@ namespace Functions.Api.Functions;
 
 public class AppDatabaseFunctions(
     IAppDatabaseService appDb,
+    IEncryptionService encryption,
     ILogger<AppDatabaseFunctions> logger)
 {
     private static readonly JsonSerializerOptions _jsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
@@ -39,6 +41,12 @@ public class AppDatabaseFunctions(
             else if (string.IsNullOrWhiteSpace(config.UserId))
             {
                 return req.CreateResponse(HttpStatusCode.Unauthorized);
+            }
+
+            // Encrypt password before storing
+            if (!string.IsNullOrEmpty(config.EncryptedPassword))
+            {
+                config = config with { EncryptedPassword = encryption.Encrypt(config.EncryptedPassword) };
             }
 
             var id = await appDb.SaveConnectionAsync(config);
