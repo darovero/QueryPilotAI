@@ -1,84 +1,113 @@
 <div align="center">
 
-# 🚀 InsightForge AI
-### Query‑to‑Insight Analytics Engineer
+<img src="docs/insightforge_banner.png" alt="InsightForge AI Banner" width="100%" />
 
-**From natural language questions to trusted SQL insights**
+# **InsightForge AI**
+**AI Analytics Engineering Platform**
 
-[![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js)](https://nextjs.org/)
-[![React](https://img.shields.io/badge/React-18.3-blue?logo=react)](https://react.dev/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?logo=tailwind-css)](https://tailwindcss.com/)
-[![Azure Functions](https://img.shields.io/badge/Azure_Functions-.NET_8_Isolated-0062AD?logo=azure-functions)](https://azure.microsoft.com/)
-[![Azure SQL](https://img.shields.io/badge/Azure_SQL-v12.0-0089D6?logo=microsoft-azure)](https://azure.microsoft.com/)
-[![Azure OpenAI](https://img.shields.io/badge/Azure_OpenAI-GPT--4o--mini-0078D4?logo=openai)](https://azure.microsoft.com/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
+English | [Español](#) | [Documentation](./docs)
 
-**Microsoft Innovation Challenger: Innovation Challenge March 2026 🏆**
+[Architecture](#-architecture) • [Key Features](#-key-features) • [Getting Started](#-getting-started) • [Operational Guide](#-operational-guide)
 
-[Problem](#-the-bottleneck-in-analytics) • [Architecture](#-architecture--stack) • [Getting Started](#-getting-started) • [Operations](#-operational-guide-powershell)
+[![issues](https://img.shields.io/github/issues/darovero/QueryPilotAI?color=FAD02C&logo=github)](https://github.com/darovero/QueryPilotAI/issues)
+[![pull requests](https://img.shields.io/github/issues-pr/darovero/QueryPilotAI?color=FAD02C&logo=github)](https://github.com/darovero/QueryPilotAI/pulls)
+[![License](https://img.shields.io/badge/License-MIT-FAD02C.svg)](https://opensource.org/licenses/MIT)
+[![Innovation Challenger](https://img.shields.io/badge/Microsoft-Innovation_Challenger-0078D4?logo=microsoft)](https://innovation.microsoft.com/)
+
+[![Next.js](https://img.shields.io/badge/Frontend-Next.js_15-black?logo=next.js)](https://nextjs.org/)
+[![Azure Functions](https://img.shields.io/badge/Backend-.NET_8_Isolated-0062AD?logo=azure-functions)](https://azure.microsoft.com/)
+[![Azure OpenAI](https://img.shields.io/badge/AI-GPT--4o--mini-10A37F?logo=openai)](https://azure.microsoft.com/)
+
+<br/>
+
+⭐ **Like what we're doing? Give us a star ⬆️**
 
 </div>
 
 ---
 
-## 🌟 The Bottleneck in Analytics
-Business users want answers from their data instantly, but generating SQL safely, efficiently, and correctly remains a major bottleneck. 
+InsightForge AI is an end-to-end analytical engineering agent built specifically for the enterprise. It solves a massive bottleneck in data-driven organizations: **generating SQL safely, efficiently, and correctly.**
 
-**InsightForge AI** is an advanced analytical engineering agent that converts natural language questions into validated SQL queries, executes them securely against Azure SQL, and explains the results in clear, actionable business language. 
+* **The Business Interface** – Users ask natural language questions, the agent translates them to validated SQL, executes them securely, and delivers insights via automated summaries.
+* **The Engineering Backend** – Decomposes analytical intent, guards against abuse with AI Content Safety, and manages rigorous human-in-the-loop approval workflows using Azure Durable Functions.
 
-The system decomposes analytical intent, generates highly robust SQL, handles errors gracefully, and delivers insights via automated summaries. We emphasize **security, correctness, transparency, approval flows, and operational reliability**.
+Ship analytics at the speed of thought, with production-ready observability and enterprise-grade security.
 
----
+<br/>
 
 ## ✨ Key Features
 
-- **🧠 Decompose Intent & Generate Robust SQL**: Translates complex natural language questions into precise, optimized, and validated SQL queries using **Azure OpenAI (gpt-4o-mini)**.
-- **🛡️ Enterprise-Grade Security & Validation**: Guards against prompt injection and abusive queries using **Azure AI Content Safety**.
-- **✅ Human-in-the-Loop Approvals**: Built-in orchestration workflows for sensitive or high-impact queries, leveraging **Azure Durable Functions**.
-- **📊 Business-Friendly Explanations**: Converts complex result sets into easy-to-understand executive insights, rendered beautifully with **React Markdown** and **Recharts**.
-- **⚙️ Transparent & Secure Execution**: Complete observability via **Application Insights / Log Analytics** and secure secret management via **Azure Key Vault** and **Entra ID (MSAL)**.
+<table width="100%">
+  <tr>
+    <td width="50%" valign="top">
+      <h3>🧠 NLP to Validated SQL</h3>
+      <p>Seamlessly translates complex human intent into optimized queries via <b>Azure OpenAI</b>. The semantic engine ensures syntax correctness before execution against your warehouse.</p>
+    </td>
+    <td width="50%" valign="top">
+      <h3>🛡️ Enterprise-Grade Safety</h3>
+      <p>Strictly guards against prompt injection and abusive queries using <b>Azure AI Content Safety</b>, keeping your Azure SQL Database hardened and compliant at all times.</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>✅ Human-in-the-Loop</h3>
+      <p>Not everything should auto-execute. Built-in orchestration workflows via <b>Azure Durable Functions</b> ensure that sensitive or high-impact queries require human approval.</p>
+    </td>
+    <td width="50%" valign="top">
+      <h3>📊 Business Explanations</h3>
+      <p>Results aren't just rows and columns. InsightForge automatically converts result datasets into <b>executive insights</b>, visualizing them beautifully with React Markdown and Recharts.</p>
+    </td>
+  </tr>
+</table>
 
 ---
 
 ## 🏗️ Architecture & Stack
 
-InsightForge AI is built on a modern, robust, and fully serverless (Dynamic Y1 Plan) architecture powered by the Microsoft Azure cloud.
+InsightForge AI runs on a fully serverless, highly scalable Microsoft Azure infrastructure, orchestrated securely to deliver instant analytics without sacrificing control.
 
-* **Frontend**: Next.js 15 App Router / React 18 / TypeScript / Tailwind CSS 
-    * Fully integrated with `@azure/msal-react` for enterprise authentication.
-    * Stunning UI using `Recharts` for data visualization and `Sonner` for toast notifications.
-* **Backend**: **Clean Architecture** in Azure Functions Isolated Worker (.NET 8).
-    * `Core.Domain` & `Core.Application` for strict business logic handling.
-    * `Infrastructure.Sql`, `Infrastructure.AzureOpenAI`, `Infrastructure.Security`, and `Infrastructure.Observability` for seamless cloud service integration.
-    * Multi-step workflows powered by `Microsoft.Azure.Functions.Worker.Extensions.DurableTask`.
-* **AI Engine**: Azure OpenAI (GPT-4o-mini) — *Intent parsing, SQL generation, and insight synthesis.*
-* **Security & Trust**: Azure AI Content Safety, Microsoft Entra ID.
-* **Data Layer**: Azure SQL Database (v12.0) — *Secure query execution with dedicated Service Principals.*
+<div align="center">
+  <img src="https://img.shields.io/badge/Clean_Architecture-SOLID_Design-000000?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Serverless-Azure_Dynamic_Y1-000000?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Infrastructure_As_Code-Bicep-000000?style=for-the-badge" />
+</div>
+<br/>
 
-### 📂 Repository Structure
-
-- `docs/` — Architecture decisions, roadmap, and hackathon keys.
-- `frontend/` — Next.js 15 UI with Tailwind and MSAL Auth.
-- `backend/` — .NET 8 Isolated Azure Functions (Clean Architecture).
-- `database/` — SQL schemas, security configurations, and seed scripts.
-- `infra/bicep/` — Infrastructure as Code containing `main.bicep` for 1-click Azure deployments.
-- `test-assets/` — Datasets, sample prompts, and validation tools.
+* 🖥️ **Frontend:** Next.js 15 App Router | React 18 | Tailwind CSS 3.4
+  * Deeply integrated `MSAL React` for strict M365/Entra ID authentication.
+  * Modern UX powered by `Recharts` and `Sonner`.
+* ⚙️ **Backend:** Azure Functions Isolated Worker (.NET 8)
+  * Heavy lifting via `Microsoft.Azure.Functions.Worker.Extensions.DurableTask`.
+  * Clean Architecture: `Core.Domain`, `Infrastructure.Sql`, `Infrastructure.AzureOpenAI`.
+* ☁️ **Cloud Infrastructure:**
+  * Azure SQL Database (v12.0)
+  * Azure OpenAI (S0)
+  * Log Analytics Workspace & App Insights
+  * Key Vault & Content Safety
 
 ---
 
 ## 🚀 Getting Started
 
+Deploying InsightForge AI is incredibly fast. With our fully defined IaC, you can have the entire system running in Azure in minutes.
+
 ### 1. Provision Infrastructure
-Deploy the required Azure resources (Functions, SQL Server, Storage, OpenAI, Content Safety, App Insights) using our automated Bicep templates:
+We provide `main.bicep` for 1-click Azure deployments:
 ```bash
-cd infra
-./deploy.sh  # or ./deploy.ps1
+cd infra/bicep
+../deploy.sh   # Linux / macOS
+# or
+..\deploy.ps1  # Windows
 ```
 
-### 2. Configure Environment
-Set up your local environment variables based on the provisioned resources. *(Note: Reference `docs/CLAVES_Y_CREDENCIALES.md` for team hackathon keys).*
+### 2. Configure Environment Secrets
+Refer to `docs/CLAVES_Y_CREDENCIALES.md` to get your team's hackathon keys. Do NOT upload real keys to the repository.
 
-**Backend (`backend/src/Functions.Api/local.settings.json`):**
+<details>
+<summary><b>Backend <code>local.settings.json</code></b></summary>
+<br>
+
+Place this entirely within `backend/src/Functions.Api/local.settings.json`:
 ```json
 {
   "IsEncrypted": false,
@@ -92,23 +121,30 @@ Set up your local environment variables based on the provisioned resources. *(No
   }
 }
 ```
+</details>
 
-**Frontend (`frontend/.env.local`):**
+<details>
+<summary><b>Frontend <code>.env.local</code></b></summary>
+<br>
+
+Place this entirely within `frontend/.env.local`:
 ```env
 NEXT_PUBLIC_AZURE_AD_CLIENT_ID=<YOUR_CLIENT_ID>
 NEXT_PUBLIC_AZURE_AD_TENANT_ID=common
 NEXT_PUBLIC_AZURE_AD_AUTHORITY=https://login.microsoftonline.com/common
 NEXT_PUBLIC_REDIRECT_URI=http://localhost:3000/
 ```
+</details>
 
 ### 3. Run Locally
-**Terminal 1 (Backend):**
+
+Open **Terminal 1** for the .NET Backend Orchestrator:
 ```powershell
 cd backend/src/Functions.Api
 func start
 ```
 
-**Terminal 2 (Frontend):**
+Open **Terminal 2** for the Next.js Frontend:
 ```powershell
 cd frontend
 npm run dev --turbo
@@ -116,10 +152,15 @@ npm run dev --turbo
 
 ---
 
-## 🛠️ Operational Guide (PowerShell)
+## 🛠️ Operational Guide
 
-### Test the Connection
-Verify that your backend can correctly reach the Azure SQL Database.
+Managing state, orchestrations, and database interactions can be done entirely via PowerShell. 
+> *Expand to view backend developer commands.*
+
+<details>
+<summary><b>Test Database Connection</b></summary>
+
+Verify that your backend can correctly reach Azure SQL:
 ```powershell
 $body = @{
     type     = "Azure SQL"
@@ -131,9 +172,13 @@ $body = @{
 
 Invoke-RestMethod -Method Post -Uri "http://localhost:7071/api/test-connection" -Body $body -ContentType "application/json"
 ```
+</details>
 
-### Submit a Query
-Test the end-to-end NLP to SQL pipeline orchestration.
+
+<details>
+<summary><b>Submit a NLP Query</b></summary>
+
+Test the full orchestration pipeline.
 ```powershell
 $query = @{
     question      = "Show me the top 10 most recent transactions"
@@ -152,21 +197,28 @@ $query = @{
 
 Invoke-RestMethod -Method Post -Uri "http://localhost:7071/api/query" -Body $query -ContentType "application/json"
 ```
+</details>
 
-### Manage Approvals (Durable Functions)
-Check the status of an orchestration or approve/reject pending queries directly via the Durable Functions API.
+<details>
+<summary><b>Approve/Reject Queries (Durable Functions)</b></summary>
+
+Check orchestration status:
 ```powershell
-# Get Status
 Invoke-RestMethod -Uri "http://localhost:7071/api/orchestrations/<INSTANCE_ID>"
+```
 
-# Approve
+Approve pending queries:
+```powershell
 $approval = @{ decision = "Approved"; approverUserId = "admin@agent.com"; comments = "Looks good" } | ConvertTo-Json
 Invoke-RestMethod -Method Post -Uri "http://localhost:7071/api/orchestrations/<INSTANCE_ID>/approve" -Body $approval -ContentType "application/json"
 ```
+</details>
 
 ---
 
 <div align="center">
-  <b>Built with ❤️ for the Microsoft Innovation Challenger</b><br>
-  <i>March 2026</i>
+  <b>Built for the Microsoft Innovation Challenger</b><br>
+  <i>Empowering data-driven decisions with safe, transparent AI.</i>
+  <br><br>
+  <img src="https://img.shields.io/badge/Status-Hackathon_Ready-success?style=for-the-badge" />
 </div>
