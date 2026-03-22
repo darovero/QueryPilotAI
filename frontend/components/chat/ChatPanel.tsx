@@ -30,6 +30,15 @@ export function ChatPanel({
   setSelectedMessageForPanel, setIsInsightPanelOpen,
   openTabs, setOpenTabs, setCurrentView, messagesEndRef,
 }: ChatPanelProps) {
+  const inputRef = React.useRef<HTMLTextAreaElement>(null);
+
+  // Auto-focus input after sending a message
+  React.useEffect(() => {
+    if (!isTyping && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [messages.length, isTyping]);
+
   return (
     <div className="flex flex-col h-full w-full relative animate-in fade-in duration-300">
 
@@ -43,11 +52,13 @@ export function ChatPanel({
             </div>
             <div className="w-full relative rounded-2xl bg-white border border-zinc-200 focus-within:border-zinc-300 focus-within:shadow-md transition-all">
               <textarea
+                ref={inputRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit(); } }}
                 disabled={isTyping}
-                className="w-full bg-transparent rounded-2xl px-5 py-4 pr-14 text-[15px] text-zinc-900 focus:outline-none resize-none h-28 font-medium placeholder:text-zinc-400"
+                autoFocus
+                className="w-full bg-transparent rounded-2xl px-5 py-4 pr-14 text-[15px] text-zinc-900 focus:outline-none border-0 resize-none h-28 font-medium placeholder:text-zinc-400"
                 placeholder="Ask a question or create a chart..."
               ></textarea>
               <button onClick={handleSubmit} disabled={isTyping || !input.trim()} className="absolute right-3 bottom-3 w-9 h-9 rounded-xl bg-zinc-900 text-white flex items-center justify-center disabled:opacity-20 disabled:bg-zinc-200 disabled:text-zinc-400 transition-all hover:bg-zinc-800 cursor-pointer">
@@ -97,14 +108,15 @@ export function ChatPanel({
 
       {/* Fixed input bar at bottom */}
       {messages.length > 0 && (
-        <div className="absolute bottom-0 left-0 right-0 px-6 md:px-10 lg:px-16 pb-5 pt-3 bg-gradient-to-t from-[var(--surface)] via-[var(--surface)] to-transparent z-20">
-          <div className="relative rounded-2xl bg-white border border-zinc-200 focus-within:border-zinc-300 focus-within:shadow-md transition-all">
+        <div className="absolute bottom-0 left-0 right-0 px-6 md:px-10 lg:px-16 pb-4 pt-4 bg-[var(--surface)] z-20">
+          <div className="relative rounded-xl bg-zinc-50 border border-zinc-200 focus-within:border-zinc-400 focus-within:bg-white focus-within:shadow-sm transition-all">
             <textarea
+              ref={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit(); } }}
               disabled={isTyping}
-              className="w-full bg-transparent px-5 py-3.5 pr-14 text-[14px] font-medium text-zinc-900 focus:outline-none resize-none h-[52px] placeholder:text-zinc-400 rounded-2xl"
+              className="w-full bg-transparent px-5 py-3 pr-14 text-[14px] font-medium text-zinc-900 focus:outline-none border-0 resize-none h-[48px] placeholder:text-zinc-400 rounded-xl"
               placeholder="Ask a follow-up question..."
             ></textarea>
             <button onClick={handleSubmit} disabled={isTyping || !input.trim()} className="absolute right-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg bg-zinc-900 text-white flex items-center justify-center disabled:opacity-20 disabled:bg-zinc-200 disabled:text-zinc-400 transition-all hover:bg-zinc-800">
