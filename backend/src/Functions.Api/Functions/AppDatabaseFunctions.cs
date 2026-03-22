@@ -12,7 +12,7 @@ public class AppDatabaseFunctions(
     IAppDatabaseService appDb,
     ILogger<AppDatabaseFunctions> logger)
 {
-    private readonly JsonSerializerOptions _jsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+    private static readonly JsonSerializerOptions _jsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
     // --- Connections ---
 
@@ -22,7 +22,8 @@ public class AppDatabaseFunctions(
     {
         try
         {
-            var body = await new StreamReader(req.Body).ReadToEndAsync();
+            using var bodyReader = new StreamReader(req.Body);
+            var body = await bodyReader.ReadToEndAsync();
             var config = JsonSerializer.Deserialize<UserConnectionRecord>(body, _jsonOptions);
 
             var authenticatedUserId = req.FunctionContext.Items.TryGetValue("UserId", out var uid) ? uid?.ToString() : null;
@@ -126,7 +127,8 @@ public class AppDatabaseFunctions(
     {
         try
         {
-            var body = await new StreamReader(req.Body).ReadToEndAsync();
+            using var bodyReader = new StreamReader(req.Body);
+            var body = await bodyReader.ReadToEndAsync();
             var config = JsonSerializer.Deserialize<UserConnectionRecord>(body, _jsonOptions);
 
             var authenticatedUserId = req.FunctionContext.Items.TryGetValue("UserId", out var uid) ? uid?.ToString() : null;
@@ -232,7 +234,8 @@ public class AppDatabaseFunctions(
     {
         try
         {
-            var body = await new StreamReader(req.Body).ReadToEndAsync();
+            using var bodyReader = new StreamReader(req.Body);
+            var body = await bodyReader.ReadToEndAsync();
             var payload = JsonSerializer.Deserialize<CreateSessionRequest>(body, _jsonOptions);
 
             var authenticatedUserId = req.FunctionContext.Items.TryGetValue("UserId", out var uid) ? uid?.ToString() : null;

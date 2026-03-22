@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "oPkVj7KPNgE=",
+  "dgSpecHash": "++7QsrzVLFY=",
   "success": true,
   "projectFilePath": "C:\\Users\\Jessy\\Documents\\GitHub\\QueryPilotAI\\backend\\src\\Functions.Api\\Functions.Api.csproj",
   "expectedPackageFiles": [
@@ -82,8 +82,8 @@
     "C:\\Users\\Jessy\\.nuget\\packages\\microsoft.identitymodel.abstractions\\8.16.0\\microsoft.identitymodel.abstractions.8.16.0.nupkg.sha512",
     "C:\\Users\\Jessy\\.nuget\\packages\\microsoft.identitymodel.jsonwebtokens\\8.16.0\\microsoft.identitymodel.jsonwebtokens.8.16.0.nupkg.sha512",
     "C:\\Users\\Jessy\\.nuget\\packages\\microsoft.identitymodel.logging\\8.16.0\\microsoft.identitymodel.logging.8.16.0.nupkg.sha512",
-    "C:\\Users\\Jessy\\.nuget\\packages\\microsoft.identitymodel.protocols\\6.35.0\\microsoft.identitymodel.protocols.6.35.0.nupkg.sha512",
-    "C:\\Users\\Jessy\\.nuget\\packages\\microsoft.identitymodel.protocols.openidconnect\\6.35.0\\microsoft.identitymodel.protocols.openidconnect.6.35.0.nupkg.sha512",
+    "C:\\Users\\Jessy\\.nuget\\packages\\microsoft.identitymodel.protocols\\8.16.0\\microsoft.identitymodel.protocols.8.16.0.nupkg.sha512",
+    "C:\\Users\\Jessy\\.nuget\\packages\\microsoft.identitymodel.protocols.openidconnect\\8.16.0\\microsoft.identitymodel.protocols.openidconnect.8.16.0.nupkg.sha512",
     "C:\\Users\\Jessy\\.nuget\\packages\\microsoft.identitymodel.tokens\\8.16.0\\microsoft.identitymodel.tokens.8.16.0.nupkg.sha512",
     "C:\\Users\\Jessy\\.nuget\\packages\\microsoft.netcore.platforms\\3.1.0\\microsoft.netcore.platforms.3.1.0.nupkg.sha512",
     "C:\\Users\\Jessy\\.nuget\\packages\\microsoft.netcore.targets\\1.0.1\\microsoft.netcore.targets.1.0.1.nupkg.sha512",
