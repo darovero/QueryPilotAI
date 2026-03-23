@@ -1,4 +1,0 @@
-name: insightforge-aoai-connection
-type: azure_open_ai
-azure_endpoint: https://eastus.api.cognitive.microsoft.com/
-api_key: placeholder
