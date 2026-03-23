@@ -1,7 +1,0 @@
-{
-  "spa": {
-    "redirectUris": [
-      "http://localhost:3000"
-    ]
-  }
-}

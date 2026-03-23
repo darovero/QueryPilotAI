@@ -2,164 +2,8 @@ using Azure.Identity;
 using Azure.AI.Agents.Persistent;
 using Core.Application.Contracts;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace Infrastructure.AzureOpenAI;
-
-/// <summary>
-/// Client that invokes agents hosted in Azure AI Foundry.
-/// Agents (SQL Planner, Result Interpreter, Concierge) are created and configured
-/// in Foundry with their prompts managed there — not hardcoded in this codebase.
-/// This service only sends messages and retrieves responses.
-/// </summary>
-public interface IFoundryAgentClient
-{
-    /// <summary>
-    /// Sends the user's question + database schema to the SQL Planner agent in Foundry.
-    /// Returns a structured JSON response with status, intent, SQL, and governance info.
-    /// </summary>
-    Task<SqlPlannerResponse> PlanSqlAsync(string question, string dbSchema, string? conversationContext = null);
-
-    /// <summary>
-    /// Sends the executed SQL results to the Result Interpreter agent in Foundry.
-    /// Returns a structured JSON interpretation with findings, recommendations, etc.
-    /// </summary>
-    Task<ResultInterpretation> InterpretResultsAsync(
-        string question, string intentJson, string sql,
-        List<Dictionary<string, object?>> rows, string? governanceJson = null);
-
-    /// <summary>
-    /// Sends a message to the Concierge agent to classify whether it's conversational or analytical.
-    /// </summary>
-    Task<ConversationalClassification?> ClassifyMessageAsync(string userId, string message);
-}
-
-// --- Response DTOs ---
-
-public sealed class SqlPlannerResponse
-{
-    [JsonPropertyName("status")]
-    public string Status { get; set; } = "unsupported";
-
-    [JsonPropertyName("user_question")]
-    public string? UserQuestion { get; set; }
-
-    [JsonPropertyName("intent")]
-    public JsonElement? Intent { get; set; }
-
-    [JsonPropertyName("understanding")]
-    public JsonElement? Understanding { get; set; }
-
-    [JsonPropertyName("data_mapping")]
-    public JsonElement? DataMapping { get; set; }
-
-    [JsonPropertyName("governance")]
-    public GovernanceInfo? Governance { get; set; }
-
-    [JsonPropertyName("sql")]
-    public SqlInfo? Sql { get; set; }
-
-    [JsonPropertyName("clarification")]
-    public ClarificationInfo? Clarification { get; set; }
-}
-
-public sealed class GovernanceInfo
-{
-    [JsonPropertyName("safe_to_execute")]
-    public bool SafeToExecute { get; set; }
-
-    [JsonPropertyName("risk_level")]
-    public string RiskLevel { get; set; } = "low";
-
-    [JsonPropertyName("policy_flags")]
-    public string[]? PolicyFlags { get; set; }
-
-    [JsonPropertyName("approval_required")]
-    public bool ApprovalRequired { get; set; }
-
-    [JsonPropertyName("approval_reason")]
-    public string? ApprovalReason { get; set; }
-}
-
-public sealed class SqlInfo
-{
-    [JsonPropertyName("dialect")]
-    public string Dialect { get; set; } = "tsql";
-
-    [JsonPropertyName("query")]
-    public string Query { get; set; } = string.Empty;
-
-    [JsonPropertyName("explanation")]
-    public string? Explanation { get; set; }
-}
-
-public sealed class ClarificationInfo
-{
-    [JsonPropertyName("question_for_user")]
-    public string? QuestionForUser { get; set; }
-}
-
-public sealed class ResultInterpretation
-{
-    [JsonPropertyName("status")]
-    public string Status { get; set; } = "no_data";
-
-    [JsonPropertyName("question_answered")]
-    public string? QuestionAnswered { get; set; }
-
-    [JsonPropertyName("executive_summary")]
-    public string? ExecutiveSummary { get; set; }
-
-    [JsonPropertyName("key_findings")]
-    public List<KeyFinding>? KeyFindings { get; set; }
-
-    [JsonPropertyName("observations")]
-    public string[]? Observations { get; set; }
-
-    [JsonPropertyName("inferences")]
-    public string[]? Inferences { get; set; }
-
-    [JsonPropertyName("recommendations")]
-    public string[]? Recommendations { get; set; }
-
-    [JsonPropertyName("risk_interpretation")]
-    public RiskInterpretation? Risk { get; set; }
-
-    [JsonPropertyName("limitations")]
-    public string[]? Limitations { get; set; }
-
-    [JsonPropertyName("follow_up_questions")]
-    public string[]? FollowUpQuestions { get; set; }
-
-    [JsonPropertyName("confidence")]
-    public double Confidence { get; set; }
-
-    [JsonPropertyName("response_for_user")]
-    public string? ResponseForUser { get; set; }
-}
-
-public sealed class KeyFinding
-{
-    [JsonPropertyName("title")]
-    public string? Title { get; set; }
-
-    [JsonPropertyName("description")]
-    public string? Description { get; set; }
-
-    [JsonPropertyName("evidence")]
-    public string? Evidence { get; set; }
-}
-
-public sealed class RiskInterpretation
-{
-    [JsonPropertyName("level")]
-    public string Level { get; set; } = "unknown";
-
-    [JsonPropertyName("rationale")]
-    public string? Rationale { get; set; }
-}
-
-// --- Implementation ---
 
 public sealed class FoundryAgentClient : IFoundryAgentClient
 {
@@ -230,7 +74,6 @@ public sealed class FoundryAgentClient : IFoundryAgentClient
         catch (Exception ex)
         {
             Console.WriteLine($"[RESULT INTERPRETER DESERIALIZATION ERROR]: {ex.Message}");
-            // The agent responded conversationally — use its text directly
             return new ResultInterpretation
             {
                 Status = "success",
@@ -246,13 +89,9 @@ public sealed class FoundryAgentClient : IFoundryAgentClient
         {
             var responseText = await RunAgentAsync(_conciergeAgentId, message);
 
-            // If the Concierge responded with text, it's conversational
-            // If it returned an analytical classification JSON, parse it
             if (string.IsNullOrWhiteSpace(responseText))
                 return null;
 
-            // Try to detect if the response is a direct conversational reply
-            // vs. a structured classification
             try
             {
                 var classification = JsonSerializer.Deserialize<ConciergeClassification>(responseText, JsonOptions);
@@ -269,7 +108,6 @@ public sealed class FoundryAgentClient : IFoundryAgentClient
                 // Not JSON — it's a direct conversational reply
             }
 
-            // Treat as direct conversational response
             return new ConversationalClassification("conversational", responseText, 1.0);
         }
         catch
@@ -280,7 +118,6 @@ public sealed class FoundryAgentClient : IFoundryAgentClient
 
     private async Task<string> RunAgentAsync(string agentId, string userMessage)
     {
-        // Create thread options with the user message included
         var options = new ThreadAndRunOptions
         {
             ThreadOptions = new PersistentAgentThreadCreationOptions
@@ -292,11 +129,9 @@ public sealed class FoundryAgentClient : IFoundryAgentClient
             }
         };
 
-        // Create thread and run in one call 
         ThreadRun run = await _agentsClient.CreateThreadAndRunAsync(agentId, options);
         var threadId = run.ThreadId;
 
-        // Poll until complete
         while (run.Status == RunStatus.Queued || run.Status == RunStatus.InProgress)
         {
             await Task.Delay(1000);
@@ -312,7 +147,6 @@ public sealed class FoundryAgentClient : IFoundryAgentClient
             throw new InvalidOperationException($"Agent run failed with status: {run.Status}");
         }
 
-        // Get the assistant's response
         var messages = _agentsClient.Messages.GetMessagesAsync(threadId, order: ListSortOrder.Descending);
         await foreach (var msg in messages)
         {
@@ -323,7 +157,6 @@ public sealed class FoundryAgentClient : IFoundryAgentClient
                     if (content is MessageTextContent textContent)
                     {
                         var text = textContent.Text;
-                        // Clean markdown wrapping if present
                         if (text.StartsWith("```json", StringComparison.OrdinalIgnoreCase))
                             text = text[7..];
                         else if (text.StartsWith("```", StringComparison.OrdinalIgnoreCase))
@@ -336,9 +169,7 @@ public sealed class FoundryAgentClient : IFoundryAgentClient
             }
         }
 
-        // Cleanup
         await _agentsClient.Threads.DeleteThreadAsync(threadId);
-
         return "{}";
     }
 
@@ -416,17 +247,4 @@ public sealed class FoundryAgentClient : IFoundryAgentClient
 
         return sb.ToString();
     }
-}
-
-// Internal DTO for Concierge parsing
-internal sealed class ConciergeClassification
-{
-    [JsonPropertyName("category")]
-    public string? Category { get; set; }
-
-    [JsonPropertyName("reply")]
-    public string? Reply { get; set; }
-
-    [JsonPropertyName("confidence")]
-    public double Confidence { get; set; } = 1.0;
 }

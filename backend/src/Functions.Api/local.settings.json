@@ -12,6 +12,11 @@
     "FoundryAgent__ProjectEndpoint": "https://marianagonzalez-6489-resource.services.ai.azure.com/api/projects/marianagonzalez-6489",
     "FoundryAgent__SqlPlannerAgentId": "asst_sVfTKQcbeUeRanGQkNDviYFZ",
     "FoundryAgent__ResultInterpreterAgentId": "asst_SEjRH87jIXeHlMvqawfXj4LB",
-    "FoundryAgent__ConciergeAgentId": "asst_vkMN5rnF0gM2EBBMz4W0Wr5h9"
+    "FoundryAgent__ConciergeAgentId": "asst_vkMN5rnF0gM2EBBMz4W0Wr5h9",
+    "AZURE_AD_TENANT_ID": "common",
+    "AZURE_AD_CLIENT_ID": "b8ad5ba3-bb50-4829-9c08-9c1b10693cef",
+    "ENCRYPTION_KEY": "9O1S5DsCsLVJhzlr+41Hh0OI+4i1xt2RMBohoHjWzX0=",
+    "RATE_LIMIT_MAX_REQUESTS": "30",
+    "RATE_LIMIT_WINDOW_MINUTES": "1"
   }
 }

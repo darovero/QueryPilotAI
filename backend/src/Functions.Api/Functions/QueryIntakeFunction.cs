@@ -81,9 +81,10 @@ public class OrchestrationStatusFunction
             {
                 output = JsonSerializer.Deserialize<InsightResponse>(outputRaw);
             }
-            catch
+            catch (Exception ex)
             {
                 // Keep output as null and expose outputRaw for troubleshooting.
+                _ = ex; // Acknowledged: deserialization failed, raw output will be returned
             }
         }
 
@@ -95,9 +96,10 @@ public class OrchestrationStatusFunction
             {
                 customStatus = JsonSerializer.Deserialize<object>(metadata.SerializedCustomStatus);
             }
-            catch
+            catch (Exception ex)
             {
                 customStatus = metadata.SerializedCustomStatus;
+                _ = ex; // Acknowledged: custom status deserialization failed
             }
         }
 
@@ -165,6 +167,12 @@ public class AuditHistoryFunction(Infrastructure.Sql.ISqlExecutionService sqlExe
     public async Task<HttpResponseData> Run(
         [HttpTrigger(AuthorizationLevel.Function, "get", Route = "history")] HttpRequestData req)
     {
+        var authenticatedUserId = req.FunctionContext.Items.TryGetValue("UserId", out var uid) ? uid?.ToString() : null;
+        if (string.IsNullOrEmpty(authenticatedUserId))
+        {
+            return req.CreateResponse(HttpStatusCode.Unauthorized);
+        }
+
         var audits = await sqlExecutionService.GetRecentAuditsAsync(50);
         var ok = req.CreateResponse(HttpStatusCode.OK);
         await ok.WriteAsJsonAsync(audits);
