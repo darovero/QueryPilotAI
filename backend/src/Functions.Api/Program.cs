@@ -17,6 +17,7 @@ var host = new HostBuilder()
 
         services.AddLogging();
         services.AddHttpClient();
+        services.AddDataProtection();
         services.AddSingleton<IEntraTokenValidator, MicrosoftEntraTokenValidator>();
 
         // --- Core ---
@@ -25,6 +26,7 @@ var host = new HostBuilder()
 
         // --- Database Services ---
         services.AddSingleton<Infrastructure.Sql.ISqlExecutionService, Infrastructure.Sql.SqlExecutionService>();
+        services.AddSingleton<Infrastructure.Sql.IConnectionSecretProtector, Infrastructure.Sql.ConnectionSecretProtector>();
         services.AddSingleton<Infrastructure.Sql.IAppDatabaseService, Infrastructure.Sql.AppDatabaseService>();
         services.AddSingleton<Infrastructure.Sql.ISchemaExtractorService, Infrastructure.Sql.SchemaExtractorService>();
 

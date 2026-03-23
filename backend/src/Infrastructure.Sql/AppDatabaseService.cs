@@ -91,11 +91,13 @@ public sealed record ConversationTurnRecord(
 public sealed class AppDatabaseService : IAppDatabaseService
 {
     private readonly string _connectionString;
+    private readonly IConnectionSecretProtector _secretProtector;
 
-    public AppDatabaseService(IConfiguration configuration)
+    public AppDatabaseService(IConfiguration configuration, IConnectionSecretProtector secretProtector)
     {
         _connectionString = configuration["AppDbConnectionString"]
             ?? throw new InvalidOperationException("AppDbConnectionString is required.");
+        _secretProtector = secretProtector;
     }
 
     // --- User Connections ---
@@ -127,7 +129,10 @@ WHEN NOT MATCHED THEN
         cmd.Parameters.AddWithValue("@DatabaseName", connection.DatabaseName);
         cmd.Parameters.AddWithValue("@AuthType", (object?)connection.AuthType ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@Username", (object?)connection.Username ?? DBNull.Value);
-        cmd.Parameters.AddWithValue("@EncryptedPassword", (object?)connection.EncryptedPassword ?? DBNull.Value);
+        var protectedPassword = string.IsNullOrWhiteSpace(connection.EncryptedPassword)
+            ? null
+            : _secretProtector.Protect(connection.EncryptedPassword);
+        cmd.Parameters.AddWithValue("@EncryptedPassword", (object?)protectedPassword ?? DBNull.Value);
         await cmd.ExecuteNonQueryAsync();
         return id;
     }
@@ -298,8 +303,14 @@ VALUES (@Id, @SessionId, @UserId, @Role, @Question, @SqlGenerated, @AgentRespons
         return list;
     }
 
-    private static UserConnectionRecord MapConnection(SqlDataReader reader, bool includeSecret = true)
+    private UserConnectionRecord MapConnection(SqlDataReader reader, bool includeSecret = true)
     {
+        string? secret = null;
+        if (includeSecret && !reader.IsDBNull(reader.GetOrdinal("encrypted_password")))
+        {
+            secret = _secretProtector.Unprotect(reader.GetString(reader.GetOrdinal("encrypted_password")));
+        }
+
         return new UserConnectionRecord(
             reader.GetGuid(reader.GetOrdinal("id")),
             reader.GetString(reader.GetOrdinal("user_id")),
@@ -310,7 +321,7 @@ VALUES (@Id, @SessionId, @UserId, @Role, @Question, @SqlGenerated, @AgentRespons
             reader.GetString(reader.GetOrdinal("database_name")),
             reader.IsDBNull(reader.GetOrdinal("auth_type")) ? null : reader.GetString(reader.GetOrdinal("auth_type")),
             reader.IsDBNull(reader.GetOrdinal("username")) ? null : reader.GetString(reader.GetOrdinal("username")),
-            includeSecret && !reader.IsDBNull(reader.GetOrdinal("encrypted_password")) ? reader.GetString(reader.GetOrdinal("encrypted_password")) : null,
+            secret,
             reader.IsDBNull(reader.GetOrdinal("schema_cache")) ? null : reader.GetString(reader.GetOrdinal("schema_cache")),
             reader.IsDBNull(reader.GetOrdinal("schema_extracted_at")) ? null : reader.GetDateTime(reader.GetOrdinal("schema_extracted_at")),
             reader.GetDateTime(reader.GetOrdinal("created_at")),
