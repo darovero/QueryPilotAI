@@ -19,14 +19,25 @@ param openAiDeploymentName string = 'gpt-4o-mini'
 @description('SKU de Azure SQL Database')
 param sqlDbSkuName string = 'Basic'
 
-var storageName = toLower(replace('${prefix}${uniqueString(resourceGroup().id)}', '-', ''))
+@description('SKU del App Service Plan para el frontend Next.js')
+param webAppSkuName string = 'B1'
+
+@description('Tier del App Service Plan para el frontend Next.js')
+param webAppSkuTier string = 'Basic'
+
+var storageNameBase = toLower(replace('st${prefix}${uniqueString(resourceGroup().id)}', '-', ''))
+var storageName = padLeft(take(storageNameBase, 24), 3, '0')
 var appInsightsName = '${prefix}-appi'
 var logAnalyticsName = '${prefix}-log'
 var functionPlanName = '${prefix}-plan'
 var functionAppName = '${prefix}-func'
+var webPlanName = '${prefix}-web-plan'
+var webAppName = '${prefix}-web'
 var sqlServerName = '${prefix}-sql-${uniqueString(resourceGroup().id)}'
-var sqlDbName = '${prefix}-sqldb'
-var keyVaultName = toLower('${prefix}-kv-${uniqueString(resourceGroup().id)}')
+var analyticsDbName = '${prefix}-sqldb'
+var appDbName = '${prefix}-appdb'
+var keyVaultNameBase = toLower(replace('kv${prefix}${uniqueString(resourceGroup().id)}', '-', ''))
+var keyVaultName = take(keyVaultNameBase, 24)
 var openAiName = '${prefix}-aoai'
 var contentSafetyName = '${prefix}-cs'
 
@@ -84,16 +95,73 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
     siteConfig: {
       ftpsState: 'Disabled'
       appSettings: [
-        { name: 'AzureWebJobsStorage'; value: 'DefaultEndpointsProtocol=https;AccountName=${storage.name};EndpointSuffix=${environment().suffixes.storage};AccountKey=${listKeys(storage.id, storage.apiVersion).keys[0].value}' }
-        { name: 'FUNCTIONS_WORKER_RUNTIME'; value: 'dotnet-isolated' }
-        { name: 'APPINSIGHTS_INSTRUMENTATIONKEY'; value: appInsights.properties.InstrumentationKey }
-        { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'; value: appInsights.properties.ConnectionString }
-        { name: 'SqlConnectionString'; value: 'Server=tcp:${sqlServer.name}.database.windows.net,1433;Initial Catalog=${sqlDbName};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;User ID=${sqlAdminLogin};Password=${sqlAdminPassword};' }
-        { name: 'AzureOpenAI__Endpoint'; value: openAi.properties.endpoint }
-        { name: 'AzureOpenAI__Deployment'; value: openAiDeployment.name }
-        { name: 'ContentSafety__Endpoint'; value: contentSafety.properties.endpoint }
+        {
+          name: 'AzureWebJobsStorage'
+          value: 'DefaultEndpointsProtocol=https;AccountName=${storage.name};EndpointSuffix=${environment().suffixes.storage};AccountKey=${storage.listKeys().keys[0].value}'
+        }
+        {
+          name: 'FUNCTIONS_WORKER_RUNTIME'
+          value: 'dotnet-isolated'
+        }
+        {
+          name: 'APPINSIGHTS_INSTRUMENTATIONKEY'
+          value: appInsights.properties.InstrumentationKey
+        }
+        {
+          name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+          value: appInsights.properties.ConnectionString
+        }
+        {
+          name: 'WEBSITE_RUN_FROM_PACKAGE'
+          value: '1'
+        }
       ]
       minTlsVersion: '1.2'
+    }
+  }
+}
+
+resource webHostingPlan 'Microsoft.Web/serverfarms@2023-12-01' = {
+  name: webPlanName
+  location: location
+  sku: {
+    name: webAppSkuName
+    tier: webAppSkuTier
+  }
+  kind: 'linux'
+  properties: {
+    reserved: true
+  }
+}
+
+resource webApp 'Microsoft.Web/sites@2023-12-01' = {
+  name: webAppName
+  location: location
+  kind: 'app,linux'
+  identity: {
+    type: 'SystemAssigned'
+  }
+  properties: {
+    serverFarmId: webHostingPlan.id
+    httpsOnly: true
+    siteConfig: {
+      linuxFxVersion: 'NODE|20-lts'
+      minTlsVersion: '1.2'
+      ftpsState: 'Disabled'
+      appSettings: [
+        {
+          name: 'SCM_DO_BUILD_DURING_DEPLOYMENT'
+          value: 'true'
+        }
+        {
+          name: 'ENABLE_ORYX_BUILD'
+          value: 'true'
+        }
+        {
+          name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+          value: appInsights.properties.ConnectionString
+        }
+      ]
     }
   }
 }
@@ -110,7 +178,22 @@ resource sqlServer 'Microsoft.Sql/servers@2023-08-01-preview' = {
 }
 
 resource sqlDb 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
-  name: '${sqlServer.name}/${sqlDbName}'
+  name: analyticsDbName
+  parent: sqlServer
+  location: location
+  sku: {
+    name: sqlDbSkuName
+    tier: 'Basic'
+  }
+  properties: {
+    zoneRedundant: false
+    readScale: 'Disabled'
+  }
+}
+
+resource appSqlDb 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
+  name: appDbName
+  parent: sqlServer
   location: location
   sku: {
     name: sqlDbSkuName
@@ -123,7 +206,8 @@ resource sqlDb 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
 }
 
 resource firewallRule 'Microsoft.Sql/servers/firewallRules@2023-08-01-preview' = {
-  name: '${sqlServer.name}/AllowAzureServices'
+  name: 'AllowAzureServices'
+  parent: sqlServer
   properties: {
     startIpAddress: '0.0.0.0'
     endIpAddress: '0.0.0.0'
@@ -162,7 +246,8 @@ resource openAi 'Microsoft.CognitiveServices/accounts@2024-10-01' = {
 }
 
 resource openAiDeployment 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01' = {
-  name: '${openAi.name}/${openAiDeploymentName}'
+  name: openAiDeploymentName
+  parent: openAi
   properties: {
     model: {
       format: 'OpenAI'
@@ -191,8 +276,19 @@ resource contentSafety 'Microsoft.CognitiveServices/accounts@2024-10-01' = {
 }
 
 output functionAppName string = functionApp.name
+output functionAppHostname string = functionApp.properties.defaultHostName
+output functionAppPrincipalId string = functionApp.identity.principalId
+output webAppName string = webApp.name
+output webAppHostname string = webApp.properties.defaultHostName
+output webAppPrincipalId string = webApp.identity.principalId
+output sqlServerFullyQualifiedName string = replace('${sqlServer.name}.${environment().suffixes.sqlServerHostname}', '..', '.')
 output sqlServerName string = sqlServer.name
-output sqlDatabaseName string = sqlDb.name
+output analyticsDatabaseName string = analyticsDbName
+output appDatabaseName string = appDbName
 output appInsightsConnectionString string = appInsights.properties.ConnectionString
 output openAiEndpoint string = openAi.properties.endpoint
+output openAiName string = openAi.name
+output openAiDeploymentName string = openAiDeployment.name
 output contentSafetyEndpoint string = contentSafety.properties.endpoint
+output contentSafetyName string = contentSafety.name
+output keyVaultName string = keyVault.name

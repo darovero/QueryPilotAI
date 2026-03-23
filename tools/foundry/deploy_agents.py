@@ -23,6 +23,13 @@ def _repo_root() -> Path:
     return Path(__file__).resolve().parents[2]
 
 
+def _resolve_config_path(root: Path, env: str, config_path: str | None) -> Path:
+    if config_path:
+        return Path(config_path).resolve()
+
+    return root / "tools" / "foundry" / "config" / f"agents.{env}.yaml"
+
+
 def _load_yaml(path: Path) -> dict[str, Any]:
     try:
         import yaml  # type: ignore
@@ -41,6 +48,19 @@ def _load_yaml(path: Path) -> dict[str, Any]:
         raise ValueError("La configuracion YAML debe ser un objeto en raiz.")
 
     return data
+
+
+def _apply_overrides(config: dict[str, Any], args: argparse.Namespace) -> dict[str, Any]:
+    if getattr(args, "project_endpoint", None):
+        config["projectEndpoint"] = args.project_endpoint
+
+    if getattr(args, "model_deployment", None):
+        config["modelDeployment"] = args.model_deployment
+
+    if getattr(args, "environment_name", None):
+        config["environment"] = args.environment_name
+
+    return config
 
 
 def _read_text(path: Path) -> str:
@@ -252,8 +272,8 @@ def _upsert_prompt_agent(client, model_deployment: str, environment: str, agent_
 
 def cmd_plan(args: argparse.Namespace) -> int:
     root = _repo_root()
-    cfg_path = root / "tools" / "foundry" / "config" / f"agents.{args.env}.yaml"
-    config = _load_yaml(cfg_path)
+    cfg_path = _resolve_config_path(root, args.env, args.config)
+    config = _apply_overrides(_load_yaml(cfg_path), args)
 
     errors = _validate_config(config, root)
     if errors:
@@ -281,8 +301,8 @@ def cmd_plan(args: argparse.Namespace) -> int:
 
 def cmd_export(args: argparse.Namespace) -> int:
     root = _repo_root()
-    cfg_path = root / "tools" / "foundry" / "config" / f"agents.{args.env}.yaml"
-    config = _load_yaml(cfg_path)
+    cfg_path = _resolve_config_path(root, args.env, args.config)
+    config = _apply_overrides(_load_yaml(cfg_path), args)
 
     errors = _validate_config(config, root)
     if errors:
@@ -307,8 +327,8 @@ def cmd_apply(_: argparse.Namespace) -> int:
     root = _repo_root()
     # argparse passes the namespace even if named _
     args = _
-    cfg_path = root / "tools" / "foundry" / "config" / f"agents.{args.env}.yaml"
-    config = _load_yaml(cfg_path)
+    cfg_path = _resolve_config_path(root, args.env, args.config)
+    config = _apply_overrides(_load_yaml(cfg_path), args)
 
     errors = _validate_config(config, root)
     if errors:
@@ -374,14 +394,26 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_plan = sub.add_parser("plan", help="Valida configuracion y muestra plan")
     p_plan.add_argument("--env", default="dev", help="Entorno objetivo (dev, qa, prod)")
+    p_plan.add_argument("--config", help="Ruta explicita al archivo YAML de configuracion")
+    p_plan.add_argument("--project-endpoint", help="Sobrescribe el project endpoint en tiempo de ejecucion")
+    p_plan.add_argument("--model-deployment", help="Sobrescribe el deployment del modelo en tiempo de ejecucion")
+    p_plan.add_argument("--environment-name", help="Sobrescribe el nombre de ambiente exportado")
     p_plan.set_defaults(func=cmd_plan)
 
     p_export = sub.add_parser("export", help="Genera artefactos para infra/backend")
     p_export.add_argument("--env", default="dev", help="Entorno objetivo (dev, qa, prod)")
+    p_export.add_argument("--config", help="Ruta explicita al archivo YAML de configuracion")
+    p_export.add_argument("--project-endpoint", help="Sobrescribe el project endpoint en tiempo de ejecucion")
+    p_export.add_argument("--model-deployment", help="Sobrescribe el deployment del modelo en tiempo de ejecucion")
+    p_export.add_argument("--environment-name", help="Sobrescribe el nombre de ambiente exportado")
     p_export.set_defaults(func=cmd_export)
 
     p_apply = sub.add_parser("apply", help="Placeholder para upsert de agentes en Foundry")
     p_apply.add_argument("--env", default="dev", help="Entorno objetivo (dev, qa, prod)")
+    p_apply.add_argument("--config", help="Ruta explicita al archivo YAML de configuracion")
+    p_apply.add_argument("--project-endpoint", help="Sobrescribe el project endpoint en tiempo de ejecucion")
+    p_apply.add_argument("--model-deployment", help="Sobrescribe el deployment del modelo en tiempo de ejecucion")
+    p_apply.add_argument("--environment-name", help="Sobrescribe el nombre de ambiente exportado")
     p_apply.set_defaults(func=cmd_apply)
 
     return parser

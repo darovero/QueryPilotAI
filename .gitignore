@@ -38,3 +38,11 @@ payload.json
 
 ### Logs
 .logs/
+
+### Deployment local state and generated artifacts
+deploy/Deploy.Configuration.psd1
+deploy/.state/
+deploy/artifacts/
+
+### Generated infrastructure output
+infra/bicep/main.json
