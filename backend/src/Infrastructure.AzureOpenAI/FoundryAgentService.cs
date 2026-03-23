@@ -167,6 +167,7 @@ public sealed class FoundryAgentClient : IFoundryAgentClient
     private readonly string _sqlPlannerAgentId;
     private readonly string _resultInterpreterAgentId;
     private readonly string _conciergeAgentId;
+    private static readonly TimeSpan RunPollingTimeout = TimeSpan.FromSeconds(75);
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -179,9 +180,19 @@ public sealed class FoundryAgentClient : IFoundryAgentClient
         string projectEndpoint,
         string sqlPlannerAgentId,
         string resultInterpreterAgentId,
-        string conciergeAgentId)
+        string conciergeAgentId,
+        string? apiKey = null,
+        string? tenantId = null)
     {
-        _agentsClient = new PersistentAgentsClient(projectEndpoint, new DefaultAzureCredential());
+        var credentialOptions = new DefaultAzureCredentialOptions();
+        if (!string.IsNullOrWhiteSpace(tenantId))
+        {
+            credentialOptions.TenantId = tenantId;
+        }
+
+        _agentsClient = new PersistentAgentsClient(
+            projectEndpoint,
+            new DefaultAzureCredential(credentialOptions));
         _sqlPlannerAgentId = sqlPlannerAgentId;
         _resultInterpreterAgentId = resultInterpreterAgentId;
         _conciergeAgentId = conciergeAgentId;
@@ -296,50 +307,63 @@ public sealed class FoundryAgentClient : IFoundryAgentClient
         ThreadRun run = await _agentsClient.CreateThreadAndRunAsync(agentId, options);
         var threadId = run.ThreadId;
 
-        // Poll until complete
-        while (run.Status == RunStatus.Queued || run.Status == RunStatus.InProgress)
+        try
         {
-            await Task.Delay(1000);
-            run = await _agentsClient.Runs.GetRunAsync(threadId, run.Id);
-        }
+            var deadline = DateTimeOffset.UtcNow + RunPollingTimeout;
 
-        if (run.Status != RunStatus.Completed)
-        {
-            if (run.Status == RunStatus.RequiresAction)
+            // Poll until complete, but fail fast if the remote run stalls.
+            while (run.Status == RunStatus.Queued || run.Status == RunStatus.InProgress)
             {
-                await _agentsClient.Runs.CancelRunAsync(threadId, run.Id);
-            }
-            throw new InvalidOperationException($"Agent run failed with status: {run.Status}");
-        }
-
-        // Get the assistant's response
-        var messages = _agentsClient.Messages.GetMessagesAsync(threadId, order: ListSortOrder.Descending);
-        await foreach (var msg in messages)
-        {
-            if (msg.Role == MessageRole.Agent)
-            {
-                foreach (var content in msg.ContentItems)
+                if (DateTimeOffset.UtcNow >= deadline)
                 {
-                    if (content is MessageTextContent textContent)
+                    await _agentsClient.Runs.CancelRunAsync(threadId, run.Id);
+                    throw new TimeoutException($"Agent run timed out after {RunPollingTimeout.TotalSeconds:F0} seconds.");
+                }
+
+                await Task.Delay(1000);
+                run = await _agentsClient.Runs.GetRunAsync(threadId, run.Id);
+            }
+
+            if (run.Status != RunStatus.Completed)
+            {
+                if (run.Status == RunStatus.RequiresAction)
+                {
+                    await _agentsClient.Runs.CancelRunAsync(threadId, run.Id);
+                }
+
+                throw new InvalidOperationException($"Agent run failed with status: {run.Status}");
+            }
+
+            // Get the assistant's response
+            var messages = _agentsClient.Messages.GetMessagesAsync(threadId, order: ListSortOrder.Descending);
+            await foreach (var msg in messages)
+            {
+                if (msg.Role == MessageRole.Agent)
+                {
+                    foreach (var content in msg.ContentItems)
                     {
-                        var text = textContent.Text;
-                        // Clean markdown wrapping if present
-                        if (text.StartsWith("```json", StringComparison.OrdinalIgnoreCase))
-                            text = text[7..];
-                        else if (text.StartsWith("```", StringComparison.OrdinalIgnoreCase))
-                            text = text[3..];
-                        if (text.EndsWith("```", StringComparison.OrdinalIgnoreCase))
-                            text = text[..^3];
-                        return text.Trim();
+                        if (content is MessageTextContent textContent)
+                        {
+                            var text = textContent.Text;
+                            // Clean markdown wrapping if present
+                            if (text.StartsWith("```json", StringComparison.OrdinalIgnoreCase))
+                                text = text[7..];
+                            else if (text.StartsWith("```", StringComparison.OrdinalIgnoreCase))
+                                text = text[3..];
+                            if (text.EndsWith("```", StringComparison.OrdinalIgnoreCase))
+                                text = text[..^3];
+                            return text.Trim();
+                        }
                     }
                 }
             }
+
+            return "{}";
         }
-
-        // Cleanup
-        await _agentsClient.Threads.DeleteThreadAsync(threadId);
-
-        return "{}";
+        finally
+        {
+            await _agentsClient.Threads.DeleteThreadAsync(threadId);
+        }
     }
 
     private static string BuildSqlPlannerMessage(string question, string dbSchema, string? conversationContext)

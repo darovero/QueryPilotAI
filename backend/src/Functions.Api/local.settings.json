@@ -9,9 +9,10 @@
     "AzureOpenAI__Deployment": "gpt-4o-mini",
     "AzureOpenAI__ApiKey": "1flrAyIIaBxztuaCvRbpPkc8jIJE6pAdLS4tmBMAgNcW67pDZFddJQQJ99CCACHYHv6XJ3w3AAAAACOGyKFo",
     "ContentSafety__Endpoint": "https://eastus.api.cognitive.microsoft.com/",
-    "FoundryAgent__ProjectEndpoint": "https://marianagonzalez-6489-resource.services.ai.azure.com/api/projects/marianagonzalez-6489",
-    "FoundryAgent__SqlPlannerAgentId": "asst_sVfTKQcbeUeRanGQkNDviYFZ",
-    "FoundryAgent__ResultInterpreterAgentId": "asst_SEjRH87jIXeHlMvqawfXj4LB",
-    "FoundryAgent__ConciergeAgentId": "asst_vkMN5rnF0gM2EBBMz4W0Wr5h9"
+    "FoundryAgent__ProjectEndpoint": "https://msfoundryagents.services.ai.azure.com/api/projects/ProgramaFrontier",
+    "FoundryAgent__TenantId": "96973449-0a60-448a-b1ad-3c7237cd6563",
+    "FoundryAgent__SqlPlannerAgentId": "asst_6a5CxOl2zBo7ffVs2wrYnmN0",
+    "FoundryAgent__ResultInterpreterAgentId": "asst_ESrKHJQViEuLlAONduDSV1NY",
+    "FoundryAgent__ConciergeAgentId": "asst_LWYNOUePVp0DMFolS09TkDAZ"
   }
 }
