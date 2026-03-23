@@ -16,6 +16,12 @@ param sqlAdminPassword string
 @description('Nombre del deployment Azure OpenAI')
 param openAiDeploymentName string = 'gpt-4o-mini'
 
+@description('Restaura la cuenta de Azure OpenAI si existe en estado soft-deleted')
+param restoreOpenAiAccount bool = false
+
+@description('Restaura la cuenta de Content Safety si existe en estado soft-deleted')
+param restoreContentSafetyAccount bool = false
+
 @description('SKU de Azure SQL Database')
 param sqlDbSkuName string = 'Basic'
 
@@ -242,6 +248,7 @@ resource openAi 'Microsoft.CognitiveServices/accounts@2024-10-01' = {
   properties: {
     customSubDomainName: toLower(openAiName)
     publicNetworkAccess: 'Enabled'
+    restore: restoreOpenAiAccount
   }
 }
 
@@ -272,6 +279,7 @@ resource contentSafety 'Microsoft.CognitiveServices/accounts@2024-10-01' = {
   properties: {
     customSubDomainName: toLower(contentSafetyName)
     publicNetworkAccess: 'Enabled'
+    restore: restoreContentSafetyAccount
   }
 }
 

@@ -1,12 +1,12 @@
 @{
     SubscriptionId = ''
-    ResourceGroupName = ''
-    Location = 'eastus'
+    ResourceGroupName = 'rg-insightforge-dev'
+    Location = 'eastus2'
     CreateResourceGroupIfMissing = $true
-    Prefix = 'insightforge-dev'
+    Prefix = 'ifdev2'
 
     Sql = @{
-        AdminLogin = ''
+        AdminLogin = 'sqladminif'
         AdminPassword = ''
         SkuName = 'Basic'
     }
@@ -14,13 +14,19 @@
     Frontend = @{
         AppServiceSkuName = 'B1'
         AppServiceSkuTier = 'Basic'
+        # Si se deja vacio, el script compone la authority con Auth.AuthorityHost + Auth.TenantId.
         Authority = ''
+        # Si se deja vacio, el script usa https://<web-app-hostname>.
+        # Esa misma URL debe existir como Redirect URI en el App Registration configurado en Auth.ClientId.
         RedirectUri = ''
+        # Si se deja vacio, el script reutiliza RedirectUri.
         PostLogoutRedirectUri = ''
     }
 
     Auth = @{
         ClientId = ''
+        TenantId = ''
+        # Debe incluir la audiencia aceptada por el backend. Normalmente coincide con ClientId.
         AllowedAudiences = @()
         AuthorityHost = 'https://login.microsoftonline.com'
     }

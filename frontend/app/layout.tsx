@@ -13,10 +13,17 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const authConfig = {
+    clientId: process.env.NEXT_PUBLIC_AZURE_AD_CLIENT_ID,
+    authority: process.env.NEXT_PUBLIC_AZURE_AD_AUTHORITY,
+    redirectUri: process.env.NEXT_PUBLIC_REDIRECT_URI,
+    postLogoutRedirectUri: process.env.NEXT_PUBLIC_POST_LOGOUT_REDIRECT_URI,
+  };
+
   return (
-    <html lang="en" className="h-full">
+    <html lang="es" className="h-full">
       <body className={`${uiFont.variable} ${displayFont.variable} h-full font-sans`}>
-        <AuthProvider>
+        <AuthProvider config={authConfig}>
           <Toaster theme="dark" position="top-center" richColors />
           {children}
         </AuthProvider>

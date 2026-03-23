@@ -12,7 +12,7 @@ public class QueryIntakeFunction(IAppDatabaseService appDb)
 {
     [Function(nameof(QueryIntakeFunction))]
     public async Task<HttpResponseData> Run(
-        [HttpTrigger(AuthorizationLevel.Function, "post", Route = "query")] HttpRequestData req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "query")] HttpRequestData req,
         [DurableClient] DurableTaskClient durableClient,
         FunctionContext executionContext)
     {
@@ -79,7 +79,7 @@ public class OrchestrationStatusFunction
 {
     [Function(nameof(OrchestrationStatusFunction))]
     public async Task<HttpResponseData> Run(
-        [HttpTrigger(AuthorizationLevel.Function, "get", Route = "orchestrations/{instanceId}")] HttpRequestData req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "orchestrations/{instanceId}")] HttpRequestData req,
         string instanceId,
         [DurableClient] DurableTaskClient durableClient)
     {
@@ -144,7 +144,7 @@ public class ApprovalFunction
 {
     [Function(nameof(ApprovalFunction))]
     public async Task<HttpResponseData> Run(
-        [HttpTrigger(AuthorizationLevel.Function, "post", Route = "orchestrations/{instanceId}/approve")] HttpRequestData req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "orchestrations/{instanceId}/approve")] HttpRequestData req,
         string instanceId,
         [DurableClient] DurableTaskClient durableClient)
     {
@@ -195,7 +195,7 @@ public class AuditHistoryFunction(Infrastructure.Sql.ISqlExecutionService sqlExe
 {
     [Function(nameof(AuditHistoryFunction))]
     public async Task<HttpResponseData> Run(
-        [HttpTrigger(AuthorizationLevel.Function, "get", Route = "history")] HttpRequestData req)
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "history")] HttpRequestData req)
     {
         var audits = await sqlExecutionService.GetRecentAuditsAsync(50);
         var ok = req.CreateResponse(HttpStatusCode.OK);

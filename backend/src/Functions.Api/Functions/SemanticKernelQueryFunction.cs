@@ -34,7 +34,7 @@ public class SemanticKernelQueryFunction
 
     [Function("SemanticKernelQuery")]
     public async Task<HttpResponseData> RunAsync(
-        [HttpTrigger(AuthorizationLevel.Function, "post", Route = "query/semantic-kernel")]
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "query/semantic-kernel")]
         HttpRequestData req,
         CancellationToken cancellationToken)
     {

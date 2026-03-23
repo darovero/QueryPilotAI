@@ -96,6 +96,155 @@ function Resolve-RequiredValue {
     return $resolved
 }
 
+function Resolve-ConfigValue {
+    param(
+        [string]$Value,
+        [string]$Prompt,
+        [string]$PropertyName,
+        [string]$DefaultValue,
+        [switch]$Secret
+    )
+
+    if (-not [string]::IsNullOrWhiteSpace($Value)) {
+        return $Value
+    }
+
+    $promptSuffix = if ([string]::IsNullOrWhiteSpace($DefaultValue)) { '' } else { " [$DefaultValue]" }
+
+    if ($Secret) {
+        $secure = Read-Host -Prompt "$Prompt$promptSuffix" -AsSecureString
+        $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
+        try {
+            $resolved = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
+        }
+        finally {
+            [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+        }
+    }
+    else {
+        $resolved = Read-Host -Prompt "$Prompt$promptSuffix"
+    }
+
+    if ([string]::IsNullOrWhiteSpace($resolved)) {
+        $resolved = $DefaultValue
+    }
+
+    if ([string]::IsNullOrWhiteSpace($resolved)) {
+        throw "Value for '$PropertyName' is required."
+    }
+
+    return $resolved
+}
+
+function New-DeploymentConfigDefaults {
+    return @{
+        Location = 'eastus2'
+        Prefix = 'ifdev2'
+        ResourceGroupName = 'rg-insightforge-dev'
+        SqlAdminLogin = 'sqladminif'
+        SqlAdminPassword = 'IfDev_2026!Deploy#01'
+    }
+}
+
+function New-DeploymentConfigSkeleton {
+    return @{
+        SubscriptionId = ''
+        ResourceGroupName = ''
+        Location = ''
+        CreateResourceGroupIfMissing = $true
+        Prefix = ''
+        Sql = @{
+            AdminLogin = ''
+            AdminPassword = ''
+            SkuName = 'Basic'
+        }
+        Frontend = @{
+            AppServiceSkuName = 'B1'
+            AppServiceSkuTier = 'Basic'
+            Authority = ''
+            RedirectUri = ''
+            PostLogoutRedirectUri = ''
+        }
+        Auth = @{
+            ClientId = ''
+            TenantId = ''
+            AllowedAudiences = @()
+            AuthorityHost = 'https://login.microsoftonline.com'
+        }
+        Foundry = @{
+            EnvironmentName = 'dev'
+            ManageProject = $true
+            ManageAgents = $true
+            CreateResourceIfMissing = $true
+            CreateProjectIfMissing = $true
+            ResourceName = ''
+            ProjectName = ''
+            ResourceSkuName = 'S0'
+            ModelDeploymentName = 'gpt-4o-mini'
+            ModelName = 'gpt-4o-mini'
+            ModelVersion = '2024-07-18'
+            ModelFormat = 'OpenAI'
+            ModelSkuName = 'Standard'
+            ModelSkuCapacity = 10
+            ProjectEndpoint = ''
+            TenantId = ''
+            SqlPlannerAgentId = ''
+            ResultInterpreterAgentId = ''
+            ConciergeAgentId = ''
+            ProjectResourceId = ''
+            RoleDefinitionName = ''
+        }
+        AzureOpenAI = @{
+            DeploymentName = 'gpt-4o-mini'
+        }
+    }
+}
+
+function Build-AuthorityUrl {
+    param(
+        [string]$AuthorityHost,
+        [string]$TenantId
+    )
+
+    $normalizedHost = $AuthorityHost.Trim().TrimEnd('/')
+    $normalizedTenantId = $TenantId.Trim().Trim('/').Trim()
+
+    if ([string]::IsNullOrWhiteSpace($normalizedHost) -or [string]::IsNullOrWhiteSpace($normalizedTenantId)) {
+        throw 'Both authority host and tenant id are required to build the frontend authority URL.'
+    }
+
+    return "$normalizedHost/$normalizedTenantId"
+}
+
+function Get-DeletedCognitiveAccountResourceId {
+    param(
+        [string]$SubscriptionId,
+        [string]$Location,
+        [string]$ResourceGroupName,
+        [string]$AccountName
+    )
+
+    return "/subscriptions/$SubscriptionId/providers/Microsoft.CognitiveServices/locations/$Location/resourceGroups/$ResourceGroupName/deletedAccounts/$AccountName"
+}
+
+function Test-SoftDeletedCognitiveAccount {
+    param(
+        [string]$SubscriptionId,
+        [string]$ResourceGroupName,
+        [string]$Location,
+        [string]$AccountName
+    )
+
+    $deletedResourceId = Get-DeletedCognitiveAccountResourceId -SubscriptionId $SubscriptionId -Location $Location -ResourceGroupName $ResourceGroupName -AccountName $AccountName
+    $deletedAccount = Try-Invoke-AzCli -ExpectJson -Arguments @('resource', 'show', '--ids', $deletedResourceId, '--api-version', '2021-04-30', '-o', 'json')
+
+    if ($null -eq $deletedAccount) {
+        return $false
+    }
+
+    return $true
+}
+
 function Invoke-AzCli {
     param(
         [string[]]$Arguments,
@@ -236,15 +385,22 @@ function New-ZipFromDirectory {
 function Build-FrontendPackage {
     param(
         [string]$SourceRoot,
-        [string]$DestinationRoot
+        [string]$DestinationRoot,
+        [hashtable]$BuildEnvironment = @{}
     )
 
     if (Test-Path $DestinationRoot) {
         Remove-Item $DestinationRoot -Recurse -Force
     }
 
+    $previousEnvironment = @{}
     Push-Location $SourceRoot
     try {
+        foreach ($entry in $BuildEnvironment.GetEnumerator()) {
+            $previousEnvironment[$entry.Key] = [Environment]::GetEnvironmentVariable($entry.Key, 'Process')
+            [Environment]::SetEnvironmentVariable($entry.Key, [string]$entry.Value, 'Process')
+        }
+
         npm ci | Out-Host
         if ($LASTEXITCODE -ne 0) {
             throw 'npm ci failed for the frontend package.'
@@ -254,8 +410,12 @@ function Build-FrontendPackage {
         if ($LASTEXITCODE -ne 0) {
             throw 'npm run build failed for the frontend package.'
         }
+
     }
     finally {
+        foreach ($entry in $previousEnvironment.GetEnumerator()) {
+            [Environment]::SetEnvironmentVariable($entry.Key, $entry.Value, 'Process')
+        }
         Pop-Location
     }
 
@@ -299,8 +459,12 @@ function Wait-ForHttp {
             }
         }
         catch {
-            $statusCode = $_.Exception.Response.StatusCode.value__
-            if ($statusCode -ge $SuccessStatusFloor -and $statusCode -le $SuccessStatusCeiling) {
+            $statusCode = $null
+            if ($_.Exception.Response) {
+                $statusCode = $_.Exception.Response.StatusCode.value__
+            }
+
+            if ($null -ne $statusCode -and $statusCode -ge $SuccessStatusFloor -and $statusCode -le $SuccessStatusCeiling) {
                 return $true
             }
         }
@@ -311,20 +475,41 @@ function Wait-ForHttp {
     return $false
 }
 
-if (-not (Test-Path $ConfigPath)) {
-    throw "Configuration file not found: $ConfigPath. Copy Deploy.Configuration.Sample.psd1 to Deploy.Configuration.psd1 and fill it in."
+if (Test-Path $ConfigPath) {
+    $config = Import-PowerShellDataFile -Path $ConfigPath
+}
+else {
+    Write-WarnLine "Configuration file not found at '$ConfigPath'. The script will prompt for the required initial values."
+    $config = New-DeploymentConfigSkeleton
 }
 
-$config = Import-PowerShellDataFile -Path $ConfigPath
+$defaults = New-DeploymentConfigDefaults
+$currentSubscription = Try-Invoke-AzCli -ExpectJson -Arguments @('account', 'show', '-o', 'json')
+$subscriptionSuggestion = if ($null -ne $currentSubscription -and -not [string]::IsNullOrWhiteSpace($currentSubscription.id)) { $currentSubscription.id } else { '' }
+$tenantSuggestion = if (-not [string]::IsNullOrWhiteSpace($config.Auth.TenantId)) { $config.Auth.TenantId } elseif (-not [string]::IsNullOrWhiteSpace($config.Foundry.TenantId)) { $config.Foundry.TenantId } elseif ($null -ne $currentSubscription -and -not [string]::IsNullOrWhiteSpace($currentSubscription.tenantId)) { $currentSubscription.tenantId } else { '' }
 
-$subscriptionId = Resolve-RequiredValue -Value $config.SubscriptionId -Prompt 'Azure subscription id' -PropertyName 'SubscriptionId'
-$resourceGroupName = Resolve-RequiredValue -Value $config.ResourceGroupName -Prompt 'Resource group name to use' -PropertyName 'ResourceGroupName'
-$location = Resolve-RequiredValue -Value $config.Location -Prompt 'Azure location' -PropertyName 'Location'
-$prefix = Resolve-RequiredValue -Value $config.Prefix -Prompt 'Deployment prefix' -PropertyName 'Prefix'
-$sqlAdminLogin = Resolve-RequiredValue -Value $config.Sql.AdminLogin -Prompt 'SQL admin login' -PropertyName 'Sql.AdminLogin'
-$sqlAdminPassword = Resolve-RequiredValue -Value $config.Sql.AdminPassword -Prompt 'SQL admin password' -PropertyName 'Sql.AdminPassword' -Secret
-$authClientId = Resolve-RequiredValue -Value $config.Auth.ClientId -Prompt 'Existing app registration client id' -PropertyName 'Auth.ClientId'
-$frontendAuthority = Resolve-RequiredValue -Value $config.Frontend.Authority -Prompt 'Frontend authority URL' -PropertyName 'Frontend.Authority'
+$subscriptionId = Resolve-ConfigValue -Value $config.SubscriptionId -Prompt 'Azure subscription id' -PropertyName 'SubscriptionId' -DefaultValue $subscriptionSuggestion
+$resourceGroupName = Resolve-ConfigValue -Value $config.ResourceGroupName -Prompt 'Resource group name to use' -PropertyName 'ResourceGroupName' -DefaultValue $defaults.ResourceGroupName
+$location = Resolve-ConfigValue -Value $config.Location -Prompt 'Azure location' -PropertyName 'Location' -DefaultValue $defaults.Location
+$prefix = Resolve-ConfigValue -Value $config.Prefix -Prompt 'Deployment prefix' -PropertyName 'Prefix' -DefaultValue $defaults.Prefix
+$sqlAdminLogin = Resolve-ConfigValue -Value $config.Sql.AdminLogin -Prompt 'SQL admin login' -PropertyName 'Sql.AdminLogin' -DefaultValue $defaults.SqlAdminLogin
+$sqlAdminPassword = Resolve-ConfigValue -Value $config.Sql.AdminPassword -Prompt 'SQL admin password' -PropertyName 'Sql.AdminPassword' -DefaultValue $defaults.SqlAdminPassword -Secret
+$authClientId = Resolve-ConfigValue -Value $config.Auth.ClientId -Prompt 'Existing app registration client id' -PropertyName 'Auth.ClientId' -DefaultValue ''
+$authTenantId = Resolve-ConfigValue -Value $config.Auth.TenantId -Prompt 'Microsoft Entra tenant id' -PropertyName 'Auth.TenantId' -DefaultValue $tenantSuggestion
+$authAuthorityHost = Resolve-ConfigValue -Value $config.Auth.AuthorityHost -Prompt 'Microsoft Entra authority host' -PropertyName 'Auth.AuthorityHost' -DefaultValue 'https://login.microsoftonline.com'
+$frontendAuthorityDefault = Build-AuthorityUrl -AuthorityHost $authAuthorityHost -TenantId $authTenantId
+$frontendAuthority = Resolve-ConfigValue -Value $config.Frontend.Authority -Prompt 'Frontend authority URL' -PropertyName 'Frontend.Authority' -DefaultValue $frontendAuthorityDefault
+
+$config.SubscriptionId = $subscriptionId
+$config.ResourceGroupName = $resourceGroupName
+$config.Location = $location
+$config.Prefix = $prefix
+$config.Sql.AdminLogin = $sqlAdminLogin
+$config.Sql.AdminPassword = $sqlAdminPassword
+$config.Auth.ClientId = $authClientId
+$config.Auth.TenantId = $authTenantId
+$config.Auth.AuthorityHost = $authAuthorityHost
+$config.Frontend.Authority = $frontendAuthority
 
 $foundryManageProject = if ($null -eq $config.Foundry.ManageProject) { $false } else { [bool]$config.Foundry.ManageProject }
 $foundryManageAgents = if ($null -eq $config.Foundry.ManageAgents) { $false } else { [bool]$config.Foundry.ManageAgents }
@@ -339,9 +524,13 @@ $foundryResultInterpreterAgentId = $config.Foundry.ResultInterpreterAgentId
 $foundryConciergeAgentId = $config.Foundry.ConciergeAgentId
 
 $allowedAudiences = @($config.Auth.AllowedAudiences | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
-if ($allowedAudiences.Count -eq 0) {
-    $allowedAudiences = @($authClientId)
-}
+$allowedAudiencesPromptValue = if ($allowedAudiences.Count -gt 0) { $allowedAudiences -join ',' } else { '' }
+$allowedAudiencesInput = Resolve-ConfigValue -Value $allowedAudiencesPromptValue -Prompt 'Allowed audiences (comma-separated)' -PropertyName 'Auth.AllowedAudiences' -DefaultValue $authClientId
+$allowedAudiences = @($allowedAudiencesInput.Split(',') | ForEach-Object { $_.Trim() } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+$config.Auth.AllowedAudiences = $allowedAudiences
+
+$openAiAccountName = "${prefix}-aoai"
+$contentSafetyAccountName = "${prefix}-cs"
 
 $completedPhases = [System.Collections.Generic.List[string]]::new()
 $resumeIndex = $phaseOrder.IndexOf($ResumeFrom)
@@ -405,6 +594,15 @@ try {
             'Provision' {
                 Write-Phase $phase 'Provisioning Azure infrastructure for backend, frontend, SQL, OpenAI, Content Safety and Key Vault'
 
+                $restoreOpenAiAccount = Test-SoftDeletedCognitiveAccount -SubscriptionId $subscriptionId -ResourceGroupName $resourceGroupName -Location $location -AccountName $openAiAccountName
+                $restoreContentSafetyAccount = Test-SoftDeletedCognitiveAccount -SubscriptionId $subscriptionId -ResourceGroupName $resourceGroupName -Location $location -AccountName $contentSafetyAccountName
+                if ($restoreOpenAiAccount) {
+                    Write-Info "Detected soft-deleted Cognitive Services account '$openAiAccountName'. The infrastructure deployment will restore it automatically."
+                }
+                if ($restoreContentSafetyAccount) {
+                    Write-Info "Detected soft-deleted Cognitive Services account '$contentSafetyAccountName'. The infrastructure deployment will restore it automatically."
+                }
+
                 $deployment = Invoke-AzCli -ExpectJson -Arguments @(
                     'deployment', 'group', 'create',
                     '--resource-group', $resourceGroupName,
@@ -414,6 +612,8 @@ try {
                     '--parameters', "sqlAdminLogin=$sqlAdminLogin",
                     '--parameters', "sqlAdminPassword=$sqlAdminPassword",
                     '--parameters', "openAiDeploymentName=$($config.AzureOpenAI.DeploymentName)",
+                    '--parameters', "restoreOpenAiAccount=$restoreOpenAiAccount",
+                    '--parameters', "restoreContentSafetyAccount=$restoreContentSafetyAccount",
                     '--parameters', "sqlDbSkuName=$($config.Sql.SkuName)",
                     '--parameters', "webAppSkuName=$($config.Frontend.AppServiceSkuName)",
                     '--parameters', "webAppSkuTier=$($config.Frontend.AppServiceSkuTier)",
@@ -714,10 +914,21 @@ try {
 
                 $outputs = Get-Content $outputsPath | ConvertFrom-Json
                 $webAppName = $outputs.webAppName.value
+                $webAppHostname = $outputs.webAppHostname.value
+                $functionAppHostname = $outputs.functionAppHostname.value
                 $frontendPackageDir = Join-Path $artifactsDir 'frontend-package'
                 $zipPath = Join-Path $artifactsDir 'frontend-package.zip'
+                $redirectUri = if ([string]::IsNullOrWhiteSpace($config.Frontend.RedirectUri)) { "https://$webAppHostname" } else { $config.Frontend.RedirectUri }
+                $postLogoutRedirectUri = if ([string]::IsNullOrWhiteSpace($config.Frontend.PostLogoutRedirectUri)) { $redirectUri } else { $config.Frontend.PostLogoutRedirectUri }
+                $frontendBuildEnvironment = @{
+                    API_BASE_URL = "https://$functionAppHostname"
+                    NEXT_PUBLIC_AZURE_AD_CLIENT_ID = $authClientId
+                    NEXT_PUBLIC_AZURE_AD_AUTHORITY = $frontendAuthority
+                    NEXT_PUBLIC_REDIRECT_URI = $redirectUri
+                    NEXT_PUBLIC_POST_LOGOUT_REDIRECT_URI = $postLogoutRedirectUri
+                }
 
-                Build-FrontendPackage -SourceRoot (Join-Path $repoRoot 'frontend') -DestinationRoot $frontendPackageDir
+                Build-FrontendPackage -SourceRoot (Join-Path $repoRoot 'frontend') -DestinationRoot $frontendPackageDir -BuildEnvironment $frontendBuildEnvironment
                 New-ZipFromDirectory -SourceDirectory $frontendPackageDir -ZipPath $zipPath
                 Invoke-AzCli -Arguments @('webapp', 'deploy', '--resource-group', $resourceGroupName, '--name', $webAppName, '--src-path', $zipPath, '--type', 'zip', '--clean', 'true', '--restart', 'true', '-o', 'none') | Out-Null
 
@@ -758,7 +969,7 @@ catch {
     Save-State -CurrentPhase $currentPhase -CompletedPhases $completedPhases.ToArray() -Status 'failed' -Message $message
     Write-Host "[error] $message" -ForegroundColor Red
     if ($completedPhases.Count -lt $phaseOrder.Count) {
-        $nextPhase = $phaseOrder[[Math]::Min($completedPhases.Count, $phaseOrder.Count - 1)]
+        $nextPhase = $currentPhase
         Write-WarnLine "To continue after fixing the issue, re-run: .\deploy\Invoke-FullDeployment.ps1 -ConfigPath '$ConfigPath' -ResumeFrom $nextPhase"
     }
     throw

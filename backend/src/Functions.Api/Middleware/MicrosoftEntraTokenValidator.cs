@@ -31,8 +31,7 @@ public sealed class MicrosoftEntraTokenValidator : IEntraTokenValidator
             ?? Array.Empty<string>();
 
         var defaultAudience = configuration["Auth__ClientId"]
-            ?? configuration["AzureAd__ClientId"]
-            ?? "439a8182-8c80-49ce-8dc7-703af41c724c";
+            ?? configuration["AzureAd__ClientId"];
 
         _validAudiences = configuredAudiences
             .Append(defaultAudience)
