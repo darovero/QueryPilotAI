@@ -3,10 +3,10 @@ namespace Core.Application.Contracts;
 public sealed record DatabaseConfig(
     string Type,
     string Host,
-    string? Port,
+    string Port,
     string Database,
-    string? Username,
-    string? Password,
+    string Username,
+    string Password,
     string? AuthType = null);
 
 public sealed record QueryRequest(string Question, string UserId, string Role, string? CorrelationId = null, string? SessionId = null, Guid? ConnectionId = null, DatabaseConfig? Connection = null);

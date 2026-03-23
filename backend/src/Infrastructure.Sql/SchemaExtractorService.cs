@@ -23,7 +23,7 @@ public sealed class SchemaExtractorService : ISchemaExtractorService
 {
     public async Task<string> ExtractSchemaAsync(DatabaseConfig config)
     {
-        var connectionString = ConnectionStringBuilder.Build(config);
+        var connectionString = BuildConnectionString(config);
 
         await using var connection = new SqlConnection(connectionString);
         await connection.OpenAsync();
@@ -195,4 +195,30 @@ ORDER BY table_schema, table_name, index_name";
         }
     }
 
+    private static string BuildConnectionString(DatabaseConfig config)
+    {
+        var portPart = string.IsNullOrWhiteSpace(config.Port) ? "" : $",{config.Port}";
+
+        if (string.Equals(config.AuthType, "AzureAD", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!string.IsNullOrWhiteSpace(config.Username))
+            {
+                return $"Server={config.Host}{portPart};Initial Catalog={config.Database};" +
+                       $"User ID={config.Username};Password={config.Password};" +
+                       "Encrypt=True;TrustServerCertificate=True;Authentication=Active Directory Password;Connection Timeout=30;";
+            }
+            return $"Server={config.Host}{portPart};Initial Catalog={config.Database};" +
+                   "Encrypt=True;TrustServerCertificate=True;Authentication=Active Directory Default;Connection Timeout=30;";
+        }
+
+        if (!string.IsNullOrWhiteSpace(config.Username))
+        {
+            return $"Server={config.Host}{portPart};Initial Catalog={config.Database};" +
+                   $"User ID={config.Username};Password={config.Password};" +
+                   "Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;";
+        }
+
+        return $"Server={config.Host}{portPart};Initial Catalog={config.Database};" +
+               "Encrypt=True;TrustServerCertificate=True;Authentication=Active Directory Default;Connection Timeout=30;";
+    }
 }

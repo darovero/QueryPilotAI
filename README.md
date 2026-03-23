@@ -1,223 +1,270 @@
-<div align="center">
+# InsightForge AI
 
-<img src="docs/insightforge_banner.png" alt="InsightForge AI Banner" width="100%" />
+Agente de ingeniería analítica orientado a fraude que transforma preguntas en lenguaje natural en planes analíticos estructurados, genera SQL validado, ejecuta consultas seguras sobre Azure SQL y entrega explicaciones ejecutivas con trazabilidad, aprobación humana y observabilidad.
 
-# **InsightForge AI**
-**AI Analytics Engineering Platform**
+## Objetivos
+- Traducir preguntas de negocio a intención analítica estructurada.
+- Generar SQL gobernado y seguro.
+- Aplicar reglas de validación, transparencia y aprobación.
+- Explicar resultados en lenguaje empresarial.
+- Demostrar IA responsable, amplitud de servicios Azure y reproducibilidad end-to-end.
 
-English | [Español](#) | [Documentation](./docs)
+## Stack objetivo
+- Frontend: Next.js / React / TypeScript
+- Backend: Azure Functions Isolated Worker (.NET 8)
+- Orquestación: Durable Functions
+- IA: Azure OpenAI
+- Seguridad: Azure AI Content Safety
+- Datos: Azure SQL Database
+- Observabilidad: Application Insights + Azure Monitor
+- Secretos: Azure Key Vault
+- Identidad: Microsoft Entra ID
 
-[Architecture](#-architecture) • [Key Features](#-key-features) • [Getting Started](#-getting-started) • [Operational Guide](#-operational-guide)
+## Estructura
+- `docs/`: arquitectura, decisiones, roadmap y demo.
+- `frontend/`: UI moderna y paneles de transparencia.
+- `backend/`: Functions, orquestación, dominio y reglas.
+- `database/`: esquema SQL, seguridad, vistas y semillas.
+- `infra/`: Bicep y scripts de despliegue.
+- `test-assets/`: prompts de prueba y datasets para validación.
 
-[![Innovation Challenger](https://img.shields.io/badge/Microsoft_Innovation_Challenger-March_2026-0078D4?style=for-the-badge&logoColor=white&logo=data:image/svg%2Bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMjU2IDI1NiI+PHBhdGggZmlsbD0iI0YxNTExQiIgZD0iTTEyMS42NjYgMTIxLjY2NkgwVjBoMTIxLjY2NnoiLz48cGF0aCBmaWxsPSIjODBDQzI4IiBkPSJNMjU2IDEyMS42NjZIMTM0LjMzNVYwSDI1NnoiLz48cGF0aCBmaWxsPSIjMDBBREVGIiBkPSJNMTIxLjY2MyAyNTYuMDAySDBWMTM0LjMzNmgxMjEuNjYzeiIvPjxwYXRoIGZpbGw9IiNGQkJDMDkiIGQ9Ik0yNTYgMjU2LjAwMkgxMzQuMzM1VjEzNC4zMzZIMjU2eiIvPjwvc3ZnPg==)](https://innovation.microsoft.com/) [![Microsoft Partner](https://img.shields.io/badge/Official_Partner-Microsoft-black?style=for-the-badge&logoColor=white&logo=data:image/svg%2Bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMjU2IDI1NiI+PHBhdGggZmlsbD0iI0YxNTExQiIgZD0iTTEyMS42NjYgMTIxLjY2NkgwVjBoMTIxLjY2NnoiLz48cGF0aCBmaWxsPSIjODBDQzI4IiBkPSJNMjU2IDEyMS42NjZIMTM0LjMzNVYwSDI1NnoiLz48cGF0aCBmaWxsPSIjMDBBREVGIiBkPSJNMTIxLjY2MyAyNTYuMDAySDBWMTM0LjMzNmgxMjEuNjYzeiIvPjxwYXRoIGZpbGw9IiNGQkJDMDkiIGQ9Ik0yNTYgMjU2LjAwMkgxMzQuMzM1VjEzNC4zMzZIMjU2eiIvPjwvc3ZnPg==)](https://partner.microsoft.com/)
-<br/>
-[![Demo Preview](https://img.shields.io/badge/▶_Demo-Preview-10B981?style=for-the-badge)](#) [![Ver PDF Project](https://img.shields.io/badge/📄_Ver-PDF_Project-EF4444?style=for-the-badge)](#)
+## Flujos demo sugeridos
+1. Consulta segura y autoejecución.
+2. Consulta sensible que requiere aprobación.
+3. Prompt abusivo o consulta insegura bloqueada.
 
-<br/>
+## Puesta en marcha rápida
+1. Provisionar Azure con `infra/deploy.ps1` o `infra/deploy.sh`.
+2. Ejecutar scripts SQL en `database/`.
+3. Configurar las variables de entorno para cada entorno (Backend y Frontend) basándose en las plantillas a continuación.
+4. Levantar backend y frontend en local.
+5. Probar prompts desde `test-assets/`.
 
-[![Next.js](https://img.shields.io/badge/Frontend-Next.js_15-black?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org/) [![.NET 8 Isolated](https://img.shields.io/badge/Backend-.NET_8_Isolated-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/) [![MSAL Auth](https://img.shields.io/badge/Auth-MSAL_M365-0078D4?style=for-the-badge&logo=microsoft&logoColor=white)](https://learn.microsoft.com/en-us/entra/identity-platform/msal-overview) [![Durable Functions](https://img.shields.io/badge/Orchestration-Durable_Functions-0062AD?style=for-the-badge&logo=azurefunctions&logoColor=white)](#)
+## Configuración y Variables de Entorno
 
-<br/>
+Para ejecutar este proyecto, las credenciales reales se encuentran en el archivo `docs/CLAVES_Y_CREDENCIALES.md` (Solo para uso interno del equipo durante el hackathon). **IMPORTANTE: Nunca subas claves API reales o secretos al repositorio.**
 
-⭐ **Like what we're doing? Give us a star ⬆️**
+### Backend (`backend/src/Functions.Api/local.settings.json`)
 
-</div>
+Crea o actualiza el archivo `local.settings.json` en la carpeta de la API con la siguiente estructura y reemplaza los valores por los que se indican en el documento de credenciales:
 
----
-
-InsightForge AI is an end-to-end analytical engineering agent built specifically for the enterprise. It solves a massive bottleneck in data-driven organizations: **generating SQL safely, efficiently, and correctly.**
-
-* **The Business Interface** – Users ask natural language questions, the agent translates them to validated SQL, executes them securely, and delivers insights via automated summaries.
-* **The Engineering Backend** – Decomposes analytical intent, guards against abuse with AI Content Safety, and manages rigorous human-in-the-loop approval workflows using Azure Durable Functions.
-
-Ship analytics at the speed of thought, with production-ready observability and enterprise-grade security.
-
-<br/>
-
-## ✨ Key Features
-
-<table width="100%">
-  <tr>
-    <td width="50%" valign="top">
-      <h3>🧠 NLP to Validated SQL</h3>
-      <p>Seamlessly translates complex human intent into optimized queries via <b>Azure OpenAI</b>. The semantic engine ensures syntax correctness before execution against your warehouse.</p>
-    </td>
-    <td width="50%" valign="top">
-      <h3>🛡️ Enterprise-Grade Safety</h3>
-      <p>Strictly guards against prompt injection and abusive queries using <b>Azure AI Content Safety</b>, keeping your Azure SQL Database hardened and compliant at all times.</p>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%" valign="top">
-      <h3>✅ Human-in-the-Loop</h3>
-      <p>Not everything should auto-execute. Built-in orchestration workflows via <b>Azure Durable Functions</b> ensure that sensitive or high-impact queries require human approval.</p>
-    </td>
-    <td width="50%" valign="top">
-      <h3>📊 Business Explanations</h3>
-      <p>Results aren't just rows and columns. InsightForge automatically converts result datasets into <b>executive insights</b>, visualizing them beautifully with React Markdown and Recharts.</p>
-    </td>
-  </tr>
-</table>
-
----
-
-## 🏗️ Architecture & Stack
-
-InsightForge AI runs on a fully serverless, highly scalable Microsoft Azure infrastructure, orchestrated securely to deliver instant analytics without sacrificing control.
-
-<div align="center">
-  <img src="https://img.shields.io/badge/Clean_Architecture-SOLID_Design-000000?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/Serverless-Azure_Dynamic_Y1-000000?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/Infrastructure_As_Code-Bicep-000000?style=for-the-badge" />
-</div>
-<br/>
-
-* 🖥️ **Frontend:** Next.js 15 App Router | React 18 | Tailwind CSS 3.4
-  * Deeply integrated `MSAL React` for strict M365/Entra ID authentication.
-  * Modern UX powered by `Recharts` and `Sonner`.
-* ⚙️ **Backend:** Azure Functions Isolated Worker (.NET 8)
-  * Heavy lifting via `Microsoft.Azure.Functions.Worker.Extensions.DurableTask`.
-  * Clean Architecture: `Core.Domain`, `Infrastructure.Sql`, `Infrastructure.AzureOpenAI`.
-* ☁️ **Cloud Infrastructure:**
-  * Azure SQL Database (v12.0)
-  * Azure OpenAI (S0)
-  * Log Analytics Workspace & App Insights
-  * Key Vault & Content Safety
-
----
-
-## 🚀 Getting Started
-
-Deploying InsightForge AI is incredibly fast. With our fully defined IaC, you can have the entire system running in Azure in minutes.
-
-### 1. Provision Infrastructure
-We provide `main.bicep` for 1-click Azure deployments:
-```bash
-cd infra/bicep
-../deploy.sh   # Linux / macOS
-# or
-..\deploy.ps1  # Windows
-```
-
-### 2. Configure Environment Secrets
-Refer to `docs/CLAVES_Y_CREDENCIALES.md` to get your team's hackathon keys. Do NOT upload real keys to the repository.
-
-<details>
-<summary><b>Backend <code>local.settings.json</code></b></summary>
-<br>
-
-Place this entirely within `backend/src/Functions.Api/local.settings.json`:
 ```json
 {
   "IsEncrypted": false,
   "Values": {
-    "AzureWebJobsStorage": "<STORAGE_CONN_STRING>",
+    "AzureWebJobsStorage": "<TU_CADENA_DE_CONEXION_STORAGE_ACCOUNT>",
     "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
-    "SqlConnectionString": "Server=tcp:<YOUR_SERVER>.database.windows.net,1433;Initial Catalog=<DB>;Encrypt=True;TrustServerCertificate=True;Authentication=Active Directory Default;",
-    "AzureOpenAI__Endpoint": "https://<YOUR_OPENAI>.openai.azure.com/openai/v1",
+    "SqlConnectionString": "Server=tcp:<TU_SERVIDOR>.database.windows.net,1433;Initial Catalog=<TU_DB_DE_USUARIO>;Encrypt=True;TrustServerCertificate=True;Authentication=Active Directory Default;",
+    "AppDbConnectionString": "Server=tcp:<TU_SERVIDOR>.database.windows.net,1433;Initial Catalog=<TU_DB_APP>;Encrypt=True;TrustServerCertificate=True;Authentication=Active Directory Default;",
+    "AzureOpenAI__Endpoint": "https://<TU_RECURSO_OPENAI>.openai.azure.com/openai/v1",
     "AzureOpenAI__Deployment": "gpt-4o-mini",
-    "ContentSafety__Endpoint": "https://<YOUR_CONTENT_SAFETY>.api.cognitive.microsoft.com/"
+    "AzureOpenAI__ApiKey": "<TU_API_KEY_OPENAI>",
+    "ContentSafety__Endpoint": "https://<TU_RECURSO_SAFETY>.api.cognitive.microsoft.com/",
+    "FoundryAgent__ProjectEndpoint": "https://<TU_RECURSO_FOUNDRY>.services.ai.azure.com/api/projects/<TU_PROYECTO>",
+    "FoundryAgent__SqlPlannerAgentId": "<ID_AGENTE_SQL_PLANNER_ASST_...>",
+    "FoundryAgent__ResultInterpreterAgentId": "<ID_AGENTE_RESULT_INTERPRETER_ASST_...>",
+    "FoundryAgent__ConciergeAgentId": "<ID_AGENTE_CONCIERGE_ASST_...>"
   }
 }
 ```
-</details>
 
-<details>
-<summary><b>Frontend <code>.env.local</code></b></summary>
-<br>
+### Frontend (`frontend/.env.local`)
 
-Place this entirely within `frontend/.env.local`:
+Crea un archivo `.env.local` en la carpeta `frontend/` usando las credenciales maestras:
+
 ```env
-NEXT_PUBLIC_AZURE_AD_CLIENT_ID=<YOUR_CLIENT_ID>
+NEXT_PUBLIC_AZURE_AD_CLIENT_ID=<TU_CLIENT_ID_DE_AZURE_AD>
 NEXT_PUBLIC_AZURE_AD_TENANT_ID=common
 NEXT_PUBLIC_AZURE_AD_AUTHORITY=https://login.microsoftonline.com/common
 NEXT_PUBLIC_REDIRECT_URI=http://localhost:3000/
-```
-</details>
-
-### 3. Run Locally
-
-Open **Terminal 1** for the .NET Backend Orchestrator:
-```powershell
-cd backend/src/Functions.Api
-func start
+NEXT_PUBLIC_POST_LOGOUT_REDIRECT_URI=http://localhost:3000/
 ```
 
-Open **Terminal 2** for the Next.js Frontend:
+## Estado
+Este repositorio contiene la arquitectura, seguridad, base de datos, infraestructura, agentes Foundry AI y lineamientos de desarrollo para comenzar en VS Code.
+
+---
+
+# QueryPilot AI — Guía de Operaciones (PowerShell)
+
+Referencia rápida de comandos para copiar y pegar en **PowerShell**.
+
+---
+
+## 1. Matar Todos los Procesos
+
 ```powershell
-cd frontend
-npm run dev --turbo
+# Matar Node (frontend), dotnet y func (backend) de un solo golpe
+taskkill /F /IM node.exe /T 2>$null; taskkill /F /IM dotnet.exe /T 2>$null; taskkill /F /IM func.exe /T 2>$null
 ```
 
 ---
 
-## 🛠️ Operational Guide
+## 2. Iniciar el Proyecto
 
-Managing state, orchestrations, and database interactions can be done entirely via PowerShell. 
-> *Expand to view backend developer commands.*
+### Backend (Azure Functions — puerto 7071)
 
-<details>
-<summary><b>Test Database Connection</b></summary>
+```powershell
+cd C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Functions.Api
+func start
+```
 
-Verify that your backend can correctly reach Azure SQL:
+### Frontend (Next.js — puerto 3000)
+
+Abrir **otra terminal** PowerShell:
+
+```powershell
+cd C:\Users\Jessy\Documents\GitHub\QueryPilotAI\frontend
+npm run dev
+```
+
+### Verificar que ambos estén corriendo
+
+```powershell
+# Debe mostrar el puerto 7071 (backend) y 3000 (frontend)
+Get-NetTCPConnection -LocalPort 7071,3000 -ErrorAction SilentlyContinue | Select LocalPort, State
+```
+
+---
+
+## 3. Probar Conexión a Azure SQL (API `test-connection`)
+
+### Directo al Backend (puerto 7071)
+
 ```powershell
 $body = @{
     type     = "Azure SQL"
-    host     = "tcp:<YOUR_SERVER>.database.windows.net"
-    database = "<YOUR_DB>"
-    username = "<USER>"
-    password = "<PASSWORD>"
+    host     = "tcp:insightforge-sql3-86253.database.windows.net"
+    database = "insightforge-sqldb"
+    username = "sqladminif"
+    password = "QueryPilot@2026!"
 } | ConvertTo-Json
 
 Invoke-RestMethod -Method Post -Uri "http://localhost:7071/api/test-connection" -Body $body -ContentType "application/json"
 ```
-</details>
 
+### A través del Frontend (puerto 3000, como lo hace la UI)
 
-<details>
-<summary><b>Submit a NLP Query</b></summary>
+```powershell
+Invoke-RestMethod -Method Post -Uri "http://localhost:3000/api/test-connection" -Body $body -ContentType "application/json"
+```
 
-Test the full orchestration pipeline.
+> Si el backend **no** está corriendo, la llamada al frontend dará **"fetch failed"**.
+
+---
+
+## 4. Probar Conexión Directa a la Base de Datos (sin APIs)
+
+```powershell
+$connString = "Server=tcp:insightforge-sql3-86253.database.windows.net,1433;Initial Catalog=insightforge-sqldb;Persist Security Info=False;User ID=sqladminif;Password=QueryPilot@2026!;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
+$conn = New-Object System.Data.SqlClient.SqlConnection($connString)
+try {
+    $conn.Open()
+    Write-Host "✅ Conexión directa exitosa"
+    $conn.Close()
+} catch {
+    Write-Host "❌ Falló: $($_.Exception.Message)"
+}
+```
+
+---
+
+## 5. Enviar una Consulta NLP (API `query`)
+
 ```powershell
 $query = @{
-    question      = "Show me the top 10 most recent transactions"
+    question      = "Muéstrame las 10 transacciones más recientes"
     userId        = "user@agent.com"
     role          = "FraudAnalyst"
     correlationId = "test-$(Get-Date -Format 'yyyyMMddHHmmss')"
     sessionId     = "console-test"
     connection    = @{
         type     = "Azure SQL"
-        host     = "tcp:<SERVER>.database.windows.net"
-        database = "<DB>"
-        username = "<USER>"
-        password = "<PASSWORD>"
+        host     = "tcp:insightforge-sql3-86253.database.windows.net"
+        database = "insightforge-sqldb"
+        username = "sqladminif"
+        password = "QueryPilot@2026!"
     }
 } | ConvertTo-Json -Depth 3
 
-Invoke-RestMethod -Method Post -Uri "http://localhost:7071/api/query" -Body $query -ContentType "application/json"
-```
-</details>
-
-<details>
-<summary><b>Approve/Reject Queries (Durable Functions)</b></summary>
-
-Check orchestration status:
-```powershell
-Invoke-RestMethod -Uri "http://localhost:7071/api/orchestrations/<INSTANCE_ID>"
+$result = Invoke-RestMethod -Method Post -Uri "http://localhost:7071/api/query" -Body $query -ContentType "application/json"
+$result | ConvertTo-Json -Depth 5
 ```
 
-Approve pending queries:
-```powershell
-$approval = @{ decision = "Approved"; approverUserId = "admin@agent.com"; comments = "Looks good" } | ConvertTo-Json
-Invoke-RestMethod -Method Post -Uri "http://localhost:7071/api/orchestrations/<INSTANCE_ID>/approve" -Body $approval -ContentType "application/json"
-```
-</details>
+> Guarda el `instanceId` que devuelve para consultar el estado.
 
 ---
 
-<div align="center">
-  <b>Built for the Microsoft Innovation Challenger</b><br>
-  <i>Empowering data-driven decisions with safe, transparent AI.</i>
-  <br><br>
-  <img src="https://img.shields.io/badge/Status-Hackathon_Ready-success?style=for-the-badge" />
-</div>
+## 6. Consultar Estado de una Orquestación
+
+```powershell
+# Reemplaza <INSTANCE_ID> con el valor real
+Invoke-RestMethod -Uri "http://localhost:7071/api/orchestrations/<INSTANCE_ID>" | ConvertTo-Json -Depth 5
+```
+
+---
+
+## 7. Aprobar / Rechazar una Consulta Pendiente
+
+```powershell
+# Aprobar
+$approval = @{
+    decision       = "Approved"
+    approverUserId = "user@agent.com"
+    comments       = ""
+} | ConvertTo-Json
+
+Invoke-RestMethod -Method Post -Uri "http://localhost:7071/api/orchestrations/<INSTANCE_ID>/approve" -Body $approval -ContentType "application/json"
+```
+
+```powershell
+# Rechazar
+$rejection = @{
+    decision       = "Rejected"
+    approverUserId = "user@agent.com"
+    comments       = "Consulta no autorizada"
+} | ConvertTo-Json
+
+Invoke-RestMethod -Method Post -Uri "http://localhost:7071/api/orchestrations/<INSTANCE_ID>/approve" -Body $rejection -ContentType "application/json"
+```
+
+---
+
+## 8. Ver Historial de Auditoría
+
+```powershell
+Invoke-RestMethod -Uri "http://localhost:7071/api/history" | ConvertTo-Json -Depth 5
+```
+
+---
+
+## 9. Resumen de Endpoints
+
+| Endpoint | Método | Puerto Backend | Puerto Frontend (proxy) |
+|---|---|---|---|
+| `/api/test-connection` | `POST` | `7071` | `3000` |
+| `/api/query` | `POST` | `7071` | `3000` |
+| `/api/orchestrations/{id}` | `GET` | `7071` | `3000` (como `/api/query/{id}`) |
+| `/api/orchestrations/{id}/approve` | `POST` | `7071` | `3000` (como `/api/query/{id}/approve`) |
+| `/api/history` | `GET` | `7071` | `3000` |
+
+---
+
+## 10. Workflow Rápido Completo
+
+```powershell
+# 1. Matar todo
+taskkill /F /IM node.exe /T 2>$null; taskkill /F /IM dotnet.exe /T 2>$null; taskkill /F /IM func.exe /T 2>$null
+
+# 2. Terminal 1 — Backend
+cd C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Functions.Api
+func start
+
+# 3. Terminal 2 — Frontend
+cd C:\Users\Jessy\Documents\GitHub\QueryPilotAI\frontend
+npm run dev
+
+# 4. Terminal 3 — Probar conexión
+$body = @{ type="Azure SQL"; host="tcp:insightforge-sql3-86253.database.windows.net"; database="insightforge-sqldb"; username="sqladminif"; password="QueryPilot@2026!" } | ConvertTo-Json
+Invoke-RestMethod -Method Post -Uri "http://localhost:7071/api/test-connection" -Body $body -ContentType "application/json"
+```

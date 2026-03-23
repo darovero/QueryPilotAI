@@ -9,9 +9,6 @@ frontend/out/
 *.user
 *.rsuser
 *.suo
-*.cache
-*.nupkg
-*.snupkg
 
 ### Azure Functions local
 **/local.settings.json
@@ -27,24 +24,10 @@ frontend/out/
 .vscode/
 !.vscode/settings.json
 !.vscode/extensions.json
-*.sln.docstates
-.idea/
 
 ### OS files
 .DS_Store
 Thumbs.db
-desktop.ini
 
 ### Azurite local storage
 .azurite/
-
-### One-off scripts and credentials
-payload.json
-*.pyc
-
-### Logs
-.logs/
-*.log
-
-### Gemini / AI assistant
-.gemini/

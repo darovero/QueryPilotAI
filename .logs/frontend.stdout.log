@@ -1,0 +1,49 @@
+
+> insightforge-frontend@0.1.0 dev
+> next dev --turbo --port 3000
+
+  ▲ Next.js 15.0.0 (turbo)
+  - Local:        http://localhost:3000
+
+ ✓ Starting...
+ ✓ Ready in 3.2s
+ ○ Compiling / ...
+ ✓ Compiled / in 4.9s
+ GET / 200 in 273ms
+ GET / 200 in 238ms
+ GET / 200 in 3261ms
+ ○ Compiling /onboarding/step-2 ...
+ ✓ Compiled /onboarding/step-2 in 991ms
+ GET /onboarding/step-2 200 in 1227ms
+ ○ Compiling /onboarding/step-3 ...
+ ✓ Compiled /onboarding/step-3 in 550ms
+ GET /onboarding/step-3 200 in 684ms
+ ✓ Compiled /onboarding/step-4 in 381ms
+ GET /onboarding/step-4 200 in 491ms
+ ○ Compiling /dashboard ...
+ ✓ Compiled /dashboard in 1364ms
+ GET /dashboard 200 in 1716ms
+ ○ Compiling /api/query ...
+ ✓ Compiled /api/query in 822ms
+ POST /api/query 200 in 2605ms
+ ○ Compiling /api/query/[instanceId] ...
+ ✓ Compiled /api/query/[instanceId] in 507ms
+ GET /api/query/cdfffc5857de4a84aba000e4a728e13d 200 in 1912ms
+ GET /api/query/cdfffc5857de4a84aba000e4a728e13d 200 in 495ms
+ GET /api/query/cdfffc5857de4a84aba000e4a728e13d 200 in 375ms
+ GET /api/query/cdfffc5857de4a84aba000e4a728e13d 200 in 291ms
+ GET /api/query/cdfffc5857de4a84aba000e4a728e13d 200 in 611ms
+ POST /api/query 200 in 516ms
+ GET /api/query/7dee28bd20074ccd9ba1accf68486c46 200 in 248ms
+ GET /api/query/7dee28bd20074ccd9ba1accf68486c46 200 in 277ms
+ GET /api/query/7dee28bd20074ccd9ba1accf68486c46 200 in 220ms
+ GET /api/query/7dee28bd20074ccd9ba1accf68486c46 200 in 239ms
+ GET /api/query/7dee28bd20074ccd9ba1accf68486c46 200 in 329ms
+ POST /api/query 200 in 430ms
+ GET /api/query/7f7f3287e40c45669f66203b6d37dd8a 200 in 269ms
+ GET /api/query/7f7f3287e40c45669f66203b6d37dd8a 200 in 255ms
+ GET /api/query/7f7f3287e40c45669f66203b6d37dd8a 200 in 259ms
+ POST /api/query 200 in 399ms
+ GET /api/query/f854e5ec7a7a469a9ebc5f4ed2eb4c5c 200 in 262ms
+ GET /api/query/f854e5ec7a7a469a9ebc5f4ed2eb4c5c 200 in 284ms
+ GET /api/query/f854e5ec7a7a469a9ebc5f4ed2eb4c5c 200 in 274ms

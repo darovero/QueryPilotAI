@@ -4,12 +4,11 @@ using Infrastructure.AzureOpenAI;
 using Infrastructure.Sql;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.DurableTask;
-using Microsoft.Extensions.Logging;
 using System.Text.Json;
 
 namespace Functions.Api.Functions;
 
-public class FraudInsightOrchestrator(ILogger<FraudInsightOrchestrator> logger)
+public class FraudInsightOrchestrator
 {
     [Function(nameof(FraudInsightOrchestrator))]
     public async Task<InsightResponse> Run([OrchestrationTrigger] TaskOrchestrationContext context)
@@ -291,12 +290,12 @@ public class FraudInsightOrchestrator(ILogger<FraudInsightOrchestrator> logger)
                         Guid.Empty, saveSessionGuid, request.UserId, "assistant",
                         request.Question, validation.NormalizedSql,
                         JsonSerializer.Serialize(interpretation),
-                        summary, null, null, context.CurrentUtcDateTime));
+                        summary, null, null, DateTimeOffset.UtcNow));
             }
             catch (Exception ex)
             {
                 // Don't crash the orchestration if saving the turn fails (e.g. FK constraint)
-                logger.LogWarning(ex, "SaveConversationTurn failed for session {SessionId}", request.SessionId);
+                Console.WriteLine($"[WARNING] SaveConversationTurn failed: {ex.Message}");
             }
         }
 

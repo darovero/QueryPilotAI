@@ -1,7 +1,91 @@
+using Core.Application.Contracts;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
+using System.Text;
+using System.Text.Json;
 
 namespace Infrastructure.Sql;
+
+/// <summary>
+/// Manages application-level persistence: user connections, chat sessions, conversation turns.
+/// Operates against insightforge-appdb (distinct from user's analytical database).
+/// </summary>
+public interface IAppDatabaseService
+{
+    // --- User Connections ---
+    Task<Guid> SaveConnectionAsync(UserConnectionRecord connection);
+    Task<UserConnectionRecord?> GetConnectionAsync(Guid connectionId);
+    Task<List<UserConnectionRecord>> GetConnectionsByUserAsync(string userId);
+    Task UpdateSchemaCacheAsync(Guid connectionId, string schemaJson);
+    Task DeleteConnectionAsync(Guid connectionId, string userId);
+    Task DeleteUserAccountAsync(string userId);
+
+    // --- Chat Sessions ---
+    Task<Guid> CreateSessionAsync(Guid id, string userId, Guid? connectionId, string? title);
+    Task<List<ChatSessionRecord>> GetSessionsByUserAsync(string userId);
+    Task TouchSessionAsync(Guid sessionId);
+    Task DeleteSessionAsync(Guid sessionId, string userId);
+
+    // --- Conversation Turns ---
+    Task<Guid> AddTurnAsync(ConversationTurnRecord turn);
+    Task<List<ConversationTurnRecord>> GetRecentTurnsAsync(Guid sessionId, int maxTurns = 10);
+
+    // --- Organizations ---
+    Task<Guid> CreateOrganizationAsync(OrganizationRecord org, string adminUserId);
+    Task<List<OrganizationRecord>> GetOrganizationsByUserIdAsync(string userId);
+    Task<int> GetOrganizationCountAsync(string userId);
+    Task DeleteOrganizationAsync(Guid orgId, string userId);
+}
+
+public sealed record OrganizationRecord(
+    Guid Id,
+    string Name,
+    string? Industry,
+    DateTimeOffset CreatedAt);
+
+public sealed record OrganizationMemberRecord(
+    Guid OrganizationId,
+    string UserId,
+    string Role,
+    DateTimeOffset JoinedAt);
+
+
+public sealed record UserConnectionRecord(
+    Guid Id,
+    string UserId,
+    string ConnectionName,
+    string DbType,
+    string Host,
+    string? Port,
+    string DatabaseName,
+    string? AuthType,
+    string? Username,
+    string? EncryptedPassword,
+    string? SchemaCache,
+    DateTimeOffset? SchemaExtractedAt,
+    DateTimeOffset CreatedAt,
+    bool IsActive);
+
+public sealed record ChatSessionRecord(
+    Guid Id,
+    string UserId,
+    Guid? ConnectionId,
+    string? Title,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset LastActivity);
+
+public sealed record ConversationTurnRecord(
+    Guid Id,
+    Guid SessionId,
+    string UserId,
+    string Role,
+    string Question,
+    string? SqlGenerated,
+    string? AgentResponse,
+    string? Summary,
+    string? IntentType,
+    string? Metric,
+    DateTimeOffset CreatedAt);
 
 public sealed class AppDatabaseService : IAppDatabaseService
 {
@@ -80,32 +164,6 @@ WHEN NOT MATCHED THEN
         await using var cmd = new SqlCommand(sql, conn);
         cmd.Parameters.AddWithValue("@Id", connectionId);
         cmd.Parameters.AddWithValue("@Schema", schemaJson);
-        await cmd.ExecuteNonQueryAsync();
-    }
-
-    public async Task DeleteConnectionAsync(Guid connectionId, string userId)
-    {
-        await using var conn = new SqlConnection(_connectionString);
-        await conn.OpenAsync();
-        const string sql = "UPDATE dbo.user_connections SET is_active = 0 WHERE id = @Id AND user_id = @UserId";
-        await using var cmd = new SqlCommand(sql, conn);
-        cmd.Parameters.AddWithValue("@Id", connectionId);
-        cmd.Parameters.AddWithValue("@UserId", userId);
-        await cmd.ExecuteNonQueryAsync();
-    }
-
-    public async Task DeleteUserAccountAsync(string userId)
-    {
-        await using var conn = new SqlConnection(_connectionString);
-        await conn.OpenAsync();
-        
-        const string sql = @"
-            DELETE FROM dbo.conversation_turns WHERE user_id = @UserId;
-            DELETE FROM dbo.chat_sessions WHERE user_id = @UserId;
-            DELETE FROM dbo.user_connections WHERE user_id = @UserId;
-        ";
-        await using var cmd = new SqlCommand(sql, conn);
-        cmd.Parameters.AddWithValue("@UserId", userId);
         await cmd.ExecuteNonQueryAsync();
     }
 
@@ -226,6 +284,51 @@ VALUES (@Id, @SessionId, @UserId, @Role, @Question, @SqlGenerated, @AgentRespons
         return list;
     }
 
+    private static UserConnectionRecord MapConnection(SqlDataReader reader)
+    {
+        return new UserConnectionRecord(
+            reader.GetGuid(reader.GetOrdinal("id")),
+            reader.GetString(reader.GetOrdinal("user_id")),
+            reader.GetString(reader.GetOrdinal("connection_name")),
+            reader.GetString(reader.GetOrdinal("db_type")),
+            reader.GetString(reader.GetOrdinal("host")),
+            reader.IsDBNull(reader.GetOrdinal("port")) ? null : reader.GetString(reader.GetOrdinal("port")),
+            reader.GetString(reader.GetOrdinal("database_name")),
+            reader.IsDBNull(reader.GetOrdinal("auth_type")) ? null : reader.GetString(reader.GetOrdinal("auth_type")),
+            reader.IsDBNull(reader.GetOrdinal("username")) ? null : reader.GetString(reader.GetOrdinal("username")),
+            reader.IsDBNull(reader.GetOrdinal("encrypted_password")) ? null : reader.GetString(reader.GetOrdinal("encrypted_password")),
+            reader.IsDBNull(reader.GetOrdinal("schema_cache")) ? null : reader.GetString(reader.GetOrdinal("schema_cache")),
+            reader.IsDBNull(reader.GetOrdinal("schema_extracted_at")) ? null : reader.GetDateTime(reader.GetOrdinal("schema_extracted_at")),
+            reader.GetDateTime(reader.GetOrdinal("created_at")),
+            reader.GetBoolean(reader.GetOrdinal("is_active")));
+    }
+
+    public async Task DeleteConnectionAsync(Guid connectionId, string userId)
+    {
+        await using var conn = new SqlConnection(_connectionString);
+        await conn.OpenAsync();
+        const string sql = "UPDATE dbo.user_connections SET is_active = 0 WHERE id = @Id AND user_id = @UserId";
+        await using var cmd = new SqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("@Id", connectionId);
+        cmd.Parameters.AddWithValue("@UserId", userId);
+        await cmd.ExecuteNonQueryAsync();
+    }
+
+    public async Task DeleteUserAccountAsync(string userId)
+    {
+        await using var conn = new SqlConnection(_connectionString);
+        await conn.OpenAsync();
+        
+        const string sql = @"
+            DELETE FROM dbo.conversation_turns WHERE user_id = @UserId;
+            DELETE FROM dbo.chat_sessions WHERE user_id = @UserId;
+            DELETE FROM dbo.user_connections WHERE user_id = @UserId;
+        ";
+        await using var cmd = new SqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("@UserId", userId);
+        await cmd.ExecuteNonQueryAsync();
+    }
+
     // --- Organizations ---
 
     public async Task<Guid> CreateOrganizationAsync(OrganizationRecord org, string adminUserId)
@@ -318,27 +421,8 @@ VALUES (@Id, @SessionId, @UserId, @Role, @Question, @SqlGenerated, @AgentRespons
         await conn.OpenAsync();
         await using var cmd = new SqlCommand(sql, conn);
         cmd.Parameters.AddWithValue("@UserId", userId);
-        var result = await cmd.ExecuteScalarAsync();
-        var count = result is int c ? c : 0;
+        var count = (int)await cmd.ExecuteScalarAsync();
         return count;
     }
-
-    private static UserConnectionRecord MapConnection(SqlDataReader reader)
-    {
-        return new UserConnectionRecord(
-            reader.GetGuid(reader.GetOrdinal("id")),
-            reader.GetString(reader.GetOrdinal("user_id")),
-            reader.GetString(reader.GetOrdinal("connection_name")),
-            reader.GetString(reader.GetOrdinal("db_type")),
-            reader.GetString(reader.GetOrdinal("host")),
-            reader.IsDBNull(reader.GetOrdinal("port")) ? null : reader.GetString(reader.GetOrdinal("port")),
-            reader.GetString(reader.GetOrdinal("database_name")),
-            reader.IsDBNull(reader.GetOrdinal("auth_type")) ? null : reader.GetString(reader.GetOrdinal("auth_type")),
-            reader.IsDBNull(reader.GetOrdinal("username")) ? null : reader.GetString(reader.GetOrdinal("username")),
-            reader.IsDBNull(reader.GetOrdinal("encrypted_password")) ? null : reader.GetString(reader.GetOrdinal("encrypted_password")),
-            reader.IsDBNull(reader.GetOrdinal("schema_cache")) ? null : reader.GetString(reader.GetOrdinal("schema_cache")),
-            reader.IsDBNull(reader.GetOrdinal("schema_extracted_at")) ? null : reader.GetDateTime(reader.GetOrdinal("schema_extracted_at")),
-            reader.GetDateTime(reader.GetOrdinal("created_at")),
-            reader.GetBoolean(reader.GetOrdinal("is_active")));
-    }
 }
+

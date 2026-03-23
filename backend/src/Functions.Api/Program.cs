@@ -6,7 +6,6 @@ var host = new HostBuilder()
     .ConfigureFunctionsWorkerDefaults(builder =>
     {
         builder.UseMiddleware<Functions.Api.Middleware.JwtValidationMiddleware>();
-        builder.UseMiddleware<Functions.Api.Middleware.RateLimitingMiddleware>();
     })
     .ConfigureServices(services =>
     {
@@ -21,14 +20,13 @@ var host = new HostBuilder()
         services.AddSingleton<Core.Application.Services.IClock, Core.Application.Services.SystemClock>();
         services.AddSingleton<Core.Domain.Policies.ISqlPolicyEngine, Infrastructure.Security.SqlPolicyEngine>();
 
-        // --- Security ---
-        services.AddSingleton<Infrastructure.Security.IEncryptionService, Infrastructure.Security.AesEncryptionService>();
-        services.AddSingleton<Infrastructure.Security.IPromptSafetyService, Infrastructure.Security.PromptSafetyService>();
+        // --- Database Services ---
+        services.AddSingleton<Infrastructure.Sql.ISqlExecutionService, Infrastructure.Sql.SqlExecutionService>();
+        services.AddSingleton<Infrastructure.Sql.IAppDatabaseService, Infrastructure.Sql.AppDatabaseService>();
+        services.AddSingleton<Infrastructure.Sql.ISchemaExtractorService, Infrastructure.Sql.SchemaExtractorService>();
 
-        // --- Database Services (Scoped — each request gets its own instance) ---
-        services.AddScoped<Infrastructure.Sql.ISqlExecutionService, Infrastructure.Sql.SqlExecutionService>();
-        services.AddScoped<Infrastructure.Sql.IAppDatabaseService, Infrastructure.Sql.AppDatabaseService>();
-        services.AddScoped<Infrastructure.Sql.ISchemaExtractorService, Infrastructure.Sql.SchemaExtractorService>();
+        // --- Security ---
+        services.AddSingleton<Infrastructure.Security.IPromptSafetyService, Infrastructure.Security.PromptSafetyService>();
 
         // --- Foundry Agent Client ---
         var projectEndpoint = Environment.GetEnvironmentVariable("FoundryAgent__ProjectEndpoint")
