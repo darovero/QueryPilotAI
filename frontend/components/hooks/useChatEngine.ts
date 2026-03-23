@@ -55,6 +55,9 @@ export function useChatEngine() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const terminalEndRef = useRef<HTMLDivElement>(null);
 
+  const sanitizeConnectionsForStorage = (items: Connection[]) =>
+    items.map(({ password: _password, ...connection }) => connection);
+
   const activeAccount = accounts[0];
   const userName = activeAccount?.name || 'User';
   const userEmail = activeAccount?.username || '';
@@ -85,7 +88,7 @@ export function useChatEngine() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedConns = localStorage.getItem('qp_connections');
-      if (savedConns) try { setConnections(JSON.parse(savedConns)); } catch {}
+      if (savedConns) try { setConnections(sanitizeConnectionsForStorage(JSON.parse(savedConns))); } catch {}
       const savedChats = localStorage.getItem('qp_chatSessions');
       if (savedChats) try { setChatSessions(JSON.parse(savedChats)); } catch {}
       const savedTabs = localStorage.getItem('qp_openTabs');
@@ -102,7 +105,7 @@ export function useChatEngine() {
   }, []);
 
   // --- localStorage persistence ---
-  useEffect(() => { localStorage.setItem('qp_connections', JSON.stringify(connections)); }, [connections]);
+  useEffect(() => { localStorage.setItem('qp_connections', JSON.stringify(sanitizeConnectionsForStorage(connections))); }, [connections]);
   useEffect(() => { localStorage.setItem('qp_chatSessions', JSON.stringify(chatSessions)); }, [chatSessions]);
   useEffect(() => { localStorage.setItem('qp_openTabs', JSON.stringify(openTabs)); }, [openTabs]);
 
@@ -133,13 +136,13 @@ export function useChatEngine() {
           if (Array.isArray(serverConns) && serverConns.length > 0) {
             const mapped: Connection[] = serverConns.map((c: ServerConnectionRecord) => ({
               id: c.id, name: c.connectionName, host: c.host, port: c.port,
-              database: c.databaseName, username: c.username, password: c.encryptedPassword,
+              database: c.databaseName, username: c.username,
               type: c.dbType, authType: c.authType
             }));
             setConnections(mapped);
           }
         }
-        const sessRes = await fetchWithAuth(`/api/sessions/${userId}`);
+        const sessRes = await fetchWithAuth('/api/sessions/me');
         if (sessRes.ok) {
           const serverSessions = await sessRes.json();
           if (Array.isArray(serverSessions) && serverSessions.length > 0) {
@@ -179,7 +182,7 @@ export function useChatEngine() {
     if (!activePoll) return;
     const interval = setInterval(async () => {
       try {
-        const res = await fetchWithAuth("/api/query/" + activePoll);
+        const res = await fetchWithAuth("/api/orchestrations/" + activePoll);
         if (!res.ok) throw new Error("Fetch failed");
         const data = await res.json();
 
@@ -285,7 +288,7 @@ export function useChatEngine() {
           question: userMsg.content, userId, role: "FraudAnalyst",
           correlationId: crypto.randomUUID(), sessionId: activeChatSession.id,
           connectionId: activeConnection?.id,
-          connection: activeConnection ? {
+          connection: activeConnection && !activeConnection.id ? {
             type: activeConnection.type || "PostgreSQL", host: activeConnection.host,
             port: activeConnection.port, database: activeConnection.database,
             username: activeConnection.username, password: activeConnection.password
@@ -314,10 +317,10 @@ export function useChatEngine() {
     if (!msg.instanceId) return;
     try {
       addLog("INFO", `Sending ${decision} for ${msg.instanceId}`);
-      const res = await fetch(`/api/query/${msg.instanceId}/approve`, {
+      const res = await fetchWithAuth(`/api/orchestrations/${msg.instanceId}/approve`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ decision, approverUserId: userId, comments: comments || "" }),
+        body: JSON.stringify({ decision, comments: comments || "" }),
       });
       if (!res.ok) throw new Error("Approval failed");
       setMessages((prev) => {
@@ -368,6 +371,7 @@ export function useChatEngine() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          id: editingConnId || connForm.id,
           dbType: connForm.type || "Azure SQL", host: connForm.host, port: connForm.port,
           databaseName: connForm.database, username: connForm.username,
           encryptedPassword: connForm.password, authType: connForm.authType
@@ -393,7 +397,8 @@ export function useChatEngine() {
             body: JSON.stringify({
               id: editingConnId, userId, connectionName: updatedConn.name,
               dbType: updatedConn.type || "PostgreSQL", host: updatedConn.host, port: updatedConn.port,
-              databaseName: updatedConn.database, username: updatedConn.username, encryptedPassword: updatedConn.password
+              databaseName: updatedConn.database, username: updatedConn.username, encryptedPassword: updatedConn.password || null,
+              authType: updatedConn.authType
             })
           });
           setConnError("");
@@ -415,7 +420,8 @@ export function useChatEngine() {
             body: JSON.stringify({
               id: newConnId, userId, connectionName: newConn.name,
               dbType: newConn.type || "PostgreSQL", host: newConn.host, port: newConn.port,
-              databaseName: newConn.database, username: newConn.username, encryptedPassword: newConn.password
+              databaseName: newConn.database, username: newConn.username, encryptedPassword: newConn.password,
+              authType: newConn.authType
             })
           });
           setCurrentView('manage_connections');

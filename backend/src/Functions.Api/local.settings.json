@@ -1,18 +1,22 @@
 {
   "IsEncrypted": false,
   "Values": {
-    "AzureWebJobsStorage": "DefaultEndpointsProtocol=https;EndpointSuffix=core.windows.net;AccountName=insightforge86253st;AccountKey=366/8yDmZ8guF1grgblIv0dkY1WGYVQPA5y8hRWW4tN9Bdy1q8bAsap2FLVKUfdKnvyOExPaIgYr+AStQ6XaJQ==;BlobEndpoint=https://insightforge86253st.blob.core.windows.net/;FileEndpoint=https://insightforge86253st.file.core.windows.net/;QueueEndpoint=https://insightforge86253st.queue.core.windows.net/;TableEndpoint=https://insightforge86253st.table.core.windows.net/",
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
     "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
-    "SqlConnectionString": "Server=tcp:insightforge-sql3-86253.database.windows.net,1433;Initial Catalog=insightforge-sqldb;Encrypt=True;TrustServerCertificate=False;Authentication=Active Directory Default;",
-    "AppDbConnectionString": "Server=tcp:insightforge-sql3-86253.database.windows.net,1433;Initial Catalog=insightforge-appdb;Encrypt=True;TrustServerCertificate=False;Authentication=Active Directory Default;",
-    "AzureOpenAI__Endpoint": "https://marianagonzalez-6489-resource.openai.azure.com/openai/v1",
-    "AzureOpenAI__Deployment": "gpt-4o-mini",
-    "AzureOpenAI__ApiKey": "1flrAyIIaBxztuaCvRbpPkc8jIJE6pAdLS4tmBMAgNcW67pDZFddJQQJ99CCACHYHv6XJ3w3AAAAACOGyKFo",
-    "ContentSafety__Endpoint": "https://eastus.api.cognitive.microsoft.com/",
-    "FoundryAgent__ProjectEndpoint": "https://msfoundryagents.services.ai.azure.com/api/projects/ProgramaFrontier",
-    "FoundryAgent__TenantId": "96973449-0a60-448a-b1ad-3c7237cd6563",
-    "FoundryAgent__SqlPlannerAgentId": "asst_6a5CxOl2zBo7ffVs2wrYnmN0",
-    "FoundryAgent__ResultInterpreterAgentId": "asst_ESrKHJQViEuLlAONduDSV1NY",
-    "FoundryAgent__ConciergeAgentId": "asst_LWYNOUePVp0DMFolS09TkDAZ"
+    "SqlConnectionString": "Server=tcp:<server>.database.windows.net,1433;Initial Catalog=<analytics-db>;Encrypt=True;TrustServerCertificate=False;Authentication=Active Directory Default;",
+    "AppDbConnectionString": "Server=tcp:<server>.database.windows.net,1433;Initial Catalog=<app-db>;Encrypt=True;TrustServerCertificate=False;Authentication=Active Directory Default;",
+    "AzureOpenAI__Endpoint": "https://<resource>.openai.azure.com/openai/v1",
+    "AzureOpenAI__Deployment": "<deployment-name>",
+    "AzureOpenAI__ApiKey": "<api-key>",
+    "ContentSafety__Endpoint": "https://<resource>.cognitiveservices.azure.com/",
+    "FoundryAgent__ProjectEndpoint": "https://<resource>.services.ai.azure.com/api/projects/<project-name>",
+    "FoundryAgent__TenantId": "<tenant-id>",
+    "FoundryAgent__SqlPlannerAgentId": "<sql-planner-agent-id>",
+    "FoundryAgent__ResultInterpreterAgentId": "<result-interpreter-agent-id>",
+    "FoundryAgent__ConciergeAgentId": "<concierge-agent-id>",
+    "Auth__AuthorityHost": "https://login.microsoftonline.com",
+    "Auth__ClientId": "439a8182-8c80-49ce-8dc7-703af41c724c",
+    "Auth__AllowedAudiences": "439a8182-8c80-49ce-8dc7-703af41c724c",
+    "SemanticKernel__EnableDemoEndpoint": "false"
   }
 }

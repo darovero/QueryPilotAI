@@ -26,7 +26,10 @@ export function useApi() {
             });
         }
 
-        const token = tokenResponse.idToken || tokenResponse.accessToken;
+        const token = tokenResponse.idToken;
+        if (!token) {
+            throw new Error("No se pudo obtener un token de identidad válido.");
+        }
 
         const headers: Record<string, string> = {
             ...(options.headers as Record<string, string>),

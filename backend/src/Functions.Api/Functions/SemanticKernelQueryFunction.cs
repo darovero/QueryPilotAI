@@ -2,6 +2,7 @@ using Core.Application.Contracts;
 using Infrastructure.AzureOpenAI.Examples;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Text.Json;
@@ -19,34 +20,45 @@ public class SemanticKernelQueryFunction
 {
     private readonly AdvancedSemanticKernelPatterns _patterns;
     private readonly ILogger<SemanticKernelQueryFunction> _logger;
+    private readonly bool _enableDemoEndpoint;
 
     public SemanticKernelQueryFunction(
         AdvancedSemanticKernelPatterns patterns,
-        ILogger<SemanticKernelQueryFunction> logger)
+        ILogger<SemanticKernelQueryFunction> logger,
+        IConfiguration configuration)
     {
         _patterns = patterns;
         _logger = logger;
+        _enableDemoEndpoint = bool.TryParse(configuration["SemanticKernel__EnableDemoEndpoint"], out var enabled) && enabled;
     }
 
     [Function("SemanticKernelQuery")]
     public async Task<HttpResponseData> RunAsync(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "query/semantic-kernel")]
+        [HttpTrigger(AuthorizationLevel.Function, "post", Route = "query/semantic-kernel")]
         HttpRequestData req,
         CancellationToken cancellationToken)
     {
         try
         {
+            if (!_enableDemoEndpoint)
+            {
+                return req.CreateResponse(HttpStatusCode.NotFound);
+            }
+
             _logger.LogInformation("SemanticKernelQuery function received request");
 
             // Parse request body
             var requestBody = await req.Body.StreamAsJson<SemanticKernelQueryRequest>();
+            var authenticatedUserId = req.FunctionContext.Items.TryGetValue("UserId", out var uid) ? uid?.ToString() : null;
 
             // Validate required fields
-            if (string.IsNullOrWhiteSpace(requestBody.UserId) || string.IsNullOrWhiteSpace(requestBody.Question))
+            if (string.IsNullOrWhiteSpace(authenticatedUserId) || string.IsNullOrWhiteSpace(requestBody.Question))
             {
-                _logger.LogWarning("Invalid request: missing UserId or Question");
-                return req.CreateResponse(HttpStatusCode.BadRequest);
+                _logger.LogWarning("Invalid request: missing authenticated user or question");
+                return req.CreateResponse(HttpStatusCode.Unauthorized);
             }
+
+            requestBody.UserId = authenticatedUserId;
 
             // Route to appropriate pattern based on request
             HttpResponseData response = requestBody.Pattern switch

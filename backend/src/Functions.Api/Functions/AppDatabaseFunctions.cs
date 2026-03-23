@@ -136,6 +136,21 @@ public class AppDatabaseFunctions(
             if (config == null || string.IsNullOrWhiteSpace(config.Host))
                 return req.CreateResponse(HttpStatusCode.BadRequest);
 
+            if (string.IsNullOrWhiteSpace(config.EncryptedPassword) && config.Id != Guid.Empty)
+            {
+                var savedConnection = await appDb.GetConnectionForUserAsync(config.Id, authenticatedUserId);
+                if (savedConnection != null)
+                {
+                    config = config with
+                    {
+                        UserId = authenticatedUserId,
+                        EncryptedPassword = savedConnection.EncryptedPassword,
+                        Username = string.IsNullOrWhiteSpace(config.Username) ? savedConnection.Username : config.Username,
+                        AuthType = string.IsNullOrWhiteSpace(config.AuthType) ? savedConnection.AuthType : config.AuthType
+                    };
+                }
+            }
+
             bool success = false;
             string error = "Unsupported database type.";
 
@@ -228,11 +243,15 @@ public class AppDatabaseFunctions(
 
     [Function("GetSessions")]
     public async Task<HttpResponseData> GetSessions(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "sessions/{userId}")] HttpRequestData req, string userId)
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "sessions/me")] HttpRequestData req)
     {
         try
         {
-            var list = await appDb.GetSessionsByUserAsync(userId);
+            var authenticatedUserId = req.FunctionContext.Items.TryGetValue("UserId", out var uid) ? uid?.ToString() : null;
+            if (string.IsNullOrWhiteSpace(authenticatedUserId))
+                return req.CreateResponse(HttpStatusCode.Unauthorized);
+
+            var list = await appDb.GetSessionsByUserAsync(authenticatedUserId);
             var res = req.CreateResponse(HttpStatusCode.OK);
             res.Headers.Add("Content-Type", "application/json");
             await res.WriteStringAsync(JsonSerializer.Serialize(list, _jsonOptions));

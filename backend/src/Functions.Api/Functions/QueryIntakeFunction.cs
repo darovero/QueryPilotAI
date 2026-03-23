@@ -1,4 +1,5 @@
 using Core.Application.Contracts;
+using Infrastructure.Sql;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.DurableTask.Client;
@@ -7,7 +8,7 @@ using System.Text.Json;
 
 namespace Functions.Api.Functions;
 
-public class QueryIntakeFunction
+public class QueryIntakeFunction(IAppDatabaseService appDb)
 {
     [Function(nameof(QueryIntakeFunction))]
     public async Task<HttpResponseData> Run(
@@ -34,6 +35,29 @@ public class QueryIntakeFunction
         }
 
         request = request with { UserId = authenticatedUserId };
+
+        if (request.ConnectionId.HasValue && (request.Connection is null || string.IsNullOrWhiteSpace(request.Connection.Password)))
+        {
+            var savedConnection = await appDb.GetConnectionForUserAsync(request.ConnectionId.Value, authenticatedUserId);
+            if (savedConnection is null)
+            {
+                var missingConnection = req.CreateResponse(HttpStatusCode.BadRequest);
+                await missingConnection.WriteAsJsonAsync(new { error = "The selected connection is not available for the authenticated user." });
+                return missingConnection;
+            }
+
+            request = request with
+            {
+                Connection = new DatabaseConfig(
+                    savedConnection.DbType,
+                    savedConnection.Host,
+                    savedConnection.Port ?? string.Empty,
+                    savedConnection.DatabaseName,
+                    savedConnection.Username ?? string.Empty,
+                    savedConnection.EncryptedPassword ?? string.Empty,
+                    savedConnection.AuthType)
+            };
+        }
 
         var instanceId = await durableClient.ScheduleNewOrchestrationInstanceAsync(
             nameof(FraudInsightOrchestrator),
@@ -135,6 +159,14 @@ public class ApprovalFunction
             await bad.WriteStringAsync("Invalid approval payload. Required: decision, approverUserId.");
             return bad;
         }
+
+        var authenticatedUserId = req.FunctionContext.Items.TryGetValue("UserId", out var uid) ? uid?.ToString() : null;
+        if (string.IsNullOrWhiteSpace(authenticatedUserId))
+        {
+            return req.CreateResponse(HttpStatusCode.Unauthorized);
+        }
+
+        decision = decision with { ApproverUserId = authenticatedUserId };
 
         var metadata = await durableClient.GetInstanceAsync(instanceId);
         if (metadata is null)

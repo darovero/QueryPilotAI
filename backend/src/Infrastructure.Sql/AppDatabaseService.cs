@@ -15,6 +15,7 @@ public interface IAppDatabaseService
     // --- User Connections ---
     Task<Guid> SaveConnectionAsync(UserConnectionRecord connection);
     Task<UserConnectionRecord?> GetConnectionAsync(Guid connectionId);
+    Task<UserConnectionRecord?> GetConnectionForUserAsync(Guid connectionId, string userId);
     Task<List<UserConnectionRecord>> GetConnectionsByUserAsync(string userId);
     Task UpdateSchemaCacheAsync(Guid connectionId, string schemaJson);
     Task DeleteConnectionAsync(Guid connectionId, string userId);
@@ -107,7 +108,7 @@ USING (SELECT @Id AS id) AS source ON target.id = source.id
 WHEN MATCHED THEN
     UPDATE SET connection_name = @ConnectionName, db_type = @DbType, host = @Host, port = @Port,
                database_name = @DatabaseName, auth_type = @AuthType, username = @Username,
-               encrypted_password = @EncryptedPassword, updated_at = SYSUTCDATETIME()
+               encrypted_password = COALESCE(@EncryptedPassword, target.encrypted_password), updated_at = SYSUTCDATETIME()
 WHEN NOT MATCHED THEN
     INSERT (id, user_id, connection_name, db_type, host, port, database_name, auth_type, username, encrypted_password)
     VALUES (@Id, @UserId, @ConnectionName, @DbType, @Host, @Port, @DatabaseName, @AuthType, @Username, @EncryptedPassword);";
@@ -152,8 +153,21 @@ WHEN NOT MATCHED THEN
         cmd.Parameters.AddWithValue("@UserId", userId);
         await using var reader = await cmd.ExecuteReaderAsync();
         var list = new List<UserConnectionRecord>();
-        while (await reader.ReadAsync()) list.Add(MapConnection(reader));
+        while (await reader.ReadAsync()) list.Add(MapConnection(reader, includeSecret: false));
         return list;
+    }
+
+    public async Task<UserConnectionRecord?> GetConnectionForUserAsync(Guid connectionId, string userId)
+    {
+        const string sql = "SELECT * FROM dbo.user_connections WHERE id = @Id AND user_id = @UserId AND is_active = 1";
+        await using var conn = new SqlConnection(_connectionString);
+        await conn.OpenAsync();
+        await using var cmd = new SqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("@Id", connectionId);
+        cmd.Parameters.AddWithValue("@UserId", userId);
+        await using var reader = await cmd.ExecuteReaderAsync();
+        if (!await reader.ReadAsync()) return null;
+        return MapConnection(reader);
     }
 
     public async Task UpdateSchemaCacheAsync(Guid connectionId, string schemaJson)
@@ -284,7 +298,7 @@ VALUES (@Id, @SessionId, @UserId, @Role, @Question, @SqlGenerated, @AgentRespons
         return list;
     }
 
-    private static UserConnectionRecord MapConnection(SqlDataReader reader)
+    private static UserConnectionRecord MapConnection(SqlDataReader reader, bool includeSecret = true)
     {
         return new UserConnectionRecord(
             reader.GetGuid(reader.GetOrdinal("id")),
@@ -296,7 +310,7 @@ VALUES (@Id, @SessionId, @UserId, @Role, @Question, @SqlGenerated, @AgentRespons
             reader.GetString(reader.GetOrdinal("database_name")),
             reader.IsDBNull(reader.GetOrdinal("auth_type")) ? null : reader.GetString(reader.GetOrdinal("auth_type")),
             reader.IsDBNull(reader.GetOrdinal("username")) ? null : reader.GetString(reader.GetOrdinal("username")),
-            reader.IsDBNull(reader.GetOrdinal("encrypted_password")) ? null : reader.GetString(reader.GetOrdinal("encrypted_password")),
+            includeSecret && !reader.IsDBNull(reader.GetOrdinal("encrypted_password")) ? reader.GetString(reader.GetOrdinal("encrypted_password")) : null,
             reader.IsDBNull(reader.GetOrdinal("schema_cache")) ? null : reader.GetString(reader.GetOrdinal("schema_cache")),
             reader.IsDBNull(reader.GetOrdinal("schema_extracted_at")) ? null : reader.GetDateTime(reader.GetOrdinal("schema_extracted_at")),
             reader.GetDateTime(reader.GetOrdinal("created_at")),

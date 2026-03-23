@@ -40,26 +40,8 @@ public sealed class SqlExecutionService(IConfiguration configuration) : ISqlExec
             }
         }
 
-        SqlConnection connection;
-        try 
-        {
-            connection = new SqlConnection(connectionString);
-            await connection.OpenAsync();
-        } 
-        catch 
-        {
-            if (connectionString != _connectionString) 
-            {
-                // Fallback to default if custom connection fails
-                connectionString = _connectionString;
-                connection = new SqlConnection(connectionString);
-                await connection.OpenAsync();
-            }
-            else 
-            {
-                throw;
-            }
-        }
+        var connection = new SqlConnection(connectionString);
+        await connection.OpenAsync();
 
         await using var cmdConnection = connection; // Ensure disposal
         

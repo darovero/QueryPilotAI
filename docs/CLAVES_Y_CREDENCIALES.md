@@ -1,20 +1,20 @@
 # Claves y Credenciales Maestras
 
 > [!WARNING]
-> Este archivo contiene claves API reales y configuraciones de conexión. **NO debe ser distribuido fuera del equipo**.
+> Este archivo no debe contener secretos reales. Usa Azure Key Vault, secretos locales no versionados o variables del pipeline.
 
 ---
 
 ## 1. Cuenta Principal de Azure 
 
-Esta cuenta de Microsoft Entra ID (Azure AD) es una **cuenta de prueba** creada **exclusivamente para este Hackathon**.
+No documentar usuarios, contraseñas ni tokens reales en el repositorio.
 
 > [!IMPORTANT]
-> **Doble Autenticación Activa:** Recuerda que la cuenta tiene activa la autenticación de dos factores (2FA), por lo que para iniciar sesión se te podría pedir confirmar en el autenticador.
+> Toda credencial expuesta previamente debe considerarse comprometida y rotarse antes de cualquier despliegue o compartición del repositorio.
 
-- **Usuario:** `MarianaGonzalez@MarianarySa.onmicrosoft.com`
-- **Contraseña:** `3102469381Qt..`
-- **Directorio (Tenant) ID:** `c30fc412-a18e-449c-b571-d18c6d5aeb05`
+- **Usuario:** `<documentar fuera del repositorio>`
+- **Contraseña:** `<nunca versionar>`
+- **Directorio (Tenant) ID:** `<tenant-id>`
 
 ---
 
@@ -24,18 +24,18 @@ Esta cuenta de Microsoft Entra ID (Azure AD) es una **cuenta de prueba** creada 
 {
   "IsEncrypted": false,
   "Values": {
-    "AzureWebJobsStorage": "DefaultEndpointsProtocol=https;EndpointSuffix=core.windows.net;AccountName=insightforge86253st;AccountKey=366/8yDmZ8guF1grgblIv0dkY1WGYVQPA5y8hRWW4tN9Bdy1q8bAsap2FLVKUfdKnvyOExPaIgYr+AStQ6XaJQ==;BlobEndpoint=https://insightforge86253st.blob.core.windows.net/;FileEndpoint=https://insightforge86253st.file.core.windows.net/;QueueEndpoint=https://insightforge86253st.queue.core.windows.net/;TableEndpoint=https://insightforge86253st.table.core.windows.net/",
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
     "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
-    "SqlConnectionString": "Server=tcp:insightforge-sql3-86253.database.windows.net,1433;Initial Catalog=insightforge-sqldb;Encrypt=True;TrustServerCertificate=True;Authentication=Active Directory Default;",
-    "AppDbConnectionString": "Server=tcp:insightforge-sql3-86253.database.windows.net,1433;Initial Catalog=insightforge-appdb;Encrypt=True;TrustServerCertificate=True;Authentication=Active Directory Default;",
-    "AzureOpenAI__Endpoint": "https://marianagonzalez-6489-resource.openai.azure.com/openai/v1",
-    "AzureOpenAI__Deployment": "gpt-4o-mini",
-    "AzureOpenAI__ApiKey": "1flrAyIIaBxztuaCvRbpPkc8jIJE6pAdLS4tmBMAgNcW67pDZFddJQQJ99CCACHYHv6XJ3w3AAAAACOGyKFo",
-    "ContentSafety__Endpoint": "https://eastus.api.cognitive.microsoft.com/",
-    "FoundryAgent__ProjectEndpoint": "https://marianagonzalez-6489-resource.services.ai.azure.com/api/projects/marianagonzalez-6489",
-    "FoundryAgent__SqlPlannerAgentId": "asst_sVfTKQcbeUeRanGQkNDviYFZ",
-    "FoundryAgent__ResultInterpreterAgentId": "asst_SEjRH87jIXeHlMvqawfXj4LB",
-    "FoundryAgent__ConciergeAgentId": "asst_vkMN5rnF0gM2EBBMz4W0Wr5h9"
+    "SqlConnectionString": "Server=tcp:<server>.database.windows.net,1433;Initial Catalog=<analytics-db>;Encrypt=True;TrustServerCertificate=False;Authentication=Active Directory Default;",
+    "AppDbConnectionString": "Server=tcp:<server>.database.windows.net,1433;Initial Catalog=<app-db>;Encrypt=True;TrustServerCertificate=False;Authentication=Active Directory Default;",
+    "AzureOpenAI__Endpoint": "https://<resource>.openai.azure.com/openai/v1",
+    "AzureOpenAI__Deployment": "<deployment-name>",
+    "AzureOpenAI__ApiKey": "<api-key>",
+    "ContentSafety__Endpoint": "https://<resource>.cognitiveservices.azure.com/",
+    "FoundryAgent__ProjectEndpoint": "https://<resource>.services.ai.azure.com/api/projects/<project-name>",
+    "FoundryAgent__SqlPlannerAgentId": "<sql-planner-agent-id>",
+    "FoundryAgent__ResultInterpreterAgentId": "<result-interpreter-agent-id>",
+    "FoundryAgent__ConciergeAgentId": "<concierge-agent-id>"
   }
 }
 ```

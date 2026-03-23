@@ -1,6 +1,7 @@
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Functions.Api.Middleware;
 using Infrastructure.AzureOpenAI.Configuration;
 
 var host = new HostBuilder()
@@ -16,6 +17,7 @@ var host = new HostBuilder()
 
         services.AddLogging();
         services.AddHttpClient();
+        services.AddSingleton<IEntraTokenValidator, MicrosoftEntraTokenValidator>();
 
         // --- Core ---
         services.AddSingleton<Core.Application.Services.IClock, Core.Application.Services.SystemClock>();
