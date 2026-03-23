@@ -89,10 +89,10 @@ public static class ConnectionStringBuilder
         var config = new DatabaseConfig(
             Type: record.DbType,
             Host: record.Host,
-            Port: record.Port,
+            Port: record.Port ?? "",
             Database: record.DatabaseName,
-            Username: record.Username,
-            Password: password,
+            Username: record.Username ?? "",
+            Password: password ?? "",
             AuthType: record.AuthType);
 
         return Build(config);

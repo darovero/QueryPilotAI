@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <NoWarn>OPENAI001</NoWarn>
+    <!-- OPENAI001: preview API usage; NU1608: SK 1.24.0 pins older OpenAI/AzureOpenAI beta, we intentionally use newer versions -->
+    <NoWarn>OPENAI001;NU1608</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

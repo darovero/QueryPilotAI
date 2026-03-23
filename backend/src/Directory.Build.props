@@ -5,5 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <LangVersion>latest</LangVersion>
+    <!-- NU1608: intentional override of transitive SDK package versions (SK vs OpenAI/AzureOpenAI) -->
+    <NoWarn>$(NoWarn);NU1608</NoWarn>
   </PropertyGroup>
 </Project>
