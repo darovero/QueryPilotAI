@@ -18,7 +18,7 @@ export function LandingPage({ onShowLegal }: LandingPageProps) {
     return (
         <div className="text-on-background bg-background min-h-screen font-sans selection:bg-primary selection:text-on-primary">
             {/* TopNavBar */}
-            <nav className="fixed top-0 w-full flex justify-between items-center px-6 md:px-8 py-4 max-w-7xl mx-auto left-1/2 -translate-x-1/2 bg-background/80 backdrop-blur-md z-50 border-b border-surface-variant">
+            <nav className="fixed top-0 w-full flex justify-between items-center px-6 md:px-8 py-4 max-w-7xl mx-auto left-1/2 -translate-x-1/2 bg-background/80  z-50 border-b border-surface-variant">
                 <Link href="/" className="text-xl font-bold tracking-tight text-on-background">InsightForge AI</Link>
                 
                 <div className="hidden md:flex items-center space-x-10 text-[11px] font-mono tracking-widest uppercase font-bold text-on-surface-variant">

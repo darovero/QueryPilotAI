@@ -50,7 +50,7 @@ export function ChatArea({
            </div>
         )}
 
-        <div className={`pt-6 pb-4 border-b border-zinc-100/80 bg-black/80 backdrop-blur-md sticky top-0 z-30 transition-all duration-300 ${isFullView ? 'px-24' : 'px-8 md:px-16 lg:px-24'}`}>
+        <div className={`pt-6 pb-4 border-b border-zinc-100/80 bg-black  sticky top-0 z-30 transition-all duration-300 ${isFullView ? 'px-24' : 'px-8 md:px-16 lg:px-24'}`}>
            <div className="flex items-center justify-between mx-auto max-w-4xl">
               <div className="flex flex-col">
                   <h2 className="text-xl font-semibold tracking-tight text-zinc-900 flex items-center gap-2">
@@ -249,7 +249,7 @@ export function ChatArea({
           </div>
         </div>
 
-        <div className={`p-6 bg-black/80 backdrop-blur-md border-t border-zinc-100/80 sticky bottom-0 z-30 transition-all duration-300 ${isFullView ? 'px-24' : 'px-8 md:px-16 lg:px-24'}`}>
+        <div className={`p-6 bg-black  border-t border-zinc-100/80 sticky bottom-0 z-30 transition-all duration-300 ${isFullView ? 'px-24' : 'px-8 md:px-16 lg:px-24'}`}>
           <div className="max-w-4xl mx-auto relative group">
               <textarea
                 value={input}

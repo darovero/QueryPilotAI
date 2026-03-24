@@ -43,7 +43,7 @@ export function TerminalLogs({ terminalLogs, isOpen, setIsOpen }: TerminalLogsPr
       {/* TERMINAL CONTENT (Sliding out) */}
       {isOpen && (
         <div className="flex-1 flex flex-col overflow-hidden animate-in fade-in slide-in-from-right-4 duration-500">
-           <div className="flex items-center justify-between px-6 py-5 border-b border-[#222222] bg-black/40 backdrop-blur-md">
+           <div className="flex items-center justify-between px-6 py-5 border-b border-[#222222] bg-black ">
                 <div className="flex items-center gap-3">
                     <div className="w-2 h-2 rounded-none bg-[#a78bfa]"></div>
                     <h3 className="text-[12px] font-black tracking-widest uppercase text-[#f4f0e6] font-mono ls-1">System Logs</h3>

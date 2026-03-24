@@ -24,7 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="es" className="h-full bg-black">
       <body className={`${uiFont.variable} ${displayFont.variable} ${monoFont.variable} h-full font-sans bg-black text-[#f4f0e6]`}>
-        <div className="fixed inset-0 bg-dots pointer-events-none z-[-1]" />
+        <div className="bg-dots" />
         <AuthProvider config={authConfig}>
           <Toaster theme="dark" position="top-center" richColors />
           {children}

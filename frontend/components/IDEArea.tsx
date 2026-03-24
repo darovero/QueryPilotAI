@@ -22,7 +22,7 @@ export function IDEArea({ activeIdeTab, activeConnection, isFullView, setIsFullV
            </span>
         </button>
 
-        <div className={`pt-6 pb-4 border-b border-zinc-100/80 bg-black/80 backdrop-blur-md sticky top-0 z-30 transition-all duration-300 ${isFullView ? 'px-24' : 'px-8 md:px-16 lg:px-24'}`}>
+        <div className={`pt-6 pb-4 border-b border-zinc-100/80 bg-black  sticky top-0 z-30 transition-all duration-300 ${isFullView ? 'px-24' : 'px-8 md:px-16 lg:px-24'}`}>
            <div className="flex items-center justify-between mx-auto max-w-5xl">
               <div className="flex items-center gap-4">
                  <div className="w-10 h-10 rounded-xl bg-zinc-900 text-white flex items-center justify-center shadow-sm">
@@ -42,7 +42,7 @@ export function IDEArea({ activeIdeTab, activeConnection, isFullView, setIsFullV
         <div className={`flex-1 overflow-hidden w-full transition-all duration-300 flex flex-col ${isFullView ? 'px-24' : 'px-8 md:px-16 lg:px-24'}`}>
             <div className="max-w-5xl flex-1 mx-auto w-full py-8 flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                <div className="w-full bg-zinc-950 rounded-2xl shadow-xl border border-zinc-800 flex flex-col overflow-hidden text-zinc-300 h-64 shrink-0">
-                  <div className="flex items-center px-4 py-2 border-b border-zinc-800/80 bg-[#0a0a0b]/80 backdrop-blur-md">
+                  <div className="flex items-center px-4 py-2 border-b border-zinc-800/80 bg-[#0a0a0b]/80 ">
                      <div className="flex gap-1.5">
                         <div className="w-3 h-3 rounded-full bg-zinc-800"></div>
                         <div className="w-3 h-3 rounded-full bg-zinc-800"></div>
@@ -58,7 +58,7 @@ export function IDEArea({ activeIdeTab, activeConnection, isFullView, setIsFullV
                </div>
                
                <div className="flex-1 bg-black border border-zinc-200 rounded-2xl shadow-sm flex flex-col overflow-hidden opacity-50 relative pointer-events-none">
-                  <div className="absolute inset-0 z-10 bg-black/40 flex items-center justify-center backdrop-blur-[1px]">
+                  <div className="absolute inset-0 z-10 bg-black flex items-center justify-center -[1px]">
                      <div className="bg-black border border-zinc-200 px-6 py-3 rounded-xl shadow-lg flex items-center gap-3">
                         <span className="material-symbols-outlined text-[20px] text-zinc-900">construction</span>
                         <span className="text-[13px] font-semibold text-zinc-900">Result parsing in development</span>

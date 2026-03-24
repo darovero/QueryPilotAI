@@ -258,7 +258,7 @@ export function ConnectionManager({
            </div>
            
            {/* Right documentation panel */}
-           <div className="w-[320px] bg-black/50 border-l border-zinc-200 p-10 hidden xl:flex flex-col">
+           <div className="w-[320px] bg-black border-l border-zinc-200 p-10 hidden xl:flex flex-col">
               <h3 className="text-[15px] font-semibold text-zinc-900 mb-8">Need help?</h3>
               <div className="space-y-10">
                  <div className="space-y-4">
@@ -347,7 +347,7 @@ export function ConnectionManager({
             ) : (
               <div className="divide-y divide-zinc-100">
                 {connections.map((conn) => (
-                  <div key={conn.id} className="grid grid-cols-12 gap-4 p-4 items-center text-[14px] hover:bg-black/50 transition-colors text-zinc-700">
+                  <div key={conn.id} className="grid grid-cols-12 gap-4 p-4 items-center text-[14px] hover:bg-black transition-colors text-zinc-700">
                     <div className="col-span-3 font-medium text-zinc-900 truncate">
                       <div className="flex items-center gap-2">
                             <div className="w-10 h-10 rounded-xl bg-black flex items-center justify-center border border-zinc-100">
