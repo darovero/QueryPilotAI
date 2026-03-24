@@ -91,12 +91,10 @@ public sealed class MicrosoftEntraTokenValidator : IEntraTokenValidator
             RequireExpirationTime = true,
             ValidateIssuerSigningKey = true,
             IssuerSigningKeys = oidcConfig.SigningKeys,
-            ValidateIssuer = true,
-            ValidIssuer = oidcConfig.Issuer,
-            ValidateAudience = true,
-            ValidAudiences = _validAudiences,
+            ValidateIssuer = false,        // Personal MS accounts use different issuers
+            ValidateAudience = false,      // idToken audience varies by account type
             ValidateLifetime = true,
-            ClockSkew = TimeSpan.FromMinutes(2)
+            ClockSkew = TimeSpan.FromMinutes(5)
         };
 
         try

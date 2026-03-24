@@ -3,8 +3,8 @@
   "Values": {
     "AzureWebJobsStorage": "UseDevelopmentStorage=true",
     "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
-    "SqlConnectionString": "Server=tcp:<server>.database.windows.net,1433;Initial Catalog=<analytics-db>;Encrypt=True;TrustServerCertificate=False;Authentication=Active Directory Default;",
-    "AppDbConnectionString": "Server=tcp:<server>.database.windows.net,1433;Initial Catalog=<app-db>;Encrypt=True;TrustServerCertificate=False;Authentication=Active Directory Default;",
+    "SqlConnectionString": "Server=tcp:insightforge-sql3-86253.database.windows.net,1433;Initial Catalog=insightforge-sqldb;User ID=sqladminif;Password=QueryPilot@2026!;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;",
+    "AppDbConnectionString": "Server=tcp:insightforge-sql3-86253.database.windows.net,1433;Initial Catalog=insightforge-sqldb;User ID=sqladminif;Password=QueryPilot@2026!;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;",
     "AzureOpenAI__Endpoint": "https://<resource>.openai.azure.com/openai/v1",
     "AzureOpenAI__Deployment": "<deployment-name>",
     "AzureOpenAI__ApiKey": "<api-key>",
@@ -15,8 +15,8 @@
     "FoundryAgent__ResultInterpreterAgentId": "<result-interpreter-agent-id>",
     "FoundryAgent__ConciergeAgentId": "<concierge-agent-id>",
     "Auth__AuthorityHost": "https://login.microsoftonline.com",
-    "Auth__ClientId": "439a8182-8c80-49ce-8dc7-703af41c724c",
-    "Auth__AllowedAudiences": "439a8182-8c80-49ce-8dc7-703af41c724c",
+    "Auth__ClientId": "b8ad5ba3-bb50-4829-9c08-9c1b10693cef",
+    "Auth__AllowedAudiences": "b8ad5ba3-bb50-4829-9c08-9c1b10693cef",
     "SemanticKernel__EnableDemoEndpoint": "false"
   }
 }
