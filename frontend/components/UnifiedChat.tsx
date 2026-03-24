@@ -148,9 +148,9 @@ export function UnifiedChat() {
           {!isSidebarOpen && (
              <button 
                 onClick={() => setIsSidebarOpen(true)} 
-                className={`absolute top-5 z-50 p-3 bg-[#0a0a0a] border border-[#333333] rounded-xl hover:bg-[#111111] hover:border-zinc-300 shadow-sm text-[#a3a3a3] hover:text-[#f4f0e6] transition-all flex items-center justify-center group left-5`}
+                className={`fixed top-5 left-5 z-[80] w-10 h-8 bg-transparent border border-transparent rounded-lg hover:bg-[#111111]/60 shadow-none text-[#a3a3a3] hover:text-[#f4f0e6] transition-all flex items-center justify-center group`}
                 title="Expand Sidebar">
-                <span className={`material-symbols-outlined text-[24px] transition-transform duration-300 group-hover:translate-x-0.5`}>
+                <span className={`material-symbols-outlined text-[60px] leading-none transition-transform duration-300 group-hover:translate-x-0.5`}>
                    menu
                 </span>
              </button>
