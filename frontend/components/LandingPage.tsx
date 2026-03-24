@@ -117,8 +117,8 @@ export function LandingPage({ onShowLegal }: LandingPageProps) {
                         <div className="grid md:grid-cols-3 gap-12">
                             {/* Feature 1 */}
                             <div className="group">
-                                <div className="w-16 h-16 rounded-2xl bg-surface-variant flex items-center justify-center mb-8 border border-outline-variant group-hover:border-primary transition-colors">
-                                    <span className="material-symbols-outlined text-primary text-3xl">terminal</span>
+                                <div className="w-24 h-24 rounded-3xl bg-surface-variant flex items-center justify-center mb-8 border border-outline-variant group-hover:border-primary group-hover:shadow-[0_0_35px_rgba(0,225,171,0.18)] transition-all duration-300">
+                                    <span className="material-symbols-outlined text-primary text-5xl md:text-6xl transition-transform duration-300 group-hover:scale-110">terminal</span>
                                 </div>
                                 <h3 className="text-2xl font-bold mb-4 text-on-background font-display">Natural Language to SQL</h3>
                                 <p className="text-on-surface-variant leading-relaxed">
@@ -127,8 +127,8 @@ export function LandingPage({ onShowLegal }: LandingPageProps) {
                             </div>
                             {/* Feature 2 */}
                             <div className="group">
-                                <div className="w-16 h-16 rounded-2xl bg-surface-variant flex items-center justify-center mb-8 border border-outline-variant group-hover:border-primary transition-colors">
-                                    <span className="material-symbols-outlined text-primary text-3xl">layers</span>
+                                <div className="w-24 h-24 rounded-3xl bg-surface-variant flex items-center justify-center mb-8 border border-outline-variant group-hover:border-primary group-hover:shadow-[0_0_35px_rgba(0,225,171,0.18)] transition-all duration-300">
+                                    <span className="material-symbols-outlined text-primary text-5xl md:text-6xl transition-transform duration-300 group-hover:scale-110">layers</span>
                                 </div>
                                 <h3 className="text-2xl font-bold mb-4 text-on-background font-display">Semantic Layer</h3>
                                 <p className="text-on-surface-variant leading-relaxed">
@@ -137,8 +137,8 @@ export function LandingPage({ onShowLegal }: LandingPageProps) {
                             </div>
                             {/* Feature 3 */}
                             <div className="group">
-                                <div className="w-16 h-16 rounded-2xl bg-surface-variant flex items-center justify-center mb-8 border border-outline-variant group-hover:border-primary transition-colors">
-                                    <span className="material-symbols-outlined text-primary text-3xl">psychology</span>
+                                <div className="w-24 h-24 rounded-3xl bg-surface-variant flex items-center justify-center mb-8 border border-outline-variant group-hover:border-primary group-hover:shadow-[0_0_35px_rgba(0,225,171,0.18)] transition-all duration-300">
+                                    <span className="material-symbols-outlined text-primary text-5xl md:text-6xl transition-transform duration-300 group-hover:scale-110">psychology</span>
                                 </div>
                                 <h3 className="text-2xl font-bold mb-4 text-on-background font-display">Ontology-aware Insights</h3>
                                 <p className="text-on-surface-variant leading-relaxed">

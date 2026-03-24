@@ -303,9 +303,9 @@ export function WorkspaceOnboarding({ handleOnboardingComplete, isAddingWorkspac
                             </div>
                             <button 
                                 onClick={() => setAnalyticsEnabled(!analyticsEnabled)}
-                                className={`w-11 h-6 rounded-none transition-colors relative shrink-0 ${analyticsEnabled ? 'bg-slate-900' : 'bg-slate-200'}`}
+                                className={`w-11 h-6 rounded-none border transition-colors relative shrink-0 ${analyticsEnabled ? 'bg-blue-600 border-blue-400' : 'bg-slate-200 border-slate-300'}`}
                             >
-                                <div className={`w-4 h-4 rounded-none bg-[#0a0a0a] absolute top-1 transition-transform ${analyticsEnabled ? 'left-6' : 'left-1'}`}></div>
+                                <div className={`w-4 h-4 rounded-none absolute top-1 transition-transform ${analyticsEnabled ? 'left-6 bg-white' : 'left-1 bg-[#0a0a0a]'}`}></div>
                             </button>
                         </div>
 
@@ -316,9 +316,9 @@ export function WorkspaceOnboarding({ handleOnboardingComplete, isAddingWorkspac
                             </div>
                             <button 
                                 onClick={() => setMarketingEnabled(!marketingEnabled)}
-                                className={`w-11 h-6 rounded-none transition-colors relative shrink-0 ${marketingEnabled ? 'bg-slate-900' : 'bg-slate-200'}`}
+                                className={`w-11 h-6 rounded-none border transition-colors relative shrink-0 ${marketingEnabled ? 'bg-blue-600 border-blue-400' : 'bg-slate-200 border-slate-300'}`}
                             >
-                                <div className={`w-4 h-4 rounded-none bg-[#0a0a0a] absolute top-1 transition-transform ${marketingEnabled ? 'left-6' : 'left-1'}`}></div>
+                                <div className={`w-4 h-4 rounded-none absolute top-1 transition-transform ${marketingEnabled ? 'left-6 bg-white' : 'left-1 bg-[#0a0a0a]'}`}></div>
                             </button>
                         </div>
                     </div>
