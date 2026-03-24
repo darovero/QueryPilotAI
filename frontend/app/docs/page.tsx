@@ -3,6 +3,7 @@ import React from 'react';
 import { useMsal } from '@azure/msal-react';
 import { loginRequest } from '../../lib/authConfig';
 import Link from 'next/link';
+import { TypewriterTitle } from '../../components/TypewriterTitle';
 
 export default function DocsPage() {
     const { instance } = useMsal();
@@ -12,11 +13,11 @@ export default function DocsPage() {
     };
 
     return (
-        <div className="min-h-screen bg-transparent text-on-background font-sans flex flex-col overflow-hidden">
+        <div className="mono-theme min-h-screen bg-transparent text-on-background flex flex-col overflow-hidden">
             {/* Top NavBar Shared */}
-            <nav className="flex justify-between items-center px-8 py-4 w-full bg-background/80 backdrop-blur-md z-50 border-b border-outline">
+            <nav className="mono-enter flex justify-between items-center px-8 py-4 w-full bg-background/80 backdrop-blur-md z-50 border-b border-outline">
                 <Link href="/" className="text-xl font-bold tracking-tight text-on-background">InsightForge AI</Link>
-                <div className="hidden md:flex items-center space-x-10 text-[11px] font-mono tracking-widest uppercase font-bold text-on-surface-variant">
+                <div className="hidden md:flex items-center space-x-10 text-[11px] tracking-widest uppercase font-bold text-on-surface-variant">
                     <Link className="hover:text-primary transition-colors duration-300" href="/docs">Docs</Link>
                     <div className="flex items-center space-x-6 border-l border-surface-variant pl-6">
                         <button onClick={handleLogin} className="hover:text-primary transition-colors duration-300">Login</button>
@@ -28,7 +29,7 @@ export default function DocsPage() {
 
             <div className="flex-1 flex overflow-hidden">
             {/* Left Sidebar */}
-            <aside className="w-64 border-r border-outline h-screen overflow-y-auto flex-shrink-0 hide-scrollbar pt-12 pb-24">
+            <aside className="mono-enter-delay-1 w-64 border-r border-outline h-screen overflow-y-auto flex-shrink-0 hide-scrollbar pt-12 pb-24">
                 <nav className="space-y-8 px-4">
                     {/* Introduction */}
                     <div>
@@ -104,17 +105,19 @@ export default function DocsPage() {
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 overflow-y-auto h-screen px-12 py-16 scroll-smooth">
+            <main className="mono-enter-delay-2 flex-1 overflow-y-auto h-screen px-12 py-16 scroll-smooth">
                 <div className="max-w-4xl mx-auto flex gap-12">
                     {/* Article Content */}
                     <article className="flex-1">
-                        <h1 className="text-4xl font-bold mb-6 text-on-background">SQL Query Workspace</h1>
+                        <h1 className="text-4xl font-bold mb-6 text-on-background">
+                            <TypewriterTitle text="SQL Query Workspace" speedMs={50} startDelayMs={220} />
+                        </h1>
                         <p className="text-on-surface-variant leading-relaxed mb-10 text-lg">
                             For advanced users, analysts, and data engineers, InsightForge AI features a fully-fledged IDE for deep database interaction. You can bypass the natural language layer anytime to write, execute, and profile raw SQL directly against your securely connected data sources.
                         </p>
 
                         {/* App Screenshot Placeholder */}
-                        <div className="w-full aspect-video rounded-xl bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400 p-[1px] mb-12 shadow-2xl overflow-hidden relative group">
+                        <div className="mono-scanline w-full aspect-video rounded-xl bg-gradient-to-br from-indigo-600 via-cyan-500 to-emerald-400 p-[1px] mb-12 shadow-2xl overflow-hidden relative group">
                             <div className="absolute inset-[1px] bg-background rounded-xl overflow-hidden opacity-90 transition-opacity duration-300 group-hover:opacity-100 flex flex-col">
                                 {/* Editor Header */}
                                 <div className="h-10 bg-surface-container-low border-b border-outline flex items-center px-4 space-x-2">
@@ -138,7 +141,7 @@ export default function DocsPage() {
                                         <div className="text-xs font-mono text-on-surface-variant mb-1 ml-4">products</div>
                                     </div>
                                     <div className="flex-1 bg-surface-container-lowest p-4 flex flex-col relative">
-                                        <div className="font-mono text-sm leading-relaxed text-on-surface-variant flex-1">
+                                        <div className="text-sm leading-relaxed text-on-surface-variant flex-1">
                                             <span className="text-error">SELECT</span> *<br/>
                                             <span className="text-error">FROM</span> users<br/>
                                             <span className="text-error">WHERE</span> created_at {'>'} <span className="text-tertiary">'2026-01-01'</span><br/>
@@ -170,8 +173,10 @@ export default function DocsPage() {
                         </div>
 
                         {/* Sections */}
-                        <section className="mb-12" id="opening">
-                            <h2 className="text-2xl font-bold mb-4 border-b border-outline pb-2 text-on-background">Launching the Workspace</h2>
+                        <section className="mb-12 mono-enter" id="opening">
+                            <h2 className="text-2xl font-bold mb-4 border-b border-outline pb-2 text-on-background">
+                                <TypewriterTitle text="Launching the Workspace" speedMs={42} startDelayMs={280} />
+                            </h2>
                             <ol className="list-decimal pl-5 space-y-3 text-on-surface-variant leading-relaxed">
                                 <li>Navigate to the Data Catalog and select your target organizational connection.</li>
                                 <li>Click the "SQL Workspace" toggle situated in the side navigation panel.</li>
@@ -179,8 +184,10 @@ export default function DocsPage() {
                             </ol>
                         </section>
 
-                        <section className="mb-12" id="exploring">
-                            <h2 className="text-2xl font-bold mb-4 border-b border-outline pb-2 text-on-background">Navigating Your Schema</h2>
+                        <section className="mb-12 mono-enter-delay-1" id="exploring">
+                            <h2 className="text-2xl font-bold mb-4 border-b border-outline pb-2 text-on-background">
+                                <TypewriterTitle text="Navigating Your Schema" speedMs={42} startDelayMs={340} />
+                            </h2>
                             <p className="text-on-surface-variant leading-relaxed mb-4">
                                 InsightForge AI offers an intuitive metadata tree to inspect your data architecture. The left panel shows live reflections of all accessible schemas, tables, and views. Interacting with any entity automatically generates a base scaffold script to preview its structure without writing manual syntax.
                             </p>
@@ -189,8 +196,10 @@ export default function DocsPage() {
                             </p>
                         </section>
 
-                        <section className="mb-12" id="refreshing">
-                            <h2 className="text-2xl font-bold mb-4 border-b border-outline pb-2 text-on-background">Synchronizing Metadata</h2>
+                        <section className="mb-12 mono-enter-delay-2" id="refreshing">
+                            <h2 className="text-2xl font-bold mb-4 border-b border-outline pb-2 text-on-background">
+                                <TypewriterTitle text="Synchronizing Metadata" speedMs={42} startDelayMs={400} />
+                            </h2>
                             <p className="text-on-surface-variant leading-relaxed mb-4">
                                 When external migrations or structural alterations occur outside of InsightForge, you can trigger a manual synchronization from the workspace header. This immediately fetches the latest object definitions from your remote server.
                             </p>
@@ -199,8 +208,10 @@ export default function DocsPage() {
                             </p>
                         </section>
 
-                        <section className="mb-16" id="downloading">
-                            <h2 className="text-2xl font-bold mb-4 border-b border-outline pb-2 text-on-background">Exporting Data</h2>
+                        <section className="mb-16 mono-enter" id="downloading">
+                            <h2 className="text-2xl font-bold mb-4 border-b border-outline pb-2 text-on-background">
+                                <TypewriterTitle text="Exporting Data" speedMs={42} startDelayMs={460} />
+                            </h2>
                             <p className="text-on-surface-variant leading-relaxed">
                                 Extracting your analyzed results is straightforward. Use the unified export menu located at the bottom of the data grid to save your current output. Fast CSV extraction is supported natively for immediate downstream use in external reports or BI tools.
                             </p>

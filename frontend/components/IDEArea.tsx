@@ -11,10 +11,10 @@ export function IDEArea({ activeIdeTab, activeConnection, isFullView, setIsFullV
   if (!activeIdeTab || !activeConnection) return null;
 
   return (
-    <div className={`flex flex-col h-full bg-black transition-all duration-300 ease-in-out relative ${isFullView ? 'opacity-100 flex-1' : 'opacity-100 flex-1 z-10'}`}>
+      <div className={`flex flex-col h-full bg-zinc-950 transition-all duration-300 ease-in-out relative ${isFullView ? 'opacity-100 flex-1' : 'opacity-100 flex-1 z-10'}`}>
         <button 
            onClick={() => setIsFullView(!isFullView)}
-           className="absolute top-6 left-6 z-50 p-2.5 bg-black border border-zinc-200 rounded-xl hover:bg-black hover:border-zinc-300 shadow-sm text-zinc-500 hover:text-zinc-900 transition-all flex items-center justify-center group hidden md:flex"
+                className="icon-button absolute top-6 left-6 z-50 p-2.5 rounded-xl shadow-sm transition-all flex items-center justify-center group hidden md:flex"
            title={isFullView ? "Show Settings Panel" : "Hide Settings Panel"}
         >
            <span className="material-symbols-outlined text-[18px] transition-transform duration-300 group-hover:scale-110">
@@ -22,15 +22,15 @@ export function IDEArea({ activeIdeTab, activeConnection, isFullView, setIsFullV
            </span>
         </button>
 
-        <div className={`pt-6 pb-4 border-b border-zinc-100/80 bg-black  sticky top-0 z-30 transition-all duration-300 ${isFullView ? 'px-24' : 'px-8 md:px-16 lg:px-24'}`}>
+        <div className={`pt-6 pb-4 border-b border-zinc-800 bg-zinc-950 sticky top-0 z-30 transition-all duration-300 ${isFullView ? 'px-24' : 'px-8 md:px-16 lg:px-24'}`}>
            <div className="flex items-center justify-between mx-auto max-w-5xl">
               <div className="flex items-center gap-4">
                  <div className="w-10 h-10 rounded-xl bg-zinc-900 text-white flex items-center justify-center shadow-sm">
                     <span className="material-symbols-outlined text-[20px]">terminal</span>
                  </div>
                  <div className="flex flex-col">
-                     <h2 className="text-xl font-semibold tracking-tight text-zinc-900">{activeIdeTab.title}</h2>
-                     <div className="flex items-center gap-2 text-[12px] font-medium text-zinc-500 mt-1">
+                     <h2 className="text-xl font-semibold tracking-tight text-zinc-100">{activeIdeTab.title}</h2>
+                     <div className="flex items-center gap-2 text-[12px] font-medium text-zinc-400 mt-1">
                          <div className="w-1.5 h-1.5 rounded-full bg-zinc-400"></div>
                          IDE Session • {activeConnection.name}
                      </div>
@@ -57,19 +57,19 @@ export function IDEArea({ activeIdeTab, activeConnection, isFullView, setIsFullV
                   </div>
                </div>
                
-               <div className="flex-1 bg-black border border-zinc-200 rounded-2xl shadow-sm flex flex-col overflow-hidden opacity-50 relative pointer-events-none">
-                  <div className="absolute inset-0 z-10 bg-black flex items-center justify-center -[1px]">
-                     <div className="bg-black border border-zinc-200 px-6 py-3 rounded-xl shadow-lg flex items-center gap-3">
-                        <span className="material-symbols-outlined text-[20px] text-zinc-900">construction</span>
-                        <span className="text-[13px] font-semibold text-zinc-900">Result parsing in development</span>
+               <div className="flex-1 surface-base rounded-2xl shadow-sm flex flex-col overflow-hidden opacity-60 relative pointer-events-none">
+                  <div className="absolute inset-0 z-10 bg-zinc-950/90 flex items-center justify-center -[1px]">
+                     <div className="surface-muted px-6 py-3 rounded-xl shadow-lg flex items-center gap-3">
+                        <span className="material-symbols-outlined text-[20px] text-zinc-100">construction</span>
+                        <span className="text-[13px] font-semibold text-zinc-100">Result parsing in development</span>
                      </div>
                   </div>
-                  <div className="px-5 py-3 border-b border-zinc-200 bg-black flex items-center justify-between">
-                     <span className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">Results Explorer</span>
+                  <div className="px-5 py-3 border-b border-zinc-800 bg-zinc-900 flex items-center justify-between">
+                     <span className="text-[11px] font-bold uppercase tracking-widest text-zinc-400">Results Explorer</span>
                   </div>
                   <div className="p-4 grid grid-cols-4 gap-4">
                      {Array.from({length: 8}).map((_, i) => (
-                        <div key={i} className="h-8 bg-zinc-100 rounded-lg"></div>
+                        <div key={i} className="h-8 bg-zinc-800 rounded-lg"></div>
                      ))}
                   </div>
                </div>

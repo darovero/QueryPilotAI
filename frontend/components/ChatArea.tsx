@@ -31,12 +31,12 @@ export function ChatArea({
   if (!activeChatSession) return null;
 
   return (
-    <div className={`flex flex-col h-full bg-black transition-all duration-300 ease-in-out relative ${isFullView ? 'opacity-100 flex-1' : 'opacity-100 flex-1 z-10'}`}>
+      <div className={`flex flex-col h-full bg-zinc-950 transition-all duration-300 ease-in-out relative ${isFullView ? 'opacity-100 flex-1' : 'opacity-100 flex-1 z-10'}`}>
         
         {/* Full View Toggle */}
         <button 
            onClick={() => setIsFullView(!isFullView)}
-           className="absolute top-6 left-6 z-50 p-2.5 bg-black border border-zinc-200 rounded-xl hover:bg-black hover:border-zinc-300 shadow-sm text-zinc-500 hover:text-zinc-900 transition-all flex items-center justify-center group hidden md:flex"
+           className="icon-button absolute top-6 left-6 z-50 p-2.5 rounded-xl shadow-sm transition-all flex items-center justify-center group hidden md:flex"
            title={isFullView ? "Show Code Space" : "Hide Code Space"}
         >
            <span className="material-symbols-outlined text-[18px] transition-transform duration-300 group-hover:scale-110">
@@ -50,23 +50,23 @@ export function ChatArea({
            </div>
         )}
 
-        <div className={`pt-6 pb-4 border-b border-zinc-100/80 bg-black  sticky top-0 z-30 transition-all duration-300 ${isFullView ? 'px-24' : 'px-8 md:px-16 lg:px-24'}`}>
+        <div className={`pt-6 pb-4 border-b border-zinc-800 bg-zinc-950 sticky top-0 z-30 transition-all duration-300 ${isFullView ? 'px-24' : 'px-8 md:px-16 lg:px-24'}`}>
            <div className="flex items-center justify-between mx-auto max-w-4xl">
               <div className="flex flex-col">
-                  <h2 className="text-xl font-semibold tracking-tight text-zinc-900 flex items-center gap-2">
+                  <h2 className="text-xl font-semibold tracking-tight text-zinc-100 flex items-center gap-2">
                      <span className="material-symbols-outlined text-[22px] text-zinc-400">forum</span>
                      {activeChatSession.title}
                   </h2>
-                  <div className="flex items-center gap-2 text-[12px] font-medium text-zinc-500 mt-1">
+                  <div className="flex items-center gap-2 text-[12px] font-medium text-zinc-400 mt-1">
                       <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
                       Connected to {activeConnection ? activeConnection.name : 'Unknown Database'}
                   </div>
               </div>
               <div className="flex gap-2">
-                 <button className="p-2 text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition-colors border border-transparent hover:border-zinc-200" title="Clear Chat">
+                 <button className="icon-button p-2 rounded-lg transition-colors" title="Clear Chat">
                     <span className="material-symbols-outlined text-[18px]">mop</span>
                  </button>
-                 <button className="p-2 text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition-colors border border-transparent hover:border-zinc-200" title="Export">
+                 <button className="icon-button p-2 rounded-lg transition-colors" title="Export">
                     <span className="material-symbols-outlined text-[18px]">download</span>
                  </button>
               </div>
@@ -77,19 +77,19 @@ export function ChatArea({
           <div className="max-w-4xl mx-auto py-8 space-y-8">
             {activeChatSession.messages.length === 0 ? (
                <div className="h-full flex flex-col items-center justify-center text-center space-y-6 pt-20 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                  <div className="w-20 h-20 bg-black border border-zinc-100 rounded-3xl flex items-center justify-center shadow-sm">
+                  <div className="w-20 h-20 surface-base rounded-3xl flex items-center justify-center shadow-sm">
                      <span className="material-symbols-outlined text-[40px] text-zinc-300">chat_bubble</span>
                   </div>
                   <div className="max-w-sm space-y-2">
-                     <h3 className="text-xl font-semibold text-zinc-900 tracking-tight">How can I help you today?</h3>
-                     <p className="text-[14px] text-zinc-500 font-medium leading-relaxed">Ask anything about your database {activeConnection?.name}. I can analyze data, write SQL, and create visualizations.</p>
+                     <h3 className="text-xl font-semibold text-zinc-100 tracking-tight">How can I help you today?</h3>
+                     <p className="text-[14px] text-zinc-400 font-medium leading-relaxed">Ask anything about your database {activeConnection?.name}. I can analyze data, write SQL, and create visualizations.</p>
                   </div>
                   <div className="flex gap-3 flex-wrap justify-center mt-4">
                      {["Show recent transactions", "Summarize user growth", "Find data anomalies"].map(suggestion => (
                         <button 
                           key={suggestion}
                           onClick={() => { setInput(suggestion); setTimeout(() => handleSubmit(), 100); }}
-                          className="px-4 py-2.5 bg-black border border-zinc-200 rounded-xl text-[13px] font-medium text-zinc-600 hover:text-zinc-900 hover:border-zinc-300 hover:bg-black transition-all shadow-sm active:scale-95">
+                                       className="interactive-card px-4 py-2.5 rounded-xl text-[13px] font-medium text-zinc-300 transition-all shadow-sm active:scale-95">
                            {suggestion}
                         </button>
                      ))}
@@ -98,7 +98,7 @@ export function ChatArea({
             ) : (
                 activeChatSession.messages.map((msg, i) => (
                   <div key={msg.id} className={`flex gap-5 w-full animate-in fade-in slide-in-from-bottom-2 duration-300 ${msg.role === 'user' ? 'flex-row-reverse text-right' : ''}`}>
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${msg.role === 'user' ? 'bg-zinc-900 text-white' : 'bg-black border border-zinc-200 text-zinc-600'}`}>
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${msg.role === 'user' ? 'bg-zinc-800 text-white' : 'surface-base text-zinc-300'}`}>
                       {msg.role === 'user' ? (
                           <span className="text-[14px] font-bold">U</span>
                       ) : (
@@ -110,11 +110,11 @@ export function ChatArea({
                             {msg.role === 'user' ? 'You' : 'QueryPilot AI'}
                         </div>
                         {msg.role === 'user' ? (
-                            <div className="bg-zinc-900 text-white rounded-2xl rounded-tr-sm px-5 py-3.5 text-[15px] font-medium leading-relaxed shadow-sm">
+                           <div className="bg-indigo-600/90 text-white rounded-2xl rounded-tr-sm px-5 py-3.5 text-[15px] font-medium leading-relaxed shadow-sm">
                                 {msg.content}
                             </div>
                         ) : (
-                            <div className="bg-black border border-zinc-200 rounded-2xl p-6 text-[14px] text-zinc-800 leading-relaxed shadow-sm space-y-5 relative overflow-hidden group">
+                           <div className="surface-base rounded-2xl p-6 text-[14px] text-zinc-200 leading-relaxed shadow-sm space-y-5 relative overflow-hidden group">
                                 {msg.status === 'Running' && (
                                     <div className="absolute top-0 left-0 w-full h-1 bg-zinc-100 overflow-hidden">
                                         <div className="h-full bg-zinc-900 rounded-full w-1/3 animate-[slide_1.5s_ease-in-out_infinite]"></div>
@@ -133,7 +133,7 @@ export function ChatArea({
                                           </div>
                                        </div>
                                        
-                                       <div className="bg-black rounded-lg p-4 border border-amber-100 font-mono text-[12px] text-zinc-800 overflow-auto whitespace-pre-wrap max-h-[200px] shadow-inner font-medium">
+                                       <div className="bg-zinc-950 rounded-lg p-4 border border-amber-200/70 font-mono text-[12px] text-zinc-200 overflow-auto whitespace-pre-wrap max-h-[200px] shadow-inner font-medium">
                                           {msg.sql}
                                        </div>
 
@@ -142,7 +142,7 @@ export function ChatArea({
                                              placeholder="Add comments for the audit log (optional)"
                                              value={approvalComments[msg.id] || ''}
                                              onChange={(e) => setApprovalComments(prev => ({ ...prev, [msg.id]: e.target.value }))}
-                                             className="w-full bg-black border border-amber-200 rounded-xl px-4 py-3 text-[13px] text-black focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-200/50 transition-colors resize-none placeholder:text-amber-300"
+                                             className="w-full bg-zinc-950 border border-amber-300/70 rounded-xl px-4 py-3 text-[13px] text-zinc-100 focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-300/30 transition-colors resize-none placeholder:text-amber-200"
                                              rows={2}
                                           />
                                           <div className="flex gap-3">
@@ -153,7 +153,7 @@ export function ChatArea({
                                              </button>
                                              <button 
                                                 onClick={() => handleApproval(msg, 'Rejected', approvalComments[msg.id])}
-                                                className="flex-1 bg-black hover:bg-black border border-amber-200 text-amber-700 px-4 py-2.5 rounded-xl font-medium text-[13px] transition-colors text-center">
+                                                className="flex-1 bg-zinc-950 hover:bg-zinc-900 border border-amber-300/70 text-amber-300 px-4 py-2.5 rounded-xl font-medium text-[13px] transition-colors text-center">
                                                 Reject Query
                                              </button>
                                           </div>
@@ -162,7 +162,7 @@ export function ChatArea({
                                 )}
 
                                 {(msg.status === 'Completed' || msg.status === 'Failed' || msg.status === 'Rejected') && msg.content && !msg.insight && (
-                                     <div className="text-[15px] max-w-none prose prose-zinc prose-p:leading-relaxed prose-pre:bg-black prose-pre:border prose-pre:border-zinc-200 prose-pre:rounded-xl">
+                                     <div className="text-[15px] max-w-none prose prose-invert prose-p:leading-relaxed prose-pre:bg-zinc-950 prose-pre:border prose-pre:border-zinc-700 prose-pre:rounded-xl">
                                          {msg.content}
                                      </div>
                                 )}
@@ -172,20 +172,20 @@ export function ChatArea({
                                       <div className="text-[15px] font-medium">{msg.insight}</div>
                                       
                                       {msg.results && msg.results.length > 0 && (
-                                         <div className="overflow-x-auto border border-zinc-200 rounded-xl bg-black shadow-sm mt-4">
+                                            <div className="overflow-x-auto border border-zinc-700 rounded-xl bg-zinc-950 shadow-sm mt-4">
                                             <table className="min-w-full text-left text-[13px] border-collapse">
-                                               <thead className="bg-black border-b border-zinc-200 text-zinc-500 uppercase tracking-widest text-[11px] font-bold">
+                                               <thead className="bg-zinc-900 border-b border-zinc-700 text-zinc-400 uppercase tracking-widest text-[11px] font-bold">
                                                   <tr>
                                                      {Object.keys(msg.results[0]).map(key => (
                                                         <th key={key} className="px-5 py-3 whitespace-nowrap">{key}</th>
                                                      ))}
                                                   </tr>
                                                </thead>
-                                               <tbody className="divide-y divide-zinc-100 font-mono">
+                                               <tbody className="divide-y divide-zinc-800 font-mono">
                                                   {msg.results.slice(0, 10).map((row, idx) => (
-                                                     <tr key={idx} className="hover:bg-black transition-colors">
+                                                     <tr key={idx} className="hover:bg-zinc-900 transition-colors">
                                                         {Object.values(row).map((val: any, j) => (
-                                                           <td key={j} className="px-5 py-3 text-zinc-700 truncate max-w-[200px]">
+                                                           <td key={j} className="px-5 py-3 text-zinc-200 truncate max-w-[200px]">
                                                               {typeof val === 'object' ? JSON.stringify(val) : String(val)}
                                                            </td>
                                                         ))}
@@ -194,7 +194,7 @@ export function ChatArea({
                                                </tbody>
                                             </table>
                                             {msg.results.length > 10 && (
-                                               <div className="px-5 py-3 bg-black text-center text-[12px] font-medium text-zinc-500 border-t border-zinc-200">
+                                               <div className="px-5 py-3 bg-zinc-900 text-center text-[12px] font-medium text-zinc-400 border-t border-zinc-700">
                                                   Showing 10 of {msg.results.length} rows
                                                </div>
                                             )}
@@ -203,7 +203,7 @@ export function ChatArea({
                                       
                                       {msg.sql && (
                                          <details className="group/code mt-4">
-                                            <summary className="cursor-pointer flex items-center gap-2 text-[12px] font-bold text-zinc-500 uppercase tracking-widest hover:text-zinc-800 transition-colors select-none">
+                                            <summary className="cursor-pointer flex items-center gap-2 text-[12px] font-bold text-zinc-400 uppercase tracking-widest hover:text-zinc-200 transition-colors select-none">
                                                <span className="material-symbols-outlined text-[16px] transition-transform group-open/code:rotate-90">chevron_right</span>
                                                View Generated SQL
                                             </summary>
@@ -216,7 +216,7 @@ export function ChatArea({
                                 )}
                                 
                                 {msg.progressEvents && msg.progressEvents.length > 0 && msg.status !== 'PendingApproval' && (
-                                   <div className={`mt-6 pt-5 border-t border-zinc-100 flex flex-col gap-3 ${msg.status === 'Completed' || msg.status === 'Failed' ? 'opacity-60' : ''}`}>
+                                   <div className={`mt-6 pt-5 border-t border-zinc-800 flex flex-col gap-3 ${msg.status === 'Completed' || msg.status === 'Failed' ? 'opacity-60' : ''}`}>
                                       <div className="text-[10px] uppercase tracking-widest text-zinc-400 font-bold flex items-center justify-between">
                                           <span>Agent Progress</span>
                                           <span>{msg.progressEvents[msg.progressEvents.length-1].time}</span>
@@ -231,8 +231,8 @@ export function ChatArea({
                                                   {j < msg.progressEvents!.length - 1 && <div className="w-[1px] h-6 bg-emerald-100 my-1"></div>}
                                                </div>
                                                <div className="flex flex-col">
-                                                  <span className="font-semibold text-zinc-900">{evt.label}</span>
-                                                  <span className="text-zinc-500 text-[12px]">{evt.status}</span>
+                                                  <span className="font-semibold text-zinc-100">{evt.label}</span>
+                                                  <span className="text-zinc-400 text-[12px]">{evt.status}</span>
                                                </div>
                                             </div>
                                          ))}
@@ -249,7 +249,7 @@ export function ChatArea({
           </div>
         </div>
 
-        <div className={`p-6 bg-black  border-t border-zinc-100/80 sticky bottom-0 z-30 transition-all duration-300 ${isFullView ? 'px-24' : 'px-8 md:px-16 lg:px-24'}`}>
+            <div className={`p-6 bg-zinc-950 border-t border-zinc-800 sticky bottom-0 z-30 transition-all duration-300 ${isFullView ? 'px-24' : 'px-8 md:px-16 lg:px-24'}`}>
           <div className="max-w-4xl mx-auto relative group">
               <textarea
                 value={input}
@@ -262,7 +262,7 @@ export function ChatArea({
                 }}
                 disabled={isTyping}
                 placeholder="Message QueryPilot..."
-                className="w-full bg-black border border-zinc-200 rounded-2xl pl-5 pr-14 py-4 text-[15px] font-medium text-black focus:outline-none focus:border-zinc-400 focus:ring-4 focus:ring-zinc-100 transition-all resize-none shadow-sm disabled:bg-black disabled:text-zinc-400 disabled:cursor-not-allowed placeholder:text-zinc-400 min-h-[56px] max-h-[200px]"
+                        className="field-input w-full rounded-2xl pl-5 pr-14 py-4 text-[15px] font-medium transition-all resize-none shadow-sm disabled:bg-zinc-950 disabled:text-zinc-500 disabled:cursor-not-allowed min-h-[56px] max-h-[200px]"
                 rows={1}
                 style={{ height: 'auto' }}
               />
