@@ -1,9 +1,9 @@
 'use client';
 
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
 import { PublicClientApplication } from '@azure/msal-browser';
 import { MsalProvider, useMsal, useIsAuthenticated } from '@azure/msal-react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { AuthRuntimeConfig, createMsalConfig, loginRequest, resolveAuthRuntimeConfig } from '../lib/authConfig';
 import { LandingPage } from '../components/LandingPage';
 
@@ -18,17 +18,23 @@ const legalDocuments: Record<LegalDocumentKey, { title: string; paragraphs: stri
     privacy: {
         title: 'Politica de Privacidad',
         paragraphs: [
-            'InsightForge AI procesa unicamente la informacion necesaria para autenticarte, habilitar tu sesion corporativa y proteger el acceso a las capacidades analiticas del sistema.',
-            'Los datos de identidad y telemetria operativa se utilizan para auditoria, trazabilidad, seguridad y soporte. No se comparten con terceros fuera de los servicios autorizados por tu organizacion.',
-            'Puedes solicitar la revision o eliminacion de tus datos conforme a las politicas internas de gobierno y cumplimiento aplicables a tu tenant corporativo.'
+            '1) Datos que tratamos: credenciales de autenticacion, identificadores de sesion, eventos de uso y trazas operativas necesarias para seguridad, soporte y continuidad del servicio.',
+            '2) Finalidad: validar acceso corporativo, proteger consultas analiticas, investigar incidentes y cumplir controles de auditoria interna y requisitos regulatorios aplicables.',
+            '3) Base de uso: interes legitimo empresarial, obligacion de cumplimiento y politicas de seguridad de la organizacion que habilita este entorno.',
+            '4) Retencion: los registros se conservan por ventanas definidas por gobierno de datos y pueden ser anonimizados o eliminados segun el ciclo de vida aprobado.',
+            '5) Comparticion: no se comercializan datos personales; solo se procesan en servicios tecnicos autorizados para operacion, monitoreo y proteccion de la plataforma.',
+            '6) Derechos: puedes solicitar revision, correccion o eliminacion segun los canales corporativos de privacidad y las limitaciones legales vigentes.'
         ]
     },
     terms: {
         title: 'Terminos del Servicio',
         paragraphs: [
-            'El acceso a InsightForge AI esta restringido a usuarios autorizados por la organizacion. Todo uso queda sujeto a monitoreo, controles de seguridad y registro de actividad.',
-            'No debes cargar informacion sin autorizacion, intentar eludir controles de seguridad ni utilizar la plataforma para consultas o acciones fuera de las politicas corporativas.',
-            'El servicio puede limitar o revocar el acceso cuando se detecten riesgos operativos, incumplimientos de seguridad o actividades incompatibles con el uso empresarial previsto.'
+            '1) Uso autorizado: el acceso es exclusivo para personal habilitado por la organizacion. Toda accion puede ser registrada para auditoria y seguridad operativa.',
+            '2) Conducta prohibida: no se permite eludir controles, ejecutar consultas fuera de politicas, subir datos sin autorizacion o intentar acceso no permitido.',
+            '3) Responsabilidad del usuario: verificar resultados antes de decisiones criticas y respetar clasificacion de datos, privacidad y normas internas de cumplimiento.',
+            '4) Seguridad y continuidad: la plataforma puede aplicar bloqueos, limites de sesion o revocacion de acceso ante riesgo, abuso o incumplimiento.',
+            '5) Disponibilidad: pueden existir mantenimientos, degradaciones temporales o cambios funcionales para mejorar seguridad y resiliencia del servicio.',
+            '6) Aceptacion: al continuar, confirmas que entiendes estos terminos y aceptas operar bajo los guardrails tecnicos y legales definidos por tu organizacion.'
         ]
     }
 };
@@ -106,7 +112,34 @@ function RequireAuth({ children }: { children: ReactNode }) {
     const { instance } = useMsal();
     const isAuthenticated = useIsAuthenticated();
     const [activeDocument, setActiveDocument] = useState<LegalDocumentKey | null>(null);
+    const modalRef = useRef<HTMLDivElement | null>(null);
     const pathname = usePathname();
+    const router = useRouter();
+    const isLoginRoute = pathname === '/login';
+
+    useEffect(() => {
+        if (!activeDocument) {
+            document.body.style.overflow = '';
+            return;
+        }
+
+        document.body.style.overflow = 'hidden';
+
+        requestAnimationFrame(() => {
+            modalRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            modalRef.current?.focus();
+        });
+
+        return () => {
+            document.body.style.overflow = '';
+        };
+    }, [activeDocument]);
+
+    useEffect(() => {
+        if (isAuthenticated && isLoginRoute) {
+            router.replace('/dashboard');
+        }
+    }, [isAuthenticated, isLoginRoute, router]);
 
     const isPublicRoute = pathname?.startsWith('/docs');
 
@@ -115,6 +148,54 @@ function RequireAuth({ children }: { children: ReactNode }) {
     }
 
     if (!isAuthenticated) {
+        if (isLoginRoute) {
+            return (
+                <div className="relative min-h-screen bg-zinc-950 text-zinc-100 flex items-center justify-center p-6 font-mono overflow-hidden">
+                    <div className="bg-dots pointer-events-none absolute inset-0 opacity-70" />
+                    <div className="relative w-full max-w-md border border-zinc-800 bg-zinc-900/75 p-8 shadow-[0_25px_70px_rgba(0,0,0,0.6)]">
+                        <div className="mx-auto flex h-16 w-16 items-center justify-center border border-zinc-700 bg-zinc-950">
+                            <div className="text-center leading-none">
+                                <p className="text-[15px] font-bold tracking-wider text-primary">IF</p>
+                                <p className="text-[9px] uppercase tracking-[0.25em] text-zinc-500">AI</p>
+                            </div>
+                        </div>
+
+                        <p className="mt-5 text-center text-[11px] uppercase tracking-[0.24em] text-zinc-500">InsightForge Access</p>
+                        <h1 className="mt-2 text-center text-2xl font-bold text-zinc-100">Iniciar sesion</h1>
+                        <p className="mt-3 text-center text-sm leading-6 text-zinc-400">
+                            Login corporativo para acceder al workspace de analitica segura.
+                        </p>
+
+                        <button
+                            type="button"
+                            onClick={() => { void instance.loginRedirect(loginRequest); }}
+                            className="mt-7 flex w-full items-center justify-center gap-3 border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm font-semibold text-zinc-100 transition-colors hover:bg-zinc-800"
+                        >
+                            <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" role="img">
+                                <rect x="1" y="1" width="10" height="10" fill="#f25022" />
+                                <rect x="13" y="1" width="10" height="10" fill="#7fba00" />
+                                <rect x="1" y="13" width="10" height="10" fill="#00a4ef" />
+                                <rect x="13" y="13" width="10" height="10" fill="#ffb900" />
+                            </svg>
+                            Continuar con Microsoft Entra ID
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => router.push('/')}
+                            className="mt-3 w-full border border-zinc-700 px-4 py-3 text-sm font-semibold text-zinc-300 transition-colors hover:bg-zinc-800"
+                        >
+                            Volver al inicio
+                        </button>
+
+                        <p className="mt-6 text-center text-[11px] leading-5 text-zinc-500">
+                            Al continuar aceptas politicas de seguridad, auditoria y cumplimiento corporativo.
+                        </p>
+                    </div>
+                </div>
+            );
+        }
+
         const legalDocument = activeDocument ? legalDocuments[activeDocument] : null;
 
         return (
@@ -122,26 +203,35 @@ function RequireAuth({ children }: { children: ReactNode }) {
                 <LandingPage onShowLegal={setActiveDocument} />
 
                 {legalDocument ? (
-                    <div className="absolute inset-0 z-20 flex items-center justify-center bg-zinc-950/45 px-4">
-                        <div className="w-full max-w-xl rounded-3xl border border-zinc-200 bg-white p-7 shadow-2xl">
-                            <div className="flex items-start justify-between gap-6">
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/80 px-4 backdrop-blur-sm">
+                        <div
+                            ref={modalRef}
+                            tabIndex={-1}
+                            className="w-full max-w-3xl border border-zinc-700 bg-[#0a0a0a] p-0 text-zinc-200 shadow-[0_20px_80px_rgba(0,0,0,0.65)] outline-none"
+                        >
+                            <div className="flex items-center justify-between border-b border-zinc-800 bg-[#111111] px-6 py-4 font-mono">
                                 <div>
-                                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">Informacion legal</p>
-                                    <h2 className="mt-2 text-2xl font-bold text-zinc-900">{legalDocument.title}</h2>
+                                    <p className="text-[11px] uppercase tracking-[0.24em] text-zinc-500">Legal Document</p>
+                                    <h2 className="mt-1 text-lg font-bold text-zinc-100">{legalDocument.title}</h2>
                                 </div>
                                 <button
                                     type="button"
                                     onClick={() => setActiveDocument(null)}
-                                    className="rounded-full border border-zinc-200 px-3 py-1.5 text-sm text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
+                                    className="border border-zinc-700 px-3 py-1.5 text-[12px] font-semibold uppercase tracking-[0.14em] text-zinc-300 transition-colors hover:bg-zinc-800 hover:text-white"
                                 >
                                     Cerrar
                                 </button>
                             </div>
 
-                            <div className="mt-6 space-y-4 text-sm leading-6 text-zinc-600">
-                                {legalDocument.paragraphs.map((paragraph) => (
-                                    <p key={paragraph}>{paragraph}</p>
-                                ))}
+                            <div className="max-h-[72vh] overflow-y-auto px-6 py-5 font-mono text-[13px] leading-7 text-zinc-300">
+                                <div className="mb-5 border border-zinc-800 bg-zinc-900/40 px-4 py-3 text-[12px] text-zinc-400">
+                                    Al continuar aceptas operar bajo politicas de seguridad, auditoria y cumplimiento corporativo.
+                                </div>
+                                <div className="space-y-4">
+                                    {legalDocument.paragraphs.map((paragraph) => (
+                                        <p key={paragraph}>{paragraph}</p>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -149,6 +239,10 @@ function RequireAuth({ children }: { children: ReactNode }) {
                 
             </div>
         );
+    }
+
+    if (isAuthenticated && isLoginRoute) {
+        return null;
     }
 
     return children;

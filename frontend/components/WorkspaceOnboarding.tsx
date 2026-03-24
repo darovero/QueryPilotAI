@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type LegalDocumentKey = 'privacy' | 'terms';
 
@@ -6,17 +6,21 @@ const legalDocuments: Record<LegalDocumentKey, { title: string; paragraphs: stri
     privacy: {
         title: 'Política de Privacidad',
         paragraphs: [
-            'InsightForge AI procesa unicamente la informacion necesaria para autenticarte, habilitar tu sesion corporativa y proteger el acceso a las capacidades analiticas del sistema.',
-            'Los datos de identidad y telemetria operativa se utilizan para auditoria, trazabilidad, seguridad y soporte. No se comparten con terceros fuera de los servicios autorizados por tu organizacion.',
-            'Puedes solicitar la revision o eliminacion de tus datos conforme a las politicas internas de gobierno y cumplimiento aplicables a tu tenant corporativo.'
+            '1) Datos tratados: autenticacion, identificadores de sesion, eventos de uso y telemetria minima para mantener seguridad y trazabilidad.',
+            '2) Finalidad: control de acceso, proteccion de consultas analiticas, soporte tecnico y respuesta ante incidentes operativos.',
+            '3) Conservacion: los registros se mantienen por politicas de gobierno de datos y pueden anonimizarse o eliminarse al finalizar su ciclo de vida.',
+            '4) Comparticion: la informacion se procesa unicamente en servicios autorizados para operar la plataforma; no se comercializa con terceros.',
+            '5) Derechos: puedes solicitar revision o correccion a traves de los procesos internos de privacidad y cumplimiento de tu organizacion.'
         ]
     },
     terms: {
         title: 'Términos del Servicio',
         paragraphs: [
-            'El acceso a InsightForge AI esta restringido a usuarios autorizados por la organizacion. Todo uso queda sujeto a monitoreo, controles de seguridad y registro de actividad.',
-            'No debes cargar informacion sin autorizacion, intentar eludir controles de seguridad ni utilizar la plataforma para consultas o acciones fuera de las politicas corporativas.',
-            'El servicio puede limitar o revocar el acceso cuando se detecten riesgos operativos, incumplimientos de seguridad o actividades incompatibles con el uso empresarial previsto.'
+            '1) Acceso autorizado: solo usuarios habilitados por la organizacion pueden utilizar el sistema en contextos aprobados.',
+            '2) Uso permitido: toda interaccion queda sujeta a monitoreo, auditoria y politicas de seguridad vigentes.',
+            '3) Restricciones: queda prohibido evadir controles, procesar datos no autorizados o intentar acciones fuera de la gobernanza definida.',
+            '4) Responsabilidad: el usuario debe validar resultados antes de decisiones sensibles y respetar normas de privacidad y cumplimiento.',
+            '5) Medidas de proteccion: el servicio puede bloquear o limitar operaciones ante riesgo, abuso o incumplimientos detectados.'
         ]
     }
 };
@@ -44,6 +48,25 @@ export function WorkspaceOnboarding({ handleOnboardingComplete, isAddingWorkspac
   const [auditLogging, setAuditLogging] = useState(true);
   const [activeDocument, setActiveDocument] = useState<LegalDocumentKey | null>(null);
     const [firstConnectionType, setFirstConnectionType] = useState<string | null>(null);
+    const legalModalRef = useRef<HTMLDivElement | null>(null);
+
+    useEffect(() => {
+        if (!activeDocument) {
+            document.body.style.overflow = '';
+            return;
+        }
+
+        document.body.style.overflow = 'hidden';
+
+        requestAnimationFrame(() => {
+            legalModalRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            legalModalRef.current?.focus();
+        });
+
+        return () => {
+            document.body.style.overflow = '';
+        };
+    }, [activeDocument]);
 
   const handleNext = () => setStep(prev => Math.min(prev + 1, totalSteps));
   const handleBack = () => setStep(prev => Math.max(prev - 1, 1));
@@ -370,26 +393,35 @@ export function WorkspaceOnboarding({ handleOnboardingComplete, isAddingWorkspac
         </div>
 
         {activeDocument && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/45 px-4 animate-in fade-in duration-200">
-                <div className="w-full max-w-xl rounded-none border border-[#333333] bg-[#0a0a0a] p-7 shadow-2xl animate-in zoom-in-95 duration-200">
-                    <div className="flex items-start justify-between gap-6">
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/80 px-4 backdrop-blur-sm animate-in fade-in duration-200">
+                <div
+                    ref={legalModalRef}
+                    tabIndex={-1}
+                    className="w-full max-w-3xl border border-[#333333] bg-[#0a0a0a] p-0 shadow-[0_20px_80px_rgba(0,0,0,0.65)] outline-none animate-in zoom-in-95 duration-200"
+                >
+                    <div className="flex items-center justify-between border-b border-[#222222] bg-[#111111] px-6 py-4 font-mono">
                         <div>
-                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8a8a8a]">Legal Information</p>
-                            <h2 className="mt-2 text-2xl font-bold text-[#f4f0e6]">{legalDocuments[activeDocument].title}</h2>
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#8a8a8a]">Legal Document</p>
+                            <h2 className="mt-1 text-lg font-bold text-[#f4f0e6]">{legalDocuments[activeDocument].title}</h2>
                         </div>
                         <button
                             type="button"
                             onClick={() => setActiveDocument(null)}
-                            className="rounded-none border border-[#333333] px-3 py-1.5 text-sm text-[#b5b5b5] transition-colors hover:bg-[#1a1a1a] hover:text-[#f4f0e6]"
+                            className="border border-[#333333] px-3 py-1.5 text-[12px] font-semibold uppercase tracking-[0.14em] text-[#b5b5b5] transition-colors hover:bg-[#1a1a1a] hover:text-[#f4f0e6]"
                         >
                             Close
                         </button>
                     </div>
 
-                    <div className="mt-6 space-y-4 text-sm leading-6 text-[#b5b5b5]">
-                        {legalDocuments[activeDocument].paragraphs.map((paragraph, index) => (
-                            <p key={index}>{paragraph}</p>
-                        ))}
+                    <div className="max-h-[72vh] overflow-y-auto px-6 py-5 font-mono text-[13px] leading-7 text-[#b5b5b5]">
+                        <div className="mb-5 border border-[#222222] bg-[#111111] px-4 py-3 text-[12px] text-[#8a8a8a]">
+                            Este documento aplica para el uso empresarial de InsightForge AI y sus controles de seguridad analitica.
+                        </div>
+                        <div className="space-y-4">
+                            {legalDocuments[activeDocument].paragraphs.map((paragraph, index) => (
+                                <p key={index}>{paragraph}</p>
+                            ))}
+                        </div>
                     </div>
                 </div>
             </div>

@@ -1,18 +1,17 @@
-import { useMsal } from '@azure/msal-react';
 import { useState } from 'react';
-import { loginRequest } from '../lib/authConfig';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 interface LandingPageProps {
     onShowLegal: (doc: 'privacy' | 'terms') => void;
 }
 
 export function LandingPage({ onShowLegal }: LandingPageProps) {
-    const { instance } = useMsal();
+    const router = useRouter();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     const handleLogin = () => {
-        void instance.loginRedirect(loginRequest);
+        router.push('/login');
     };
 
     return (
