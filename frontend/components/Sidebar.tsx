@@ -137,11 +137,15 @@ export function Sidebar({
                                 }}
                                 className="flex flex-1 items-center gap-3 truncate text-left h-full py-1 ml-1"
                              >
-                                <div className="w-5 h-5 flex items-center justify-center shrink-0">
-                                   {(!conn.type || !['Azure SQL', 'PostgreSQL', 'MySQL'].includes(conn.type)) && (
-                                      <div className={`w-1.5 h-1.5 rounded-full ${isConnActive ? 'bg-emerald-500' : 'bg-zinc-400'}`}></div>
-                                   )}
-                                </div>
+                                 <div className="w-5 h-5 flex items-center justify-center shrink-0 relative">
+                                    {conn.type === 'Azure SQL' && <img src="/assets/iconos sql/DeviconAzuresqldatabase.svg" className="w-4 h-4 object-contain" alt="Azure SQL" />}
+                                    {conn.type === 'PostgreSQL' && <img src="/assets/iconos sql/DeviconPostgresqlWordmark.svg" className="w-4 h-4 object-contain" alt="PostgreSQL" />}
+                                    {conn.type === 'MySQL' && <img src="/assets/iconos sql/LogosMysql.svg" className="w-4 h-4 object-contain" alt="MySQL" />}
+                                    {(!conn.type || !['Azure SQL', 'PostgreSQL', 'MySQL'].includes(conn.type)) && (
+                                       <span className="material-symbols-outlined text-[16px] text-zinc-400">database</span>
+                                    )}
+                                    <div className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-[#fafafa] transition-colors ${isConnActive ? 'bg-emerald-500' : 'bg-zinc-300'}`}></div>
+                                 </div>
                                 <span className="truncate">{conn.name}</span>
                              </button>
                              <button 

@@ -23,13 +23,56 @@ export function useConnections(
   const [testSuccess, setTestSuccess] = useState(false);
   const { instance } = useMsal();
 
-  // Load from localStorage on mount
+  // Load from localStorage on mount (immediate, offline-first)
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedConns = localStorage.getItem('qp_connections');
       if (savedConns) try { setConnections(sanitizeConnectionsForStorage(JSON.parse(savedConns))); } catch {}
     }
   }, []);
+
+  // Fetch connections from backend when user is authenticated
+  useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+
+    const loadFromBackend = async () => {
+      try {
+        const res = await fetchWithAuth('/api/connections');
+        if (!res.ok) return;
+        const backendConns: any[] = await res.json();
+        if (cancelled || !backendConns.length) return;
+
+        // Map backend records to frontend Connection shape
+        const mapped: Connection[] = backendConns.map((c: any) => ({
+          id: c.id,
+          name: c.connectionName,
+          type: c.dbType,
+          host: c.host,
+          port: c.port || '',
+          database: c.databaseName,
+          username: c.username || '',
+          password: '', // never store passwords client-side from backend
+          authType: c.authType || 'SQL',
+        }));
+
+        setConnections(prev => {
+          // Merge: backend wins for existing IDs, keep any local-only ones
+          const backendIds = new Set(mapped.map(c => c.id));
+          const localOnly = prev.filter(c => !backendIds.has(c.id));
+          return [...mapped, ...localOnly];
+        });
+
+        addLog("INFO", `Loaded ${mapped.length} saved connection(s) from server.`);
+      } catch (err) {
+        // Silent fail — localStorage already has cached data
+        console.warn('Failed to load connections from backend:', err);
+      }
+    };
+
+    loadFromBackend();
+    return () => { cancelled = true; };
+  }, [userId]);
 
   // Save to localStorage
   useEffect(() => { 
@@ -125,9 +168,9 @@ export function useConnections(
             setConnections(prev => [...prev, connToSave]);
         }
 
-        // Persist to backend (fire-and-forget is OK here; localStorage is the source of truth for now)
+        // Persist to backend so connection survives across sessions/devices
         try {
-            await fetchWithAuth('/api/connections', {
+            const saveRes = await fetchWithAuth('/api/connections', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -143,7 +186,12 @@ export function useConnections(
                     authType: connToSave.authType
                 })
             });
-        } catch { /* backend save is best-effort */ }
+            if (!saveRes.ok) {
+                addLog("WARN", "Connection saved locally but failed to sync to server. It may not persist across sessions.");
+            }
+        } catch (saveErr) {
+            addLog("WARN", "Connection saved locally but could not reach the server. It may not persist across sessions.");
+        }
 
         setConnError("");
         setCurrentView('manage_connections');
