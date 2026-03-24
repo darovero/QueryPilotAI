@@ -69,6 +69,7 @@ public class FraudInsightOrchestrator
         // =====================================================
         int turnCount = 0;
         string? conversationContext = null;
+        string? lastSqlFromConversation = null;
 
         if (request.SessionId is not null && Guid.TryParse(request.SessionId, out var sessionGuid))
         {
@@ -81,14 +82,30 @@ public class FraudInsightOrchestrator
 
             if (recentTurns.Count > 0)
             {
-                conversationContext = JsonSerializer.Serialize(recentTurns.Select(t => new
+                var lastAnalyticalTurn = recentTurns.LastOrDefault(t => !string.IsNullOrWhiteSpace(t.SqlGenerated));
+                lastSqlFromConversation = lastAnalyticalTurn?.SqlGenerated;
+
+                conversationContext = JsonSerializer.Serialize(new
                 {
-                    question = t.Question,
-                    summary = t.Summary,
-                    sql = t.SqlGenerated,
-                    intent = t.IntentType,
-                    timestamp = t.CreatedAt
-                }));
+                    latest = lastAnalyticalTurn is null
+                        ? null
+                        : new
+                        {
+                            question = lastAnalyticalTurn.Question,
+                            summary = lastAnalyticalTurn.Summary,
+                            sql = lastAnalyticalTurn.SqlGenerated,
+                            intent = lastAnalyticalTurn.IntentType,
+                            timestamp = lastAnalyticalTurn.CreatedAt
+                        },
+                    turns = recentTurns.Select(t => new
+                    {
+                        question = t.Question,
+                        summary = t.Summary,
+                        sql = t.SqlGenerated,
+                        intent = t.IntentType,
+                        timestamp = t.CreatedAt
+                    })
+                });
             }
 
             context.SetCustomStatus(new PipelineStep("conversation_context", "Contexto recuperado", "Completed", context.CurrentUtcDateTime));
@@ -155,6 +172,35 @@ public class FraudInsightOrchestrator
             nameof(PlanSqlActivity),
             new SqlPlannerInput(request.Question, dbSchema, conversationContext));
 
+        if (CanRecoverWithPreviousSql(plannerResponse.Status, request.Question, lastSqlFromConversation))
+        {
+            plannerResponse = new SqlPlannerResponse
+            {
+                Status = "ready",
+                UserQuestion = request.Question,
+                Sql = new SqlInfo
+                {
+                    Dialect = "tsql",
+                    Query = lastSqlFromConversation!,
+                    Explanation = "Se reutiliza el SQL válido de la consulta previa para resolver una solicitud de seguimiento contextual."
+                },
+                Governance = new GovernanceInfo
+                {
+                    SafeToExecute = true,
+                    RiskLevel = "low",
+                    ApprovalRequired = false,
+                    ApprovalReason = string.Empty,
+                    PolicyFlags = Array.Empty<string>()
+                }
+            };
+
+            context.SetCustomStatus(new PipelineStep(
+                "sql_planning",
+                "Se reutilizó SQL previo para resolver el seguimiento de la conversación",
+                "Completed",
+                context.CurrentUtcDateTime));
+        }
+
         // Handle non-ready statuses
         if (plannerResponse.Status != "ready")
         {
@@ -206,7 +252,17 @@ public class FraudInsightOrchestrator
         // =====================================================
         if (validation.RequiresApproval)
         {
-            context.SetCustomStatus(new PipelineStep("approval", "Esperando aprobación humana", "Active", context.CurrentUtcDateTime));
+            context.SetCustomStatus(new
+            {
+                Step = "approval",
+                Label = "Esperando aprobación humana",
+                Status = "PendingApproval",
+                Timestamp = context.CurrentUtcDateTime,
+                Message = "Esta consulta requiere aprobación manual antes de ejecutarse.",
+                Sql = validation.NormalizedSql,
+                RiskLevel = validation.RiskLevel,
+                Reasons = validation.Reasons
+            });
 
             await context.CallActivityAsync(nameof(SaveAuditTrailActivity), new AuditTrailRecord(
                 requestId, request.UserId, request.Role, request.Question,
@@ -279,7 +335,8 @@ public class FraudInsightOrchestrator
         // =====================================================
         // Step 9: Save conversation turn + audit
         // =====================================================
-        var summary = interpretation.ResponseForUser ?? interpretation.ExecutiveSummary ?? "Análisis completado.";
+        var summary = BuildUserNarrativeSummary(interpretation, rows.Count);
+        var warnings = BuildWarnings(interpretation);
 
         if (request.SessionId is not null && Guid.TryParse(request.SessionId, out var saveSessionGuid))
         {
@@ -307,7 +364,95 @@ public class FraudInsightOrchestrator
         return new InsightResponse(
             context.InstanceId, "Completed", summary,
             interpretation.KeyFindings?.Select(f => f.Title ?? "").ToArray() ?? Array.Empty<string>(),
-            validation.NormalizedSql, Array.Empty<string>(),
+            validation.NormalizedSql, warnings,
             rows, new AuditMetadata(interpretation.Risk?.Level ?? "low", null));
+    }
+
+    private static string BuildUserNarrativeSummary(ResultInterpretation interpretation, int rowCount)
+    {
+        var primary = FirstNonEmpty(
+            interpretation.ResponseForUser,
+            interpretation.ExecutiveSummary,
+            interpretation.QuestionAnswered,
+            interpretation.Reason);
+
+        if (string.IsNullOrWhiteSpace(primary))
+        {
+            if (rowCount == 0)
+            {
+                primary = "No se encontraron registros que coincidan con tu consulta para el período analizado. Intenta ampliar el rango de fechas o verificar los filtros utilizados.";
+            }
+            else
+            {
+                primary = $"Se procesó la consulta correctamente y se obtuvieron {rowCount} registros. A continuación se muestran los resultados para facilitar el análisis.";
+            }
+        }
+
+        var warnings = BuildWarnings(interpretation);
+        if (warnings.Length == 0)
+        {
+            return primary;
+        }
+
+        return $"{primary} Considera estas alertas: {string.Join(" ", warnings)}";
+    }
+
+    private static string[] BuildWarnings(ResultInterpretation interpretation)
+    {
+        return interpretation.Warnings
+            ?? interpretation.Limitations
+            ?? Array.Empty<string>();
+    }
+
+    private static bool CanRecoverWithPreviousSql(string plannerStatus, string question, string? previousSql)
+    {
+        if (string.IsNullOrWhiteSpace(previousSql))
+        {
+            return false;
+        }
+
+        if (!string.Equals(plannerStatus, "unsupported", StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(plannerStatus, "needs_clarification", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(question))
+        {
+            return false;
+        }
+
+        var normalizedQuestion = question.ToLowerInvariant();
+        var followUpHints = new[]
+        {
+            "dicha",
+            "esa",
+            "ese",
+            "anterior",
+            "mismo",
+            "misma",
+            "grafica",
+            "gráfica",
+            "grafico",
+            "gráfico",
+            "chart",
+            "visual",
+            "tendencia"
+        };
+
+        return followUpHints.Any(normalizedQuestion.Contains);
+    }
+
+    private static string? FirstNonEmpty(params string?[] values)
+    {
+        foreach (var value in values)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                return value.Trim();
+            }
+        }
+
+        return null;
     }
 }
