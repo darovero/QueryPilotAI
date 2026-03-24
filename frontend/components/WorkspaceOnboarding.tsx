@@ -22,7 +22,7 @@ const legalDocuments: Record<LegalDocumentKey, { title: string; paragraphs: stri
 };
 
 interface WorkspaceOnboardingProps {
-    handleOnboardingComplete: (data: { name: string; industry: string; }) => void;
+    handleOnboardingComplete: (data: { name: string; industry: string; firstConnectionType?: string | null }) => void;
     isAddingWorkspace: boolean;
 }
 
@@ -43,10 +43,11 @@ export function WorkspaceOnboarding({ handleOnboardingComplete, isAddingWorkspac
   const [dataMasking, setDataMasking] = useState(true);
   const [auditLogging, setAuditLogging] = useState(true);
   const [activeDocument, setActiveDocument] = useState<LegalDocumentKey | null>(null);
+    const [firstConnectionType, setFirstConnectionType] = useState<string | null>(null);
 
   const handleNext = () => setStep(prev => Math.min(prev + 1, totalSteps));
   const handleBack = () => setStep(prev => Math.max(prev - 1, 1));
-  const handleFinish = () => handleOnboardingComplete(workspace);
+    const handleFinish = () => handleOnboardingComplete({ ...workspace, firstConnectionType });
 
   const toggleUseCase = (useCase: string) => {
       setUseCases(prev => prev.includes(useCase) ? prev.filter(c => c !== useCase) : [...prev, useCase]);
@@ -320,23 +321,44 @@ export function WorkspaceOnboarding({ handleOnboardingComplete, isAddingWorkspac
                  </div>
                  <div className="bg-[#0a0a0a] border border-[#333333] rounded-none p-8 shadow-sm space-y-6 text-center">
                     
-                    <div className="grid grid-cols-2 gap-3 mb-6">
-                        <div className="border border-[#333333] rounded-none p-4 bg-[#111111] flex flex-col items-center justify-center gap-2">
-                           <img src="/assets/iconos sql/DeviconAzuresqldatabase.svg" className="w-8 h-8 opacity-70" alt="Azure" />
-                           <span className="text-[12px] font-bold text-[#b5b5b5]">Azure SQL</span>
-                        </div>
-                        <div className="border border-[#333333] rounded-none p-4 bg-[#111111] flex flex-col items-center justify-center gap-2">
-                           <img src="/assets/iconos sql/DeviconPostgresqlWordmark.svg" className="w-8 h-8 opacity-70" alt="Postgres" />
-                           <span className="text-[12px] font-bold text-[#b5b5b5]">PostgreSQL</span>
-                        </div>
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
+                                {[
+                                     { name: 'Azure SQL', icon: '/assets/iconos sql/DeviconAzuresqldatabase.svg' },
+                                     { name: 'PostgreSQL', icon: '/assets/iconos sql/DeviconPostgresqlWordmark.svg' },
+                                     { name: 'MySQL', icon: '/assets/iconos sql/LogosMysql.svg' },
+                                     { name: 'MariaDB', icon: '/assets/iconos sql/LogosMariadb.svg' },
+                                     { name: 'SQLite', icon: '/assets/iconos sql/LogosSqlite.svg' }
+                                ].map((db) => (
+                                     <button
+                                        key={db.name}
+                                        type="button"
+                                        onClick={() => setFirstConnectionType(prev => prev === db.name ? null : db.name)}
+                                        className={`border rounded-none p-4 flex flex-col items-center justify-center gap-2 transition-colors ${firstConnectionType === db.name ? 'border-[#a78bfa] bg-[#141022]' : 'border-[#333333] bg-[#111111] hover:border-zinc-500'}`}
+                                     >
+                                         <img src={db.icon} className="w-8 h-8 opacity-90" alt={db.name} />
+                                         <span className={`text-[12px] font-bold ${firstConnectionType === db.name ? 'text-[#f4f0e6]' : 'text-[#b5b5b5]'}`}>{db.name}</span>
+                                     </button>
+                                ))}
                     </div>
 
-                    <button 
-                       onClick={handleFinish}
-                       disabled={isAddingWorkspace}
-                       className="w-full bg-[#a78bfa] text-black font-bold rounded-none py-4 text-[14px] hover:bg-[#8b5cf6] transition-all shadow-md active:scale-95 disabled:opacity-50">
-                       {isAddingWorkspace ? 'Creating Workspace...' : 'Skip and go to Dashboard'}
-                    </button>
+                          <div className="space-y-3">
+                             <button 
+                                 onClick={handleFinish}
+                                 disabled={isAddingWorkspace || !firstConnectionType}
+                                 className="w-full bg-[#a78bfa] text-black font-bold rounded-none py-4 text-[14px] hover:bg-[#8b5cf6] transition-all shadow-md active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+                                 {isAddingWorkspace ? 'Creating Workspace...' : `Create Workspace and Connect ${firstConnectionType || ''}`}
+                             </button>
+
+                             <button 
+                                 onClick={() => {
+                                    setFirstConnectionType(null);
+                                                     handleOnboardingComplete({ ...workspace, firstConnectionType: null });
+                                 }}
+                                 disabled={isAddingWorkspace}
+                                 className="w-full bg-[#111111] border border-[#333333] text-[#d1cdbd] font-semibold rounded-none py-3.5 text-[14px] hover:bg-[#1a1a1a] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                                 {isAddingWorkspace ? 'Creating Workspace...' : 'Skip and go to Dashboard'}
+                             </button>
+                          </div>
                     
                     <p className="text-[13px] text-[#a3a3a3] font-medium pt-2">
                         You can add connections anytime from the sidebar.

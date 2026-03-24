@@ -46,9 +46,9 @@ export function Sidebar({
           
           <button 
              onClick={() => setIsSidebarOpen(false)}
-             className="absolute -right-3 top-8 w-6 h-6 bg-[#0a0a0a] border border-[#333333] rounded-none flex items-center justify-center text-[#8a8a8a] hover:text-[#f4f0e6] hover:bg-[#111111] transition-colors z-50 shadow-sm"
+             className="absolute -right-4 top-7 w-9 h-9 bg-[#0a0a0a] border border-[#333333] rounded-xl flex items-center justify-center text-[#8a8a8a] hover:text-[#f4f0e6] hover:bg-[#111111] transition-colors z-50 shadow-sm"
           >
-             <span className="material-symbols-outlined text-[14px]">chevron_left</span>
+             <span className="material-symbols-outlined text-[20px]">chevron_left</span>
           </button>
 
           <div className="flex flex-col h-full">
@@ -83,7 +83,7 @@ export function Sidebar({
             </button>
             <button 
               onClick={() => setCurrentView('settings')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-none text-[13px] transition-all duration-200 group active:scale-[0.98] ${currentView === 'settings' ? 'bg-[#1a1a1a] text-[#f4f0e6] font-medium' : 'text-[#a3a3a3] hover:text-[#f4f0e6] hover:bg-[#1a1a1a]/50'}`}>
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-none text-[13px] transition-all duration-200 group active:scale-[0.98] ${currentView.startsWith('settings') ? 'bg-[#1a1a1a] text-[#f4f0e6] font-medium' : 'text-[#a3a3a3] hover:text-[#f4f0e6] hover:bg-[#1a1a1a]/50'}`}>
               <span className="material-symbols-outlined text-[20px] transition-transform text-[#8a8a8a] group-hover:text-[#d1cdbd]">tune</span>
               <span className="group-hover:translate-x-1 transition-transform duration-200">Settings</span>
             </button>

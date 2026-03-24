@@ -183,6 +183,30 @@ body {
   padding-right: 2px;
 }
 
+.mosaic-center {
+  position: relative;
+  isolation: isolate;
+}
+
+.mosaic-center::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: radial-gradient(rgba(148, 163, 184, 0.34) 1.9px, transparent 1.9px);
+  background-size: 30px 30px;
+  background-position: 0 0;
+  opacity: 0.82;
+  mask-image: radial-gradient(ellipse at center, black 36%, rgba(0, 0, 0, 0.8) 68%, transparent 96%);
+  -webkit-mask-image: radial-gradient(ellipse at center, black 36%, rgba(0, 0, 0, 0.8) 68%, transparent 96%);
+}
+
+.mosaic-center > * {
+  position: relative;
+  z-index: 1;
+}
+
 .card {
   background: var(--surface);
   border: 1px solid var(--line);

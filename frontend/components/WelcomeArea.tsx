@@ -12,7 +12,7 @@ interface WelcomeAreaProps {
 
 export function WelcomeArea({ userName, setCurrentView }: WelcomeAreaProps) {
   return (
-      <div className="mono-theme flex-1 flex flex-col items-center pt-32 px-10 bg-zinc-950 w-full h-full relative overflow-y-auto animate-in fade-in duration-500">
+      <div className="mono-theme mosaic-center flex-1 flex flex-col items-center pt-32 px-10 bg-zinc-950 w-full h-full relative overflow-y-auto animate-in fade-in duration-500">
       <div className="max-w-2xl w-full">
         {/* Header */}
         <div className="mb-12 mono-enter">

@@ -31,11 +31,88 @@ export function ConnectionManager({
   connError, testSuccess, isTestingConnection, handleMsalLogin, handleSaveConnection,
   fetchWithAuth, chatSessions, setChatSessions, openTabs, setOpenTabs, setExpandedConns, addLog
 }: ConnectionManagerProps) {
+  const enabledIntegrations = new Set(['Azure SQL', 'PostgreSQL', 'MySQL', 'MariaDB', 'SQLite', 'Oracle']);
+
+  const connectionFields = connForm.type === 'SQLite'
+    ? [{ label: 'Database File Path*', key: 'host', type: 'text' }]
+    : [
+        { label: 'Server Address (URL)*', key: 'host', type: 'text' },
+        { label: 'Database Name*', key: 'database', type: 'text' }
+      ];
+
+  const docsByType: Record<string, { title: string; url: string; icon: string; guides: Array<{ name: string; url: string; iconPath?: string; symbol?: string }> }> = {
+    'Azure SQL': {
+      title: 'Connecting Azure SQL',
+      url: 'https://learn.microsoft.com/en-us/azure/azure-sql/database/connect-query-portal',
+      icon: '/assets/iConos 28_28/LogosMicrosoftIcon.svg',
+      guides: [
+        { name: 'Azure SQL', url: 'https://learn.microsoft.com/en-us/azure/azure-sql/database/', iconPath: '/assets/iConos 28_28/MaterialIconThemeAzure.svg' },
+        { name: 'DigitalOcean', url: 'https://docs.digitalocean.com/products/databases/', iconPath: '/assets/iConos 28_28/LogosDigitalOceanIcon.svg' },
+        { name: 'Heroku', url: 'https://devcenter.heroku.com/categories/heroku-postgres', iconPath: '/assets/iConos 28_28/LogosHerokuIcon.svg' },
+        { name: 'Neon', url: 'https://neon.tech/docs/connect/connect-from-any-app', iconPath: '/assets/iConos 28_28/LogosNeonIcon.svg' },
+        { name: 'Supabase', url: 'https://supabase.com/docs/guides/database/connecting-to-postgres', iconPath: '/assets/iConos 28_28/DeviconSupabase.svg' }
+      ]
+    },
+    'PostgreSQL': {
+      title: 'Connecting PostgreSQL',
+      url: 'https://www.postgresql.org/docs/current/tutorial-start.html',
+      icon: '/assets/iconos sql/DeviconPostgresqlWordmark.svg',
+      guides: [
+        { name: 'DigitalOcean', url: 'https://docs.digitalocean.com/products/databases/postgresql/', iconPath: '/assets/iConos 28_28/LogosDigitalOceanIcon.svg' },
+        { name: 'Supabase', url: 'https://supabase.com/docs/guides/database/connecting-to-postgres', iconPath: '/assets/iConos 28_28/DeviconSupabase.svg' },
+        { name: 'Neon', url: 'https://neon.tech/docs/connect/connect-from-any-app', iconPath: '/assets/iConos 28_28/LogosNeonIcon.svg' },
+        { name: 'Render', url: 'https://render.com/docs/databases', symbol: 'cloud' },
+        { name: 'AWS RDS', url: 'https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_PostgreSQL.html', symbol: 'dns' }
+      ]
+    },
+    'MySQL': {
+      title: 'Connecting MySQL',
+      url: 'https://dev.mysql.com/doc/refman/8.0/en/connecting.html',
+      icon: '/assets/iconos sql/LogosMysql.svg',
+      guides: [
+        { name: 'DigitalOcean', url: 'https://docs.digitalocean.com/products/databases/mysql/', iconPath: '/assets/iConos 28_28/LogosDigitalOceanIcon.svg' },
+        { name: 'Railway', url: 'https://docs.railway.app/databases/mysql', symbol: 'train' },
+        { name: 'PlanetScale', url: 'https://planetscale.com/docs', symbol: 'public' }
+      ]
+    },
+    'MariaDB': {
+      title: 'Connecting MariaDB',
+      url: 'https://mariadb.com/kb/en/library/getting-installing-and-upgrading-mariadb/',
+      icon: '/assets/iconos sql/LogosMariadb.svg',
+      guides: [
+        { name: 'MariaDB Docs', url: 'https://mariadb.com/kb/en/documentation/', iconPath: '/assets/iconos sql/LogosMariadb.svg' },
+        { name: 'DigitalOcean', url: 'https://docs.digitalocean.com/products/databases/mysql/', iconPath: '/assets/iConos 28_28/LogosDigitalOceanIcon.svg' },
+        { name: 'Railway', url: 'https://docs.railway.app/databases/mysql', symbol: 'train' }
+      ]
+    },
+    'SQLite': {
+      title: 'Connecting SQLite',
+      url: 'https://www.sqlite.org/docs.html',
+      icon: '/assets/iconos sql/LogosSqlite.svg',
+      guides: [
+        { name: 'SQLite Docs', url: 'https://www.sqlite.org/docs.html', iconPath: '/assets/iconos sql/LogosSqlite.svg' },
+        { name: 'Turso', url: 'https://docs.turso.tech/', symbol: 'bolt' }
+      ]
+    },
+    'Oracle': {
+      title: 'Connecting Oracle',
+      url: 'https://docs.oracle.com/en/database/',
+      icon: '/assets/iconos sql/DeviconOracle.svg',
+      guides: [
+        { name: 'Oracle Database Docs', url: 'https://docs.oracle.com/en/database/', iconPath: '/assets/iconos sql/DeviconOracle.svg' },
+        { name: 'Oracle Cloud', url: 'https://docs.oracle.com/en-us/iaas/Content/home.htm', symbol: 'cloud' },
+        { name: 'Connection Guide', url: 'https://www.oracle.com/database/technologies/appdev/sql.html', symbol: 'link' }
+      ]
+    }
+  };
+
+  const docs = docsByType[connForm.type || 'Azure SQL'] || docsByType['Azure SQL'];
+
   return (
     <>
       {/* VIEW: INTEGRATIONS */}
       {currentView === 'integrations' && (
-        <div className="py-16 px-10 max-w-5xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="mosaic-center py-16 px-10 max-w-5xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
           <button 
             onClick={() => setCurrentView('welcome')}
             className="mb-6 flex items-center gap-2 text-[13px] font-medium text-zinc-400 hover:text-zinc-100 transition-colors"
@@ -75,20 +152,37 @@ export function ConnectionManager({
                         setEditingConnId(null);
                         setConnForm({ name: "My Postgres Database", host: "db.mypostgres.com", port: "5432", database: "analytics_db", username: "postgres_admin", password: "", type: "PostgreSQL" });
                         setCurrentView('connect_postgres');
+                    } else if (item.name === 'MySQL') {
+                        setEditingConnId(null);
+                        setConnForm({ name: "My MySQL Database", host: "mysql-database.com", port: "3306", database: "my_database", username: "root", password: "", type: "MySQL" });
+                        setCurrentView('connect_postgres');
+                    } else if (item.name === 'MariaDB') {
+                      setEditingConnId(null);
+                      setConnForm({ name: "My MariaDB Database", host: "mariadb-database.com", port: "3306", database: "my_database", username: "root", password: "", type: "MariaDB" });
+                      setCurrentView('connect_postgres');
+                    } else if (item.name === 'SQLite') {
+                        setEditingConnId(null);
+                        setConnForm({ name: "My SQLite Database", host: "C:/data/app.db", port: "", database: "", username: "", password: "", type: "SQLite" });
+                        setCurrentView('connect_postgres');
+                    } else if (item.name === 'Oracle') {
+                      setEditingConnId(null);
+                      setConnForm({ name: "My Oracle Database", host: "oracle-database.com", port: "1521", database: "ORCL", username: "system", password: "", type: "Oracle" });
+                      setCurrentView('connect_postgres');
                     }
                 }}
-                className={`bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-2xl p-5 flex items-center gap-4 transition-all active:scale-[0.98] group hover:shadow-sm ${item.name !== 'Azure SQL' && 'opacity-50 cursor-not-allowed hover:border-zinc-800 active:scale-100 hover:shadow-none'}`}
+                className={`bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-2xl p-5 flex items-center gap-4 transition-all active:scale-[0.98] group hover:shadow-sm ${!enabledIntegrations.has(item.name) && 'opacity-50 cursor-not-allowed hover:border-zinc-800 active:scale-100 hover:shadow-none'}`}
+                disabled={!enabledIntegrations.has(item.name)}
               >
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center transition-transform ${item.name === 'Azure SQL' ? 'bg-zinc-800 group-hover:bg-zinc-700 group-hover:scale-105' : 'bg-zinc-800'}`}>
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center transition-transform ${enabledIntegrations.has(item.name) ? 'bg-zinc-800 group-hover:bg-zinc-700 group-hover:scale-105' : 'bg-zinc-800'}`}>
                    {item.icon.includes('.svg') ? (
                       <img src={item.icon} className="w-6 h-6 object-contain" alt={item.name} />
                    ) : (
-                      <span className={`material-symbols-outlined text-[20px] ${item.name === 'Azure SQL' ? 'text-zinc-100' : 'text-zinc-400'}`}>database</span>
+                      <span className={`material-symbols-outlined text-[20px] ${enabledIntegrations.has(item.name) ? 'text-zinc-100' : 'text-zinc-400'}`}>database</span>
                    )}
                 </div>
                 <div className="flex flex-col items-start gap-1">
-                  <span className={`text-[14px] font-medium ${item.name === 'Azure SQL' ? 'text-zinc-100' : 'text-zinc-400'}`}>{item.name}</span>
-                  {item.name !== 'Azure SQL' && <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Coming Soon</span>}
+                  <span className={`text-[14px] font-medium ${enabledIntegrations.has(item.name) ? 'text-zinc-100' : 'text-zinc-400'}`}>{item.name}</span>
+                  {!enabledIntegrations.has(item.name) && <span className="text-[10px] uppercase tracking-wider text-zinc-500 font-bold">Coming Soon</span>}
                 </div>
               </button>
             ))}
@@ -98,7 +192,7 @@ export function ConnectionManager({
 
       {/* VIEW: CONNECT AZURE SQL / POSTGRES */}
       {(currentView === 'connect_azuresql' || currentView === 'connect_postgres') && (
-        <div className="flex h-full animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="mosaic-center flex h-full animate-in fade-in slide-in-from-bottom-4 duration-500">
            <div className="flex-1 flex justify-center py-12 px-8 overflow-y-auto">
               <div className="w-full max-w-[480px]">
                  
@@ -109,6 +203,14 @@ export function ConnectionManager({
                   <div className="flex items-center gap-4 mb-8">
                     {connForm.type === 'Azure SQL' ? (
                        <img src="/assets/iconos sql/DeviconAzuresqldatabase.svg" className="w-10 h-10" alt="Azure SQL" />
+                    ) : connForm.type === 'MySQL' ? (
+                      <img src="/assets/iconos sql/LogosMysql.svg" className="w-10 h-10" alt="MySQL" />
+                      ) : connForm.type === 'MariaDB' ? (
+                        <img src="/assets/iconos sql/LogosMariadb.svg" className="w-10 h-10" alt="MariaDB" />
+                    ) : connForm.type === 'SQLite' ? (
+                      <img src="/assets/iconos sql/LogosSqlite.svg" className="w-10 h-10" alt="SQLite" />
+                        ) : connForm.type === 'Oracle' ? (
+                          <img src="/assets/iconos sql/DeviconOracle.svg" className="w-10 h-10" alt="Oracle" />
                     ) : (
                        <img src="/assets/iconos sql/DeviconPostgresqlWordmark.svg" className="w-10 h-10" alt="PostgreSQL" />
                     )}
@@ -143,10 +245,7 @@ export function ConnectionManager({
                         />
                      </div>
 
-                     {[
-                      { label: "Server Address (URL)*", key: "host", type: "text" },
-                      { label: "Database Name*", key: "database", type: "text" }
-                    ].map((field, i) => (
+                     {connectionFields.map((field, i) => (
                        <div key={i} className="space-y-1.5">
                           <label className="text-[12px] font-semibold text-zinc-300 uppercase tracking-widest">{field.label}</label>
                           <input 
@@ -212,7 +311,7 @@ export function ConnectionManager({
                        </div>
                     )}
 
-                    {(!connForm.authType || connForm.authType === 'SQL') && [
+                    {(connForm.type !== 'SQLite' && (!connForm.authType || connForm.authType === 'SQL')) && [
                       { label: "Username*", key: "username", type: "text" },
                       { label: "Password*", key: "password", type: "password" }
                     ].map((field, i) => (
@@ -266,44 +365,18 @@ export function ConnectionManager({
               <div className="space-y-10">
                  <div className="space-y-4">
                    <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Documentation</div>
-                   <a className="flex items-center gap-3 text-[13px] font-medium text-zinc-300 hover:text-zinc-100 transition-colors" href="https://learn.microsoft.com/en-us/azure/azure-sql/database/connect-query-portal" target="_blank" rel="noopener noreferrer">
-                      <img src="/assets/iConos 28_28/LogosMicrosoftIcon.svg" className="w-8 h-8" alt="Microsoft" />
-                      Connecting Azure SQL
+                   <a className="flex items-center gap-3 text-[13px] font-medium text-zinc-300 hover:text-zinc-100 transition-colors" href={docs.url} target="_blank" rel="noopener noreferrer">
+                      <img src={docs.icon} className="w-8 h-8 object-contain" alt={connForm.type || 'Database'} />
+                      {docs.title}
                     </a>
                  </div>
                  <div className="space-y-4">
                    <div className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Platform Guides</div>
                    <div className="space-y-2">
-                     {[
-                       { 
-                         name: 'Azure SQL', 
-                         url: 'https://learn.microsoft.com/en-us/azure/azure-sql/database/',
-                         icon: <img src="/assets/iConos 28_28/MaterialIconThemeAzure.svg" className="w-6 h-6" alt="Azure" />
-                       },
-                       { 
-                         name: 'DigitalOcean', 
-                         url: 'https://docs.digitalocean.com/products/databases/',
-                         icon: <img src="/assets/iConos 28_28/LogosDigitalOceanIcon.svg" className="w-6 h-6" alt="DigitalOcean" />
-                       },
-                       { 
-                         name: 'Heroku', 
-                         url: 'https://devcenter.heroku.com/categories/heroku-postgres',
-                         icon: <img src="/assets/iConos 28_28/LogosHerokuIcon.svg" className="w-6 h-6" alt="Heroku" />
-                       },
-                       { 
-                         name: 'Neon', 
-                         url: 'https://neon.tech/docs/connect/connect-from-any-app',
-                         icon: <img src="/assets/iConos 28_28/LogosNeonIcon.svg" className="w-6 h-6" alt="Neon" />
-                       },
-                       { 
-                         name: 'Supabase', 
-                         url: 'https://supabase.com/docs/guides/database/connecting-to-postgres',
-                         icon: <img src="/assets/iConos 28_28/DeviconSupabase.svg" className="w-6 h-6" alt="Supabase" />
-                       }
-                     ].map((plat) => (
+                     {docs.guides.map((plat) => (
                        <a key={plat.name} className="flex items-center gap-3 text-[13px] font-medium text-zinc-300 hover:text-zinc-100 transition-colors p-2 rounded-lg hover:bg-zinc-800/60 -ml-2" href={plat.url} target="_blank" rel="noopener noreferrer">
                          <div className="w-7 h-7 flex items-center justify-center shrink-0">
-                           {plat.icon}
+                           {plat.iconPath ? <img src={plat.iconPath} className="w-6 h-6 object-contain" alt={plat.name} /> : <span className="material-symbols-outlined text-[18px] text-zinc-300">{plat.symbol || 'database'}</span>}
                          </div>
                          {plat.name}
                        </a>
@@ -317,7 +390,7 @@ export function ConnectionManager({
 
       {/* VIEW: MANAGE CONNECTIONS */}
       {currentView === 'manage_connections' && (
-        <div className="py-16 px-10 max-w-5xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="mosaic-center py-16 px-10 max-w-5xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
           <button 
             onClick={() => setCurrentView('welcome')}
             className="mb-6 flex items-center gap-2 text-[13px] font-medium text-zinc-400 hover:text-zinc-100 transition-colors"
@@ -359,7 +432,10 @@ export function ConnectionManager({
                                {conn.type === 'Azure SQL' && <img src="/assets/iconos sql/DeviconAzuresqldatabase.svg" className="w-6 h-6 object-contain" alt="Azure" />}
                                {(conn.type === 'PostgreSQL' || (!conn.type && !conn.authType)) && <img src="/assets/iconos sql/DeviconPostgresqlWordmark.svg" className="w-6 h-6 object-contain" alt="Postgres" />}
                                {conn.type === 'MySQL' && <img src="/assets/iconos sql/LogosMysql.svg" className="w-6 h-6 object-contain" alt="MySQL" />}
-                               {conn.type && !['Azure SQL', 'PostgreSQL', 'MySQL'].includes(conn.type) && (
+                               {conn.type === 'MariaDB' && <img src="/assets/iconos sql/LogosMariadb.svg" className="w-6 h-6 object-contain" alt="MariaDB" />}
+                               {conn.type === 'SQLite' && <img src="/assets/iconos sql/LogosSqlite.svg" className="w-6 h-6 object-contain" alt="SQLite" />}
+                               {conn.type === 'Oracle' && <img src="/assets/iconos sql/DeviconOracle.svg" className="w-6 h-6 object-contain" alt="Oracle" />}
+                               {conn.type && !['Azure SQL', 'PostgreSQL', 'MySQL', 'MariaDB', 'SQLite', 'Oracle'].includes(conn.type) && (
                                   <span className="material-symbols-outlined text-[22px] text-zinc-100">database</span>
                                )}
                             </div>   {conn.name}

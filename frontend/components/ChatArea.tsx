@@ -1,5 +1,6 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { ChatSession, Message, Connection } from "./types";
+import { TypewriterTitle } from "./TypewriterTitle";
 
 interface ChatAreaProps {
   activeChatSession: ChatSession | null;
@@ -17,7 +18,7 @@ interface ChatAreaProps {
 }
 
 export function ChatArea({
-  activeChatSession, connections, isFullView, setIsFullView, messagesEndRef,
+   activeChatSession, connections, isFullView, messagesEndRef,
   addLog, fetchWithAuth, handleApproval, handleSubmit, input, setInput, isTyping
 }: ChatAreaProps) {
   const [approvalComments, setApprovalComments] = useState<Record<string, string>>({});
@@ -31,43 +32,28 @@ export function ChatArea({
   if (!activeChatSession) return null;
 
   return (
-      <div className={`flex flex-col h-full bg-zinc-950 transition-all duration-300 ease-in-out relative ${isFullView ? 'opacity-100 flex-1' : 'opacity-100 flex-1 z-10'}`}>
-        
-        {/* Full View Toggle */}
-        <button 
-           onClick={() => setIsFullView(!isFullView)}
-           className="icon-button absolute top-6 left-6 z-50 p-2.5 rounded-xl shadow-sm transition-all flex items-center justify-center group hidden md:flex"
-           title={isFullView ? "Show Code Space" : "Hide Code Space"}
-        >
-           <span className="material-symbols-outlined text-[18px] transition-transform duration-300 group-hover:scale-110">
-              {isFullView ? 'close_fullscreen' : 'fullscreen'}
-           </span>
-        </button>
-        {isFullView && (
-           <div className="absolute top-6 left-20 z-50 px-4 py-2.5 bg-zinc-900 text-white rounded-xl shadow-sm text-[13px] font-medium flex items-center gap-2 animate-in fade-in slide-in-from-left-4 duration-300 pointer-events-none">
-              <span className="material-symbols-outlined text-[16px] text-zinc-400">info</span>
-              Focus Mode Enabled
-           </div>
-        )}
+      <div className={`mosaic-center flex flex-col h-full bg-zinc-950 transition-all duration-300 ease-in-out relative overflow-hidden ${isFullView ? 'opacity-100 flex-1' : 'opacity-100 flex-1 z-10'}`}>
+        <div className="pointer-events-none absolute -top-20 -right-20 h-72 w-72 rounded-full bg-indigo-500/10 blur-3xl" />
+        <div className="pointer-events-none absolute bottom-20 -left-24 h-80 w-80 rounded-full bg-cyan-500/10 blur-3xl" />
 
-        <div className={`pt-6 pb-4 border-b border-zinc-800 bg-zinc-950 sticky top-0 z-30 transition-all duration-300 ${isFullView ? 'px-24' : 'px-8 md:px-16 lg:px-24'}`}>
+      <div className={`pt-6 pb-4 border-b border-zinc-800/90 bg-zinc-950/95 sticky top-0 z-30 transition-all duration-300 ${isFullView ? 'px-24' : 'px-8 md:px-16 lg:px-24'}`}>
            <div className="flex items-center justify-between mx-auto max-w-4xl">
               <div className="flex flex-col">
                   <h2 className="text-xl font-semibold tracking-tight text-zinc-100 flex items-center gap-2">
                      <span className="material-symbols-outlined text-[22px] text-zinc-400">forum</span>
-                     {activeChatSession.title}
+                     <TypewriterTitle text={activeChatSession.title} speedMs={40} startDelayMs={120} />
                   </h2>
-                  <div className="flex items-center gap-2 text-[12px] font-medium text-zinc-400 mt-1">
-                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
-                      Connected to {activeConnection ? activeConnection.name : 'Unknown Database'}
+                           <div className="flex items-center gap-2 text-[12px] font-medium text-zinc-400 mt-2">
+                                 <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1 text-[11px] text-emerald-300">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                    Connected
+                                 </span>
+                                 <span className="text-zinc-500">{activeConnection ? activeConnection.name : 'Unknown Database'}</span>
                   </div>
               </div>
               <div className="flex gap-2">
                  <button className="icon-button p-2 rounded-lg transition-colors" title="Clear Chat">
                     <span className="material-symbols-outlined text-[18px]">mop</span>
-                 </button>
-                 <button className="icon-button p-2 rounded-lg transition-colors" title="Export">
-                    <span className="material-symbols-outlined text-[18px]">download</span>
                  </button>
               </div>
            </div>
@@ -77,44 +63,46 @@ export function ChatArea({
           <div className="max-w-4xl mx-auto py-8 space-y-8">
             {activeChatSession.messages.length === 0 ? (
                <div className="h-full flex flex-col items-center justify-center text-center space-y-6 pt-20 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                  <div className="w-20 h-20 surface-base rounded-3xl flex items-center justify-center shadow-sm">
-                     <span className="material-symbols-outlined text-[40px] text-zinc-300">chat_bubble</span>
-                  </div>
-                  <div className="max-w-sm space-y-2">
-                     <h3 className="text-xl font-semibold text-zinc-100 tracking-tight">How can I help you today?</h3>
-                     <p className="text-[14px] text-zinc-400 font-medium leading-relaxed">Ask anything about your database {activeConnection?.name}. I can analyze data, write SQL, and create visualizations.</p>
-                  </div>
-                  <div className="flex gap-3 flex-wrap justify-center mt-4">
-                     {["Show recent transactions", "Summarize user growth", "Find data anomalies"].map(suggestion => (
-                        <button 
-                          key={suggestion}
-                          onClick={() => { setInput(suggestion); setTimeout(() => handleSubmit(), 100); }}
-                                       className="interactive-card px-4 py-2.5 rounded-xl text-[13px] font-medium text-zinc-300 transition-all shadow-sm active:scale-95">
-                           {suggestion}
-                        </button>
-                     ))}
+                  <div className="w-full max-w-2xl rounded-3xl border border-zinc-800 bg-zinc-900/50 px-8 py-10 shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
+                    <div className="mx-auto mb-6 w-20 h-20 surface-base rounded-3xl flex items-center justify-center shadow-sm">
+                      <span className="material-symbols-outlined text-[40px] text-zinc-300">chat_bubble</span>
+                    </div>
+                    <div className="max-w-sm mx-auto space-y-2">
+                      <h3 className="text-xl font-semibold text-zinc-100 tracking-tight">How can I help you today?</h3>
+                      <p className="text-[14px] text-zinc-400 font-medium leading-relaxed">Ask anything about your database {activeConnection?.name}. I can analyze data, write SQL, and create visualizations.</p>
+                    </div>
+                    <div className="mt-6 flex gap-3 flex-wrap justify-center">
+                      {["Show recent transactions", "Summarize user growth", "Find data anomalies"].map(suggestion => (
+                          <button 
+                            key={suggestion}
+                            onClick={() => { setInput(suggestion); setTimeout(() => handleSubmit(), 100); }}
+                            className="interactive-card px-4 py-2.5 rounded-xl text-[13px] font-medium text-zinc-300 transition-all shadow-sm active:scale-95">
+                              {suggestion}
+                          </button>
+                      ))}
+                    </div>
                   </div>
                </div>
             ) : (
                 activeChatSession.messages.map((msg, i) => (
-                  <div key={msg.id} className={`flex gap-5 w-full animate-in fade-in slide-in-from-bottom-2 duration-300 ${msg.role === 'user' ? 'flex-row-reverse text-right' : ''}`}>
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${msg.role === 'user' ? 'bg-zinc-800 text-white' : 'surface-base text-zinc-300'}`}>
+                           <div key={msg.id} className={`flex gap-5 w-full animate-in fade-in slide-in-from-bottom-2 duration-300 ${msg.role === 'user' ? 'flex-row-reverse text-right' : ''}`}>
+                              <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${msg.role === 'user' ? 'bg-indigo-500/80 text-white ring-1 ring-indigo-300/40' : 'surface-base text-zinc-300 ring-1 ring-zinc-700/70'}`}>
                       {msg.role === 'user' ? (
                           <span className="text-[14px] font-bold">U</span>
                       ) : (
                           <span className="material-symbols-outlined text-[18px]">smart_toy</span>
                       )}
                     </div>
-                    <div className={`max-w-[75%] space-y-2 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+                  <div className={`max-w-[74%] space-y-2 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
                         <div className={`text-[12px] font-bold text-zinc-400 uppercase tracking-widest px-1 ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
                             {msg.role === 'user' ? 'You' : 'QueryPilot AI'}
                         </div>
                         {msg.role === 'user' ? (
-                           <div className="bg-indigo-600/90 text-white rounded-2xl rounded-tr-sm px-5 py-3.5 text-[15px] font-medium leading-relaxed shadow-sm">
+                        <div className="bg-gradient-to-br from-indigo-500 to-violet-600 text-white rounded-2xl rounded-tr-sm px-5 py-3.5 text-[15px] font-medium leading-relaxed shadow-md ring-1 ring-indigo-300/40">
                                 {msg.content}
                             </div>
                         ) : (
-                           <div className="surface-base rounded-2xl p-6 text-[14px] text-zinc-200 leading-relaxed shadow-sm space-y-5 relative overflow-hidden group">
+                        <div className="rounded-2xl p-6 text-[14px] text-zinc-200 leading-relaxed shadow-sm space-y-5 relative overflow-hidden group border border-zinc-700/80 bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-950">
                                 {msg.status === 'Running' && (
                                     <div className="absolute top-0 left-0 w-full h-1 bg-zinc-100 overflow-hidden">
                                         <div className="h-full bg-zinc-900 rounded-full w-1/3 animate-[slide_1.5s_ease-in-out_infinite]"></div>
@@ -250,7 +238,7 @@ export function ChatArea({
         </div>
 
             <div className={`p-6 bg-zinc-950 border-t border-zinc-800 sticky bottom-0 z-30 transition-all duration-300 ${isFullView ? 'px-24' : 'px-8 md:px-16 lg:px-24'}`}>
-          <div className="max-w-4xl mx-auto relative group">
+               <div className="max-w-4xl mx-auto relative group rounded-2xl border border-zinc-800 bg-zinc-900/65 p-2">
               <textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
@@ -262,21 +250,21 @@ export function ChatArea({
                 }}
                 disabled={isTyping}
                 placeholder="Message QueryPilot..."
-                        className="field-input w-full rounded-2xl pl-5 pr-14 py-4 text-[15px] font-medium transition-all resize-none shadow-sm disabled:bg-zinc-950 disabled:text-zinc-500 disabled:cursor-not-allowed min-h-[56px] max-h-[200px]"
+                className="field-input w-full rounded-xl pl-5 pr-14 py-4 text-[15px] font-medium transition-all resize-none shadow-sm disabled:bg-zinc-950 disabled:text-zinc-500 disabled:cursor-not-allowed min-h-[56px] max-h-[200px]"
                 rows={1}
                 style={{ height: 'auto' }}
               />
               <button 
                  onClick={handleSubmit} 
                  disabled={!input.trim() || isTyping}
-                 className="absolute right-2 top-2 p-2.5 rounded-xl bg-zinc-900 text-white disabled:bg-zinc-100 disabled:text-zinc-400 transition-all active:scale-95 disabled:active:scale-100 shadow-sm flex items-center justify-center">
+                 className="absolute right-2 top-2 p-2.5 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white disabled:bg-zinc-100 disabled:text-zinc-400 transition-all active:scale-95 disabled:active:scale-100 shadow-sm flex items-center justify-center ring-1 ring-indigo-300/30">
                 {isTyping ? (
                    <div className="w-[18px] h-[18px] border-2 border-zinc-300 border-t-zinc-600 rounded-full animate-spin"></div>
                 ) : (
                    <span className="material-symbols-outlined text-[18px]">arrow_upward</span>
                 )}
               </button>
-              <div className="absolute -bottom-5 left-0 w-full text-center text-[11px] text-zinc-400 font-medium">
+              <div className="absolute -bottom-5 left-0 w-full text-center text-[11px] text-zinc-500 font-medium">
                   QueryPilot can make mistakes. Consider verifying important information.
               </div>
           </div>

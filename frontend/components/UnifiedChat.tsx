@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Head from "next/head";
 import { useApi } from "../hooks/useApi";
 
@@ -35,6 +35,7 @@ export function UnifiedChat() {
   const [openTabs, setOpenTabs] = useState<DashboardTab[]>([]);
   const [expandedConns, setExpandedConns] = useState<Record<string, boolean>>({});
   const [historyData, setHistoryData] = useState<any[]>([]);
+   const [pendingFirstConnectionType, setPendingFirstConnectionType] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isTerminalOpen, setIsTerminalOpen] = useState(false);
@@ -45,7 +46,7 @@ export function UnifiedChat() {
   const {
     organization, organizations, setOrganization,
     isLoadingOrg, isAddingWorkspace, setIsAddingWorkspace,
-    handleOnboardingComplete, handleDeleteWorkspace
+      handleOnboardingComplete: handleWorkspaceOnboardingComplete, handleDeleteWorkspace
   } = useWorkspace(userId, fetchWithAuth);
 
   const {
@@ -81,6 +82,36 @@ export function UnifiedChat() {
     }
   };
 
+   const handleOnboardingComplete = async (data: { name: string; industry: string; firstConnectionType?: string | null }) => {
+      setPendingFirstConnectionType(data.firstConnectionType || null);
+      await handleWorkspaceOnboardingComplete({ name: data.name, industry: data.industry });
+   };
+
+   useEffect(() => {
+      if (!organization || !pendingFirstConnectionType) return;
+
+      setEditingConnId(null);
+
+      if (pendingFirstConnectionType === 'Azure SQL') {
+         setConnForm({ name: "", host: "", port: "", database: "", username: "", password: "", type: "Azure SQL", authType: 'SQL' });
+         setCurrentView('connect_azuresql');
+      } else if (pendingFirstConnectionType === 'PostgreSQL') {
+         setConnForm({ name: "My Postgres Database", host: "db.mypostgres.com", port: "5432", database: "analytics_db", username: "postgres_admin", password: "", type: "PostgreSQL" });
+         setCurrentView('connect_postgres');
+      } else if (pendingFirstConnectionType === 'MySQL') {
+         setConnForm({ name: "My MySQL Database", host: "mysql-database.com", port: "3306", database: "my_database", username: "root", password: "", type: "MySQL" });
+         setCurrentView('connect_postgres');
+      } else if (pendingFirstConnectionType === 'MariaDB') {
+         setConnForm({ name: "My MariaDB Database", host: "mariadb-database.com", port: "3306", database: "my_database", username: "root", password: "", type: "MariaDB" });
+         setCurrentView('connect_postgres');
+      } else if (pendingFirstConnectionType === 'SQLite') {
+         setConnForm({ name: "My SQLite Database", host: "C:/data/app.db", port: "", database: "", username: "", password: "", type: "SQLite" });
+         setCurrentView('connect_postgres');
+      }
+
+      setPendingFirstConnectionType(null);
+   }, [organization, pendingFirstConnectionType, setConnForm, setEditingConnId]);
+
   if (isLoadingOrg) {
     return (
        <div className="min-h-screen bg-transparent flex items-center justify-center">
@@ -113,13 +144,13 @@ export function UnifiedChat() {
            openChat={openChat} setEditingConnId={setEditingConnId} setConnForm={setConnForm} addLog={addLog}
         />
 
-        <main className={`flex-1 flex overflow-hidden relative transition-all duration-300 ${isFullView && (activeChatSession || activeIdeTab) ? 'bg-[#111111]' : 'bg-transparent'}`}>
+      <main className={`mosaic-center flex-1 flex overflow-hidden relative transition-all duration-300 ${isFullView && (activeChatSession || activeIdeTab) ? 'bg-[#111111]' : 'bg-transparent'}`}>
           {!isSidebarOpen && (
              <button 
                 onClick={() => setIsSidebarOpen(true)} 
-                className={`absolute top-5 z-50 p-2 bg-[#0a0a0a] border border-[#333333] rounded-none hover:bg-[#111111] hover:border-zinc-300 shadow-sm text-[#a3a3a3] hover:text-[#f4f0e6] transition-all flex items-center justify-center group left-5`}
+                className={`absolute top-5 z-50 p-3 bg-[#0a0a0a] border border-[#333333] rounded-xl hover:bg-[#111111] hover:border-zinc-300 shadow-sm text-[#a3a3a3] hover:text-[#f4f0e6] transition-all flex items-center justify-center group left-5`}
                 title="Expand Sidebar">
-                <span className={`material-symbols-outlined text-[18px] transition-transform duration-300 group-hover:translate-x-0.5`}>
+                <span className={`material-symbols-outlined text-[24px] transition-transform duration-300 group-hover:translate-x-0.5`}>
                    menu
                 </span>
              </button>
@@ -161,15 +192,55 @@ export function UnifiedChat() {
           )}
 
           {currentView === 'settings' && (
-             <div className="pt-24 px-10 max-w-3xl mx-auto w-full animate-in fade-in duration-500 overflow-y-auto">
+             <div className="pt-24 px-10 max-w-4xl mx-auto w-full animate-in fade-in duration-500 overflow-y-auto">
                 <button 
                   onClick={() => setCurrentView('welcome')}
                   className="mb-6 flex items-center gap-2 text-[13px] font-medium text-[#a3a3a3] hover:text-[#f4f0e6] transition-colors"
                 >
                   <span className="material-symbols-outlined text-[16px]">arrow_back</span> Back to Home
                 </button>
+                <div className="mb-8 bg-[#0a0a0a] border border-[#333333] p-8 rounded-none shadow-sm space-y-2">
+                  <h1 className="text-3xl font-semibold text-[#f4f0e6] tracking-tight">Settings</h1>
+                  <p className="text-[14px] text-[#a3a3a3] font-medium">Organize and manage workspace configuration from one place.</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                  <button
+                    onClick={() => setCurrentView('settings_manage_workspace')}
+                    className="text-left bg-[#0a0a0a] border border-[#333333] hover:border-zinc-500 p-6 rounded-none transition-colors"
+                  >
+                    <div className="flex items-center gap-3 mb-3">
+                      <span className="material-symbols-outlined text-[20px] text-[#a78bfa]">apartment</span>
+                      <h3 className="text-lg font-semibold text-[#f4f0e6]">Manage Workspace</h3>
+                    </div>
+                    <p className="text-[13px] text-[#a3a3a3] font-medium">Update workspace profile and control critical workspace actions.</p>
+                  </button>
+
+                  <div className="bg-[#0a0a0a] border border-[#333333] p-6 rounded-none opacity-70">
+                    <div className="flex items-center gap-3 mb-3">
+                      <span className="material-symbols-outlined text-[20px] text-[#8a8a8a]">security</span>
+                      <h3 className="text-lg font-semibold text-[#f4f0e6]">Security</h3>
+                    </div>
+                    <p className="text-[13px] text-[#a3a3a3] font-medium">Coming soon: access policies, session controls, and audit preferences.</p>
+                  </div>
+                </div>
+             </div>
+          )}
+
+          {currentView === 'settings_manage_workspace' && (
+             <div className="pt-24 px-10 max-w-3xl mx-auto w-full animate-in fade-in duration-500 overflow-y-auto">
+                <button 
+                  onClick={() => setCurrentView('settings')}
+                  className="mb-6 flex items-center gap-2 text-[13px] font-medium text-[#a3a3a3] hover:text-[#f4f0e6] transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[16px]">arrow_back</span> Back to Settings
+                </button>
                 <div className="space-y-2 mb-8 bg-[#0a0a0a] border border-[#333333] p-8 rounded-none shadow-sm">
-                   
+                  <h1 className="text-3xl font-semibold text-[#f4f0e6] tracking-tight">Manage Workspace</h1>
+                  <p className="text-[14px] text-[#a3a3a3] font-medium">Workspace profile, ownership context, and lifecycle controls.</p>
+                </div>
+
+                <div className="space-y-2 mb-8 bg-[#0a0a0a] border border-[#333333] p-8 rounded-none shadow-sm">
                    <div className="space-y-4 mb-8">
                       <h3 className="text-xl font-bold text-[#f4f0e6] tracking-wide">Workspace Profile</h3>
                       <div className="flex items-center gap-6 bg-[#111111] p-6 rounded-none border border-[#222222]">
@@ -201,7 +272,6 @@ export function UnifiedChat() {
                           </button>
                       </div>
                    </div>
-
                 </div>
              </div>
           )}
