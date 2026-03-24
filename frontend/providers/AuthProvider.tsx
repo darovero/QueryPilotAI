@@ -142,6 +142,7 @@ function RequireAuth({ children }: { children: ReactNode }) {
     }, [isAuthenticated, isLoginRoute, router]);
 
     const isPublicRoute = pathname?.startsWith('/docs');
+    const legalDocument = activeDocument ? legalDocuments[activeDocument] : null;
 
     if (isPublicRoute) {
         return <>{children}</>;
@@ -150,26 +151,27 @@ function RequireAuth({ children }: { children: ReactNode }) {
     if (!isAuthenticated) {
         if (isLoginRoute) {
             return (
-                <div className="relative min-h-screen bg-zinc-950 text-zinc-100 flex items-center justify-center p-6 font-mono overflow-hidden">
-                    <div className="bg-dots pointer-events-none absolute inset-0 opacity-70" />
-                    <div className="relative w-full max-w-md border border-zinc-800 bg-zinc-900/75 p-8 shadow-[0_25px_70px_rgba(0,0,0,0.6)]">
-                        <div className="mx-auto flex h-16 w-16 items-center justify-center border border-zinc-700 bg-zinc-950">
+                <div className="mosaic-center min-h-screen bg-zinc-950 text-zinc-100 flex items-center justify-center p-6 font-mono overflow-hidden">
+                    <div className="relative w-full max-w-md border border-zinc-800 bg-zinc-900/80 p-8 shadow-[0_25px_70px_rgba(0,0,0,0.6)] mono-scanline mono-enter">
+                        <div className="mx-auto flex h-16 w-16 items-center justify-center border border-zinc-700 bg-zinc-950 mono-enter-delay-1">
                             <div className="text-center leading-none">
                                 <p className="text-[15px] font-bold tracking-wider text-primary">IF</p>
                                 <p className="text-[9px] uppercase tracking-[0.25em] text-zinc-500">AI</p>
                             </div>
                         </div>
 
-                        <p className="mt-5 text-center text-[11px] uppercase tracking-[0.24em] text-zinc-500">InsightForge Access</p>
-                        <h1 className="mt-2 text-center text-2xl font-bold text-zinc-100">Iniciar sesion</h1>
-                        <p className="mt-3 text-center text-sm leading-6 text-zinc-400">
+                        <p className="mono-enter-delay-1 mt-5 text-center text-[11px] uppercase tracking-[0.24em] text-zinc-500">InsightForge Access</p>
+                        <h1 className="mono-enter-delay-1 mt-2 text-center text-2xl font-bold text-zinc-100">
+                            <span className="mono-caret-inline">Iniciar sesion</span>
+                        </h1>
+                        <p className="mono-enter-delay-2 mt-3 text-center text-sm leading-6 text-zinc-400">
                             Login corporativo para acceder al workspace de analitica segura.
                         </p>
 
                         <button
                             type="button"
                             onClick={() => { void instance.loginRedirect(loginRequest); }}
-                            className="mt-7 flex w-full items-center justify-center gap-3 border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm font-semibold text-zinc-100 transition-colors hover:bg-zinc-800"
+                            className="mono-enter-delay-2 mt-7 flex w-full items-center justify-center gap-3 border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm font-semibold text-zinc-100 transition-colors hover:bg-zinc-800"
                         >
                             <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" role="img">
                                 <rect x="1" y="1" width="10" height="10" fill="#f25022" />
@@ -183,20 +185,75 @@ function RequireAuth({ children }: { children: ReactNode }) {
                         <button
                             type="button"
                             onClick={() => router.push('/')}
-                            className="mt-3 w-full border border-zinc-700 px-4 py-3 text-sm font-semibold text-zinc-300 transition-colors hover:bg-zinc-800"
+                            className="mono-enter-delay-2 mt-3 w-full border border-zinc-700 px-4 py-3 text-sm font-semibold text-zinc-300 transition-colors hover:bg-zinc-800"
                         >
                             Volver al inicio
                         </button>
 
-                        <p className="mt-6 text-center text-[11px] leading-5 text-zinc-500">
+                        <p className="mono-enter-delay-2 mt-6 text-center text-[11px] leading-5 text-zinc-500">
                             Al continuar aceptas politicas de seguridad, auditoria y cumplimiento corporativo.
                         </p>
+
+                        <p className="mono-enter-delay-2 mt-2 text-center text-[11px] leading-5 text-zinc-500">
+                            Leer
+                            {' '}
+                            <button
+                                type="button"
+                                onClick={() => setActiveDocument('privacy')}
+                                className="underline underline-offset-2 hover:text-zinc-300 transition-colors"
+                            >
+                                Politica de Privacidad
+                            </button>
+                            {' '}
+                            y
+                            {' '}
+                            <button
+                                type="button"
+                                onClick={() => setActiveDocument('terms')}
+                                className="underline underline-offset-2 hover:text-zinc-300 transition-colors"
+                            >
+                                Terminos del Servicio
+                            </button>
+                        </p>
                     </div>
+
+                    {legalDocument ? (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/80 px-4 backdrop-blur-sm">
+                            <div
+                                ref={modalRef}
+                                tabIndex={-1}
+                                className="w-full max-w-3xl border border-zinc-700 bg-[#0a0a0a] p-0 text-zinc-200 shadow-[0_20px_80px_rgba(0,0,0,0.65)] outline-none"
+                            >
+                                <div className="flex items-center justify-between border-b border-zinc-800 bg-[#111111] px-6 py-4 font-mono">
+                                    <div>
+                                        <p className="text-[11px] uppercase tracking-[0.24em] text-zinc-500">Legal Document</p>
+                                        <h2 className="mt-1 text-lg font-bold text-zinc-100">{legalDocument.title}</h2>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setActiveDocument(null)}
+                                        className="border border-zinc-700 px-3 py-1.5 text-[12px] font-semibold uppercase tracking-[0.14em] text-zinc-300 transition-colors hover:bg-zinc-800 hover:text-white"
+                                    >
+                                        Cerrar
+                                    </button>
+                                </div>
+
+                                <div className="max-h-[72vh] overflow-y-auto px-6 py-5 font-mono text-[13px] leading-7 text-zinc-300">
+                                    <div className="mb-5 border border-zinc-800 bg-zinc-900/40 px-4 py-3 text-[12px] text-zinc-400">
+                                        Al continuar aceptas operar bajo politicas de seguridad, auditoria y cumplimiento corporativo.
+                                    </div>
+                                    <div className="space-y-4">
+                                        {legalDocument.paragraphs.map((paragraph) => (
+                                            <p key={paragraph}>{paragraph}</p>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ) : null}
                 </div>
             );
         }
-
-        const legalDocument = activeDocument ? legalDocuments[activeDocument] : null;
 
         return (
             <div className="relative min-h-screen font-sans selection:bg-blue-900 selection:text-white">
