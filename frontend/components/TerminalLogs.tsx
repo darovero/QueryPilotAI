@@ -1,45 +1,92 @@
 import { LogEntry } from "./types";
 import { useEffect, useRef } from "react";
 
-export function TerminalLogs({ terminalLogs }: { terminalLogs: LogEntry[] }) {
+interface TerminalLogsProps {
+    terminalLogs: LogEntry[];
+    isOpen: boolean;
+    setIsOpen: (open: boolean) => void;
+}
+
+export function TerminalLogs({ terminalLogs, isOpen, setIsOpen }: TerminalLogsProps) {
   const terminalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (terminalRef.current) {
         terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
     }
-  }, [terminalLogs]);
+  }, [terminalLogs, isOpen]);
 
   return (
-    <div className="w-[320px] bg-zinc-950 border-l border-zinc-800 flex flex-col shrink-0 text-zinc-300 relative z-20 hidden lg:flex rounded-l-2xl shadow-2xl ml-2">
-      <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-900/50 bg-[#0a0a0b]/80 backdrop-blur-md rounded-tl-2xl">
-          <h3 className="text-[12px] font-bold tracking-widest uppercase text-zinc-500 font-mono">Terminal</h3>
+    <div className={`h-[100dvh] transition-all duration-500 ease-in-out border-l border-[#333333] flex relative z-40 bg-black ${isOpen ? 'w-[450px]' : 'w-[50px]'}`}>
+      
+      {/* VERTICAL BAR (Lambda Style) */}
+      <div 
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-[50px] h-full flex flex-col items-center py-8 cursor-pointer hover:bg-[#111111] transition-colors border-r border-[#222222] select-none"
+      >
+        <span className="material-symbols-outlined text-[#a78bfa] mb-12 text-[22px]">
+           {isOpen ? 'dock_to_right' : 'side_navigation'}
+        </span>
+        
+        <div className="flex-1 flex items-center justify-center">
+            <h3 className="whitespace-nowrap text-[11px] font-mono tracking-[0.3em] uppercase font-black text-[#a3a3a3] transform rotate-180" style={{ writingMode: 'vertical-rl' }}>
+               // TERMINAL DE AGENTE <span className="text-[#f4f0e6]">INSIGHTFORGE</span> //
+            </h3>
+        </div>
+
+        <div className="mt-auto flex flex-col items-center gap-4 text-[#444444]">
+            <span className="text-[10px] font-mono font-bold">V0.2</span>
+            <div className="w-1 h-1 rounded-none bg-[#a78bfa] animate-pulse"></div>
+        </div>
       </div>
-      <div className="flex-1 overflow-y-auto p-5 font-mono text-[11px] space-y-3 leading-relaxed" ref={terminalRef}>
-          {terminalLogs.map((log) => (
-              <div key={log.id} className="flex flex-col gap-1 tracking-tight animate-in fade-in slide-in-from-left-2 duration-300">
-                  <span className="text-zinc-600 font-mono text-[10px] tabular-nums font-semibold opacity-70">
-                     {new Date(log.timestamp).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit', fractionalSecondDigits: 3 })}
-                  </span>
-                  <div className="flex items-start gap-2.5">
-                      <span className={`w-14 shrink-0 font-bold tracking-wider opacity-90 ${log.level === 'INFO' ? 'text-blue-400' : log.level === 'SUCCESS' ? 'text-emerald-400' : log.level === 'ERROR' ? 'text-red-400' : log.level === 'WARN' ? 'text-amber-400' : 'text-zinc-400'}`}>
-                          [{log.level}]
-                      </span>
-                      <span className={`break-words ${log.level === 'ERROR' ? 'text-red-300/90' : log.level === 'WARN' ? 'text-amber-300/90' : 'text-zinc-300/90'}`}>
-                          {log.message}
-                      </span>
-                  </div>
-              </div>
-          ))}
-          {/* Typing animation block */}
-          {terminalLogs.length > 0 && Array.from({ length: 1 }).map((_, i) => (
-             <div key={'cursor-'+i} className="flex items-end gap-1 text-zinc-600 mt-4 opacity-50">
-                <span className="text-emerald-500 font-bold">~</span>
-                <span className="text-blue-500 font-bold">$</span>
-                <div className="w-1.5 h-3 bg-zinc-400 animate-[pulse_1s_cubic-bezier(0.4,0,0.6,1)_infinite]"></div>
-             </div>
-          ))}
-      </div>
+
+      {/* TERMINAL CONTENT (Sliding out) */}
+      {isOpen && (
+        <div className="flex-1 flex flex-col overflow-hidden animate-in fade-in slide-in-from-right-4 duration-500">
+           <div className="flex items-center justify-between px-6 py-5 border-b border-[#222222] bg-black/40 backdrop-blur-md">
+                <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 rounded-none bg-[#a78bfa]"></div>
+                    <h3 className="text-[12px] font-black tracking-widest uppercase text-[#f4f0e6] font-mono ls-1">System Logs</h3>
+                </div>
+                <button onClick={() => setIsOpen(false)} className="text-[#a3a3a3] hover:text-white transition-colors">
+                    <span className="material-symbols-outlined text-[18px]">close</span>
+                </button>
+           </div>
+           
+           <div className="flex-1 overflow-y-auto p-6 font-mono text-[11px] space-y-4 leading-relaxed bg-[#050505]" ref={terminalRef}>
+               {terminalLogs.length === 0 && (
+                   <div className="text-[#444444] italic font-medium">// Waiting for agent activity...</div>
+               )}
+               {terminalLogs.map((log) => (
+                   <div key={log.id} className="flex flex-col gap-1.5 animate-in fade-in duration-300">
+                       <span className="text-[#555555] font-mono text-[10px] tabular-nums font-bold">
+                          {new Date(log.timestamp).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}.{new Date(log.timestamp).getMilliseconds()}
+                       </span>
+                       <div className="flex items-start gap-3">
+                           <span className={`px-2 py-0.5 rounded-none text-[9px] font-black tracking-tighter uppercase ${
+                               log.level === 'INFO' ? 'bg-[#a78bfa]/10 text-[#a78bfa]' : 
+                               log.level === 'SUCCESS' ? 'bg-emerald-500/10 text-emerald-400' : 
+                               log.level === 'ERROR' ? 'bg-red-500/10 text-red-400' : 
+                               log.level === 'WARN' ? 'bg-amber-500/10 text-amber-400' : 
+                               'bg-zinc-800 text-zinc-400'
+                           }`}>
+                               {log.level}
+                           </span>
+                           <span className={`break-words tracking-tight font-medium ${log.level === 'ERROR' ? 'text-red-300/80' : log.level === 'WARN' ? 'text-amber-300/80' : 'text-[#dfe2eb]'}`}>
+                               {log.message}
+                           </span>
+                       </div>
+                   </div>
+               ))}
+               
+               {/* Animated Cursor */}
+               <div className="flex items-center gap-2 text-[#a78bfa] mt-6 opacity-80">
+                  <span className="material-symbols-outlined text-[14px]">terminal</span>
+                  <div className="w-2 h-4 bg-[#a78bfa] animate-pulse"></div>
+               </div>
+           </div>
+        </div>
+      )}
     </div>
   );
 }

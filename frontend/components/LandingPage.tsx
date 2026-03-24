@@ -43,9 +43,23 @@ export function LandingPage({ onShowLegal }: LandingPageProps) {
             </nav>
 
             <main className="relative pt-32">
-                {/* Animated tech grid background */}
-                <div className="absolute inset-0 bg-space-mosaic pointer-events-none z-0" style={{ maskImage: 'linear-gradient(to bottom, black 40%, transparent 100%)', WebkitMaskImage: 'linear-gradient(to bottom, black 40%, transparent 100%)' }}></div>
-                <div className="absolute top-0 inset-x-0 h-[600px] pointer-events-none z-0" style={{ background: 'radial-gradient(circle at 50% 10%, rgba(0, 225, 171, 0.1) 0%, transparent 60%)' }}></div>
+                {/* Video Background Section */}
+                <div className="absolute top-0 inset-x-0 h-[85vh] min-h-[600px] overflow-hidden">
+                    <video 
+                        autoPlay 
+                        muted 
+                        loop 
+                        playsInline 
+                        className="w-full h-full object-cover"
+                    >
+                        <source src="https://res.cloudinary.com/dmlk7u0mq/video/upload/v1774368663/LANDING_PAGE_ybuzdy.mp4" type="video/mp4" />
+                    </video>
+                    {/* Minimalist transition to black at the bottom only */}
+                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black"></div>
+                </div>
+
+                {/* Animated tech grid background (Simplified for compatibility with video) */}
+                <div className="absolute inset-0 bg-space-mosaic pointer-events-none z-0 opacity-20" style={{ maskImage: 'linear-gradient(to bottom, black 40%, transparent 100%)', WebkitMaskImage: 'linear-gradient(to bottom, black 40%, transparent 100%)' }}></div>
 
                 {/* Hero Section */}
                 <section className="max-w-5xl mx-auto px-6 text-center pb-24 md:pb-32 pt-8 md:pt-16 relative z-10">

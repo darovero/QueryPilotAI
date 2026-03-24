@@ -37,6 +37,7 @@ export function UnifiedChat() {
   const [historyData, setHistoryData] = useState<any[]>([]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [isTerminalOpen, setIsTerminalOpen] = useState(false);
 
   // Custom Hooks
   const { terminalLogs, addLog } = useLogs();
@@ -221,6 +222,12 @@ export function UnifiedChat() {
           />
 
         </main>
+
+        <TerminalLogs 
+          terminalLogs={terminalLogs} 
+          isOpen={isTerminalOpen} 
+          setIsOpen={setIsTerminalOpen} 
+        />
       </div>
 
       <style dangerouslySetInnerHTML={{__html:`
