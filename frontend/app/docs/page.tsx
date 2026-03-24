@@ -118,7 +118,7 @@ export default function DocsPage() {
                             <div className="absolute inset-[1px] bg-background rounded-xl overflow-hidden opacity-90 transition-opacity duration-300 group-hover:opacity-100 flex flex-col">
                                 {/* Editor Header */}
                                 <div className="h-10 bg-surface-container-low border-b border-outline flex items-center px-4 space-x-2">
-                                    <div className="w-3 h-3 rounded-none bg-red-500/80"></div>
+                                    <div className="w-3 h-3 rounded-none bg-red-900/100/80"></div>
                                     <div className="w-3 h-3 rounded-none bg-yellow-500/80"></div>
                                     <div className="w-3 h-3 rounded-none bg-green-500/80"></div>
                                     <div className="flex-1 flex justify-center">

@@ -11,10 +11,10 @@ export function IDEArea({ activeIdeTab, activeConnection, isFullView, setIsFullV
   if (!activeIdeTab || !activeConnection) return null;
 
   return (
-    <div className={`flex flex-col h-full bg-white transition-all duration-300 ease-in-out relative ${isFullView ? 'opacity-100 flex-1' : 'opacity-100 flex-1 z-10'}`}>
+    <div className={`flex flex-col h-full bg-black transition-all duration-300 ease-in-out relative ${isFullView ? 'opacity-100 flex-1' : 'opacity-100 flex-1 z-10'}`}>
         <button 
            onClick={() => setIsFullView(!isFullView)}
-           className="absolute top-6 left-6 z-50 p-2.5 bg-white border border-zinc-200 rounded-xl hover:bg-zinc-50 hover:border-zinc-300 shadow-sm text-zinc-500 hover:text-zinc-900 transition-all flex items-center justify-center group hidden md:flex"
+           className="absolute top-6 left-6 z-50 p-2.5 bg-black border border-zinc-200 rounded-xl hover:bg-black hover:border-zinc-300 shadow-sm text-zinc-500 hover:text-zinc-900 transition-all flex items-center justify-center group hidden md:flex"
            title={isFullView ? "Show Settings Panel" : "Hide Settings Panel"}
         >
            <span className="material-symbols-outlined text-[18px] transition-transform duration-300 group-hover:scale-110">
@@ -22,7 +22,7 @@ export function IDEArea({ activeIdeTab, activeConnection, isFullView, setIsFullV
            </span>
         </button>
 
-        <div className={`pt-6 pb-4 border-b border-zinc-100/80 bg-white/80 backdrop-blur-md sticky top-0 z-30 transition-all duration-300 ${isFullView ? 'px-24' : 'px-8 md:px-16 lg:px-24'}`}>
+        <div className={`pt-6 pb-4 border-b border-zinc-100/80 bg-black/80 backdrop-blur-md sticky top-0 z-30 transition-all duration-300 ${isFullView ? 'px-24' : 'px-8 md:px-16 lg:px-24'}`}>
            <div className="flex items-center justify-between mx-auto max-w-5xl">
               <div className="flex items-center gap-4">
                  <div className="w-10 h-10 rounded-xl bg-zinc-900 text-white flex items-center justify-center shadow-sm">
@@ -57,14 +57,14 @@ export function IDEArea({ activeIdeTab, activeConnection, isFullView, setIsFullV
                   </div>
                </div>
                
-               <div className="flex-1 bg-white border border-zinc-200 rounded-2xl shadow-sm flex flex-col overflow-hidden opacity-50 relative pointer-events-none">
-                  <div className="absolute inset-0 z-10 bg-white/40 flex items-center justify-center backdrop-blur-[1px]">
-                     <div className="bg-white border border-zinc-200 px-6 py-3 rounded-xl shadow-lg flex items-center gap-3">
+               <div className="flex-1 bg-black border border-zinc-200 rounded-2xl shadow-sm flex flex-col overflow-hidden opacity-50 relative pointer-events-none">
+                  <div className="absolute inset-0 z-10 bg-black/40 flex items-center justify-center backdrop-blur-[1px]">
+                     <div className="bg-black border border-zinc-200 px-6 py-3 rounded-xl shadow-lg flex items-center gap-3">
                         <span className="material-symbols-outlined text-[20px] text-zinc-900">construction</span>
                         <span className="text-[13px] font-semibold text-zinc-900">Result parsing in development</span>
                      </div>
                   </div>
-                  <div className="px-5 py-3 border-b border-zinc-200 bg-zinc-50 flex items-center justify-between">
+                  <div className="px-5 py-3 border-b border-zinc-200 bg-black flex items-center justify-between">
                      <span className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">Results Explorer</span>
                   </div>
                   <div className="p-4 grid grid-cols-4 gap-4">

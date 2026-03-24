@@ -189,14 +189,14 @@ export function UnifiedChat() {
                    
                    <div className="space-y-4">
                       <h3 className="text-[13px] font-bold uppercase tracking-widest text-red-500">Danger Zone</h3>
-                      <div className="flex items-center justify-between p-6 border border-red-200 bg-red-50/50 rounded-none">
+                      <div className="flex items-center justify-between p-6 border border-red-900/50 bg-red-900/10 rounded-none">
                           <div className="space-y-1">
-                             <p className="text-[14px] font-semibold text-red-700">Delete Workspace</p>
-                             <p className="text-[13px] text-red-600/70 font-medium">Permanently delete this workspace and all its data.</p>
+                             <p className="text-[14px] font-semibold text-red-400">Delete Workspace</p>
+                             <p className="text-[13px] text-red-500/70 font-medium">Permanently delete this workspace and all its data.</p>
                           </div>
                           <button
                             onClick={handleDeleteWorkspace}
-                            className="px-6 py-2.5 bg-red-100 hover:bg-red-200 border border-red-200 text-red-700 rounded-none text-[13px] font-bold transition-colors">
+                            className="px-6 py-2.5 bg-red-900/20 hover:bg-red-900/30 border border-red-900/50 text-red-400 rounded-none text-[13px] font-bold transition-colors">
                             Delete
                           </button>
                       </div>

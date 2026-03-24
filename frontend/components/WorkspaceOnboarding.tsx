@@ -221,7 +221,7 @@ export function WorkspaceOnboarding({ handleOnboardingComplete, isAddingWorkspac
                         
                         {/* SQL Validation */}
                         <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-slate-50 border border-slate-100 rounded-none flex items-center justify-center shrink-0">
+                            <div className="w-12 h-12 bg-black border border-slate-100 rounded-none flex items-center justify-center shrink-0">
                                 <span className="material-symbols-outlined text-[#d1cdbd]">verified_user</span>
                             </div>
                             <div className="flex-1">
@@ -238,7 +238,7 @@ export function WorkspaceOnboarding({ handleOnboardingComplete, isAddingWorkspac
 
                         {/* Data Masking */}
                         <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-slate-50 border border-slate-100 rounded-none flex items-center justify-center shrink-0">
+                            <div className="w-12 h-12 bg-black border border-slate-100 rounded-none flex items-center justify-center shrink-0">
                                 <span className="material-symbols-outlined text-[#d1cdbd]">masks</span>
                             </div>
                             <div className="flex-1">
@@ -255,7 +255,7 @@ export function WorkspaceOnboarding({ handleOnboardingComplete, isAddingWorkspac
 
                         {/* Audit Logging */}
                         <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-slate-50 border border-slate-100 rounded-none flex items-center justify-center shrink-0">
+                            <div className="w-12 h-12 bg-black border border-slate-100 rounded-none flex items-center justify-center shrink-0">
                                 <span className="material-symbols-outlined text-[#d1cdbd]">receipt_long</span>
                             </div>
                             <div className="flex-1">

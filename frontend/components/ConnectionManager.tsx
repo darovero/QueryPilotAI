@@ -74,9 +74,9 @@ export function ConnectionManager({
                         setCurrentView('connect_postgres');
                     }
                 }}
-                className={`bg-white border border-zinc-200 hover:border-zinc-300 rounded-2xl p-5 flex items-center gap-4 transition-all active:scale-[0.98] group hover:shadow-sm ${item.name !== 'Azure SQL' && 'opacity-50 cursor-not-allowed hover:border-zinc-200 active:scale-100 hover:shadow-none'}`}
+                className={`bg-black border border-zinc-200 hover:border-zinc-300 rounded-2xl p-5 flex items-center gap-4 transition-all active:scale-[0.98] group hover:shadow-sm ${item.name !== 'Azure SQL' && 'opacity-50 cursor-not-allowed hover:border-zinc-200 active:scale-100 hover:shadow-none'}`}
               >
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center transition-transform ${item.name === 'Azure SQL' ? 'bg-zinc-50 group-hover:bg-zinc-100 group-hover:scale-105' : 'bg-zinc-50'}`}>
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center transition-transform ${item.name === 'Azure SQL' ? 'bg-black group-hover:bg-zinc-100 group-hover:scale-105' : 'bg-black'}`}>
                    {item.icon.includes('.svg') ? (
                       <img src={item.icon} className="w-6 h-6 object-contain" alt={item.name} />
                    ) : (
@@ -114,9 +114,9 @@ export function ConnectionManager({
                     </h2>
                   </div>
                  
-                 <div className="space-y-6 bg-white border border-zinc-200 p-8 rounded-3xl">
+                 <div className="space-y-6 bg-black border border-zinc-200 p-8 rounded-3xl">
                      {connError && (
-                        <div className="p-3 bg-red-50 text-red-600 rounded-xl text-[13px] font-medium border border-red-100 flex items-center gap-2">
+                        <div className="p-3 bg-red-900/10 text-red-500 rounded-xl text-[13px] font-medium border border-red-100 flex items-center gap-2">
                            <span className="material-symbols-outlined text-[16px]">error</span>
                            {connError}
                         </div>
@@ -136,7 +136,7 @@ export function ConnectionManager({
                           type="text" 
                           value={connForm.name || ""}
                           onChange={(e) => setConnForm(prev => ({ ...prev, name: e.target.value }))}
-                          className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-[13px] text-black focus:outline-none focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200 transition-colors font-mono" 
+                          className="w-full bg-black border border-zinc-200 rounded-xl px-4 py-3 text-[13px] text-black focus:outline-none focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200 transition-colors font-mono" 
                         />
                      </div>
 
@@ -150,7 +150,7 @@ export function ConnectionManager({
                             type={field.type}
                             value={(connForm as any)[field.key] || ""}
                             onChange={(e) => setConnForm(prev => ({ ...prev, [field.key]: e.target.value }))}
-                            className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-[13px] text-black focus:outline-none focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200 transition-colors font-mono" 
+                            className="w-full bg-black border border-zinc-200 rounded-xl px-4 py-3 text-[13px] text-black focus:outline-none focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200 transition-colors font-mono" 
                           />
                        </div>
                     ))}
@@ -161,7 +161,7 @@ export function ConnectionManager({
                           <div className="grid grid-cols-2 gap-3">
                              <button 
                                onClick={() => setConnForm(prev => ({ ...prev, authType: 'SQL' }))}
-                               className={`flex items-center gap-2 p-3 border rounded-xl text-[13px] font-medium transition-colors ${connForm.authType !== 'AzureAD' ? 'border-zinc-900 bg-zinc-50 text-zinc-900' : 'border-zinc-200 bg-white text-zinc-500 hover:border-zinc-300'}`}>
+                               className={`flex items-center gap-2 p-3 border rounded-xl text-[13px] font-medium transition-colors ${connForm.authType !== 'AzureAD' ? 'border-zinc-900 bg-black text-zinc-900' : 'border-zinc-200 bg-black text-zinc-500 hover:border-zinc-300'}`}>
                                <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${connForm.authType !== 'AzureAD' ? 'border-zinc-900' : 'border-zinc-300'}`}>
                                   {connForm.authType !== 'AzureAD' && <div className="w-2 h-2 rounded-full bg-zinc-900"></div>}
                                </div>
@@ -169,7 +169,7 @@ export function ConnectionManager({
                              </button>
                              <button 
                                onClick={() => setConnForm(prev => ({ ...prev, authType: 'AzureAD' }))}
-                               className={`flex items-center gap-2 p-3 border rounded-xl text-[13px] font-medium transition-colors text-left leading-tight ${connForm.authType === 'AzureAD' ? 'border-zinc-900 bg-zinc-50 text-zinc-900' : 'border-zinc-200 bg-white text-zinc-500 hover:border-zinc-300'}`}>
+                               className={`flex items-center gap-2 p-3 border rounded-xl text-[13px] font-medium transition-colors text-left leading-tight ${connForm.authType === 'AzureAD' ? 'border-zinc-900 bg-black text-zinc-900' : 'border-zinc-200 bg-black text-zinc-500 hover:border-zinc-300'}`}>
                                <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${connForm.authType === 'AzureAD' ? 'border-zinc-900' : 'border-zinc-300'}`}>
                                   {connForm.authType === 'AzureAD' && <div className="w-2 h-2 rounded-full bg-zinc-900"></div>}
                                </div>
@@ -219,7 +219,7 @@ export function ConnectionManager({
                             type={field.type}
                             value={(connForm as any)[field.key] || ""}
                             onChange={(e) => setConnForm(prev => ({ ...prev, [field.key]: e.target.value }))}
-                            className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-[13px] text-black focus:outline-none focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200 transition-colors font-mono" 
+                            className="w-full bg-black border border-zinc-200 rounded-xl px-4 py-3 text-[13px] text-black focus:outline-none focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200 transition-colors font-mono" 
                           />
                        </div>
                     ))}
@@ -228,7 +228,7 @@ export function ConnectionManager({
                       {editingConnId && (
                         <button 
                           onClick={() => setCurrentView('manage_connections')}
-                          className="w-1/3 bg-white border border-zinc-200 text-zinc-700 font-medium rounded-xl py-3.5 text-[14px] hover:bg-zinc-50 transition-colors flex justify-center items-center">
+                          className="w-1/3 bg-black border border-zinc-200 text-zinc-700 font-medium rounded-xl py-3.5 text-[14px] hover:bg-black transition-colors flex justify-center items-center">
                             Cancel
                         </button>
                       )}
@@ -258,7 +258,7 @@ export function ConnectionManager({
            </div>
            
            {/* Right documentation panel */}
-           <div className="w-[320px] bg-zinc-50/50 border-l border-zinc-200 p-10 hidden xl:flex flex-col">
+           <div className="w-[320px] bg-black/50 border-l border-zinc-200 p-10 hidden xl:flex flex-col">
               <h3 className="text-[15px] font-semibold text-zinc-900 mb-8">Need help?</h3>
               <div className="space-y-10">
                  <div className="space-y-4">
@@ -334,8 +334,8 @@ export function ConnectionManager({
             </button>
           </div>
 
-          <div className="bg-white border border-zinc-200 rounded-2xl overflow-hidden shadow-sm">
-            <div className="grid grid-cols-12 gap-4 p-4 border-b border-zinc-200 bg-zinc-50 text-[12px] font-semibold text-zinc-500 uppercase tracking-widest">
+          <div className="bg-black border border-zinc-200 rounded-2xl overflow-hidden shadow-sm">
+            <div className="grid grid-cols-12 gap-4 p-4 border-b border-zinc-200 bg-black text-[12px] font-semibold text-zinc-500 uppercase tracking-widest">
               <div className="col-span-3">Name</div>
               <div className="col-span-2">Type</div>
               <div className="col-span-3">Host</div>
@@ -347,10 +347,10 @@ export function ConnectionManager({
             ) : (
               <div className="divide-y divide-zinc-100">
                 {connections.map((conn) => (
-                  <div key={conn.id} className="grid grid-cols-12 gap-4 p-4 items-center text-[14px] hover:bg-zinc-50/50 transition-colors text-zinc-700">
+                  <div key={conn.id} className="grid grid-cols-12 gap-4 p-4 items-center text-[14px] hover:bg-black/50 transition-colors text-zinc-700">
                     <div className="col-span-3 font-medium text-zinc-900 truncate">
                       <div className="flex items-center gap-2">
-                            <div className="w-10 h-10 rounded-xl bg-zinc-50 flex items-center justify-center border border-zinc-100">
+                            <div className="w-10 h-10 rounded-xl bg-black flex items-center justify-center border border-zinc-100">
                                {conn.type === 'Azure SQL' && <img src="/assets/iconos sql/DeviconAzuresqldatabase.svg" className="w-6 h-6 object-contain" alt="Azure" />}
                                {(conn.type === 'PostgreSQL' || (!conn.type && !conn.authType)) && <img src="/assets/iconos sql/DeviconPostgresqlWordmark.svg" className="w-6 h-6 object-contain" alt="Postgres" />}
                                {conn.type === 'MySQL' && <img src="/assets/iconos sql/LogosMysql.svg" className="w-6 h-6 object-contain" alt="MySQL" />}
@@ -389,7 +389,7 @@ export function ConnectionManager({
                            setConnForm({ ...conn, type: conn.type || (conn.authType ? 'Azure SQL' : 'PostgreSQL') }); 
                            setCurrentView(conn.authType || conn.type === 'Azure SQL' ? 'connect_azuresql' : 'connect_postgres'); 
                         }}
-                        className="w-8 h-8 rounded-lg border border-zinc-200 bg-white text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50 flex items-center justify-center transition-colors"
+                        className="w-8 h-8 rounded-lg border border-zinc-200 bg-black text-zinc-500 hover:text-zinc-900 hover:bg-black flex items-center justify-center transition-colors"
                         title="Edit"
                       >
                         <span className="material-symbols-outlined text-[16px]">edit</span>
@@ -417,7 +417,7 @@ export function ConnectionManager({
                               );
                            }
                         }}
-                        className="w-8 h-8 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:text-red-700 hover:bg-red-100 flex items-center justify-center transition-colors"
+                        className="w-8 h-8 rounded-lg border border-red-100 bg-red-900/10 text-red-500 hover:text-red-400 hover:bg-red-900/20 flex items-center justify-center transition-colors"
                         title="Delete"
                       >
                         <span className="material-symbols-outlined text-[16px]">delete</span>

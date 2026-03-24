@@ -11,7 +11,7 @@ interface WelcomeAreaProps {
 
 export function WelcomeArea({ userName, setCurrentView }: WelcomeAreaProps) {
   return (
-    <div className="flex-1 flex flex-col items-center pt-32 px-10 bg-[#fafafa] w-full h-full relative overflow-y-auto animate-in fade-in duration-500">
+    <div className="flex-1 flex flex-col items-center pt-32 px-10 bg-black w-full h-full relative overflow-y-auto animate-in fade-in duration-500">
       <div className="max-w-2xl w-full">
         {/* Header */}
         <div className="mb-12">
@@ -28,7 +28,7 @@ export function WelcomeArea({ userName, setCurrentView }: WelcomeAreaProps) {
            {/* Card 1: Connect Data Source */}
            <button 
               onClick={() => setCurrentView('integrations')}
-              className="w-full bg-white hover:bg-zinc-50 border border-zinc-200 hover:border-zinc-300 p-6 rounded-2xl flex items-center justify-between group transition-all text-left shadow-sm">
+              className="w-full bg-black hover:bg-black border border-zinc-200 hover:border-zinc-300 p-6 rounded-2xl flex items-center justify-between group transition-all text-left shadow-sm">
               <div className="flex items-center gap-6">
                  <div className="w-12 h-12 rounded-xl bg-zinc-100 flex items-center justify-center shrink-0 border border-zinc-200 group-hover:bg-zinc-200 transition-colors">
                     <span className="material-symbols-outlined text-[24px] text-zinc-600 group-hover:text-zinc-900">database</span>
@@ -44,7 +44,7 @@ export function WelcomeArea({ userName, setCurrentView }: WelcomeAreaProps) {
            {/* Card 2: Read Docs */}
            <button 
               onClick={() => window.open('https://querypilot.com/docs', '_blank')}
-              className="w-full bg-white hover:bg-zinc-50 border border-zinc-200 hover:border-zinc-300 p-6 rounded-2xl flex items-center justify-between group transition-all text-left shadow-sm">
+              className="w-full bg-black hover:bg-black border border-zinc-200 hover:border-zinc-300 p-6 rounded-2xl flex items-center justify-between group transition-all text-left shadow-sm">
               <div className="flex items-center gap-6">
                  <div className="w-12 h-12 rounded-xl bg-zinc-100 flex items-center justify-center shrink-0 border border-zinc-200 group-hover:bg-zinc-200 transition-colors">
                     <span className="material-symbols-outlined text-[24px] text-zinc-600 group-hover:text-zinc-900">description</span>

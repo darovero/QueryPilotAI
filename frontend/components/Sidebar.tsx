@@ -198,7 +198,7 @@ export function Sidebar({
                                                 } else { toast.error('Failed to delete chat.'); }
                                               }).catch(() => toast.error('Failed to delete chat.'));
                                           }}
-                                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-50 text-red-500 hover:text-red-600 rounded-none transition-all shrink-0 ml-1"
+                                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-900/10 text-red-500 hover:text-red-500 rounded-none transition-all shrink-0 ml-1"
                                         title="Delete Chat"
                                      >
                                         <span className="material-symbols-outlined text-[14px]">delete</span>
@@ -225,7 +225,7 @@ export function Sidebar({
             </div>
             <button
               onClick={handleLogout}
-              className="p-1.5 rounded-none text-[#8a8a8a] hover:text-red-500 hover:bg-red-50 transition-all"
+              className="p-1.5 rounded-none text-[#8a8a8a] hover:text-red-500 hover:bg-red-900/10 transition-all"
               title="Sign out"
             >
               <span className="material-symbols-outlined text-[18px]">logout</span>

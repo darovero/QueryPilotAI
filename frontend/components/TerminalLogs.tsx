@@ -66,7 +66,7 @@ export function TerminalLogs({ terminalLogs, isOpen, setIsOpen }: TerminalLogsPr
                            <span className={`px-2 py-0.5 rounded-none text-[9px] font-black tracking-tighter uppercase ${
                                log.level === 'INFO' ? 'bg-[#a78bfa]/10 text-[#a78bfa]' : 
                                log.level === 'SUCCESS' ? 'bg-emerald-500/10 text-emerald-400' : 
-                               log.level === 'ERROR' ? 'bg-red-500/10 text-red-400' : 
+                               log.level === 'ERROR' ? 'bg-red-900/100/10 text-red-400' : 
                                log.level === 'WARN' ? 'bg-amber-500/10 text-amber-400' : 
                                'bg-zinc-800 text-zinc-400'
                            }`}>
