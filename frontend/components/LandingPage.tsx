@@ -1,4 +1,5 @@
 import { useMsal } from '@azure/msal-react';
+import { useState } from 'react';
 import { loginRequest } from '../lib/authConfig';
 import Link from 'next/link';
 
@@ -8,6 +9,7 @@ interface LandingPageProps {
 
 export function LandingPage({ onShowLegal }: LandingPageProps) {
     const { instance } = useMsal();
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     const handleLogin = () => {
         void instance.loginRedirect(loginRequest);
@@ -16,58 +18,59 @@ export function LandingPage({ onShowLegal }: LandingPageProps) {
     return (
         <div className="text-on-background bg-background min-h-screen font-sans selection:bg-primary selection:text-on-primary">
             {/* TopNavBar */}
-            <nav className="fixed top-0 w-full flex justify-between items-center px-8 py-4 max-w-7xl mx-auto left-1/2 -translate-x-1/2 bg-background/80 backdrop-blur-md z-50 border-b border-surface-variant">
+            <nav className="fixed top-0 w-full flex justify-between items-center px-6 md:px-8 py-4 max-w-7xl mx-auto left-1/2 -translate-x-1/2 bg-background/80 backdrop-blur-md z-50 border-b border-surface-variant">
                 <Link href="/" className="text-xl font-bold tracking-tight text-on-background">InsightForge AI</Link>
-                <div className="hidden md:flex items-center space-x-8">
-                    <Link className="text-on-surface-variant hover:text-primary transition-all duration-300 font-medium" href="/docs">Docs</Link>
-                    <div className="flex items-center space-x-4">
-                        <button onClick={handleLogin} className="text-on-surface-variant hover:text-primary transition-all duration-300 font-medium">Login</button>
-                        <button onClick={handleLogin} className="bg-primary text-on-primary px-6 py-2 rounded-full font-semibold hover:bg-primary-fixed transition-transform active:scale-95">Try for free</button>
+                
+                <div className="hidden md:flex items-center space-x-10 text-[11px] font-mono tracking-widest uppercase font-bold text-on-surface-variant">
+                    <Link className="hover:text-primary transition-colors duration-300" href="/docs">Docs</Link>
+                    <div className="flex items-center space-x-6 border-l border-surface-variant pl-6">
+                        <button onClick={handleLogin} className="hover:text-primary transition-colors duration-300">Login</button>
+                        <button onClick={handleLogin} className="bg-primary text-black px-6 py-2 font-bold hover:bg-primary-fixed transition-transform active:scale-95 rounded-none border border-primary">Try for free</button>
                     </div>
                 </div>
-                {/* Mobile Menu Placeholder */}
-                <div className="md:hidden">
-                    <span className="material-symbols-outlined text-on-background">menu</span>
-                </div>
+
+                <button className="md:hidden text-on-background p-2" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+                    <span className="material-symbols-outlined">{mobileMenuOpen ? 'close' : 'menu'}</span>
+                </button>
+
+                {mobileMenuOpen && (
+                    <div className="absolute top-full left-0 w-full bg-background border-b border-surface-variant flex flex-col p-6 space-y-6 md:hidden animate-in slide-in-from-top-2 text-[11px] font-mono tracking-widest uppercase font-bold text-on-surface-variant">
+                        <Link className="hover:text-primary transition-colors py-2 border-b border-surface-variant border-dashed" onClick={() => setMobileMenuOpen(false)} href="/docs">Docs</Link>
+                        <button onClick={handleLogin} className="text-left py-2 hover:text-primary transition-colors">Login</button>
+                        <button onClick={handleLogin} className="bg-primary text-black px-6 py-3 font-bold hover:bg-primary-fixed transition-transform w-full rounded-none">Try for free</button>
+                    </div>
+                )}
             </nav>
 
             <main className="relative pt-32">
-                <style>{`
-                    @keyframes space-mosaic {
-                        0% { background-position: 0 0; }
-                        100% { background-position: 40px 40px; }
-                    }
-                    .bg-space-mosaic {
-                        background-image: 
-                            linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-                            linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-                        background-size: 40px 40px;
-                        animation: space-mosaic 4s linear infinite;
-                    }
-                `}</style>
                 {/* Animated tech grid background */}
                 <div className="absolute inset-0 bg-space-mosaic pointer-events-none z-0" style={{ maskImage: 'linear-gradient(to bottom, black 40%, transparent 100%)', WebkitMaskImage: 'linear-gradient(to bottom, black 40%, transparent 100%)' }}></div>
                 <div className="absolute top-0 inset-x-0 h-[600px] pointer-events-none z-0" style={{ background: 'radial-gradient(circle at 50% 10%, rgba(0, 225, 171, 0.1) 0%, transparent 60%)' }}></div>
 
                 {/* Hero Section */}
-                <section className="max-w-5xl mx-auto px-6 text-center pb-32 relative z-10">
-                    <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight text-on-background mb-8 leading-[1.1] font-display">
-                        Where Questions Become <br /> <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-tertiary">Trusted Insights</span>
+                <section className="max-w-5xl mx-auto px-6 text-center pb-24 md:pb-32 pt-8 md:pt-16 relative z-10">
+                    <div className="inline-flex items-center space-x-2 bg-surface border border-outline-variant px-4 py-2 rounded-none mb-8 shadow-sm">
+                        <span className="material-symbols-outlined text-primary text-[18px]">verified_user</span>
+                        <span className="text-sm font-medium text-on-surface-variant">Enterprise-grade Security First</span>
+                    </div>
+                    
+                    <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-8 text-on-background leading-tight">
+                        Conversational analytics <br/>
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-tertiary">for private databases.</span>
                     </h1>
-                    <p className="text-lg md:text-xl text-on-surface-variant max-w-2xl mx-auto mb-16 leading-relaxed">
-                        Ask your data anything. InsightForge understands your business using semantic models and ontology, then generates SQL, charts, and insights instantly.
+                    
+                    <p className="text-lg md:text-xl text-on-surface-variant mb-12 max-w-3xl mx-auto leading-relaxed">
+                        Query your structured data using natural language without compromising security. InsightForge AI integrates directly with your Azure SQL or Postgres environment to deliver agentic insights instantly.
                     </p>
-                    {/* Chat Style Input */}
-                    <div className="max-w-2xl mx-auto mb-12 relative">
-                        <div className="bg-surface border border-outline-variant shadow-2xl rounded-full p-2 flex items-center">
-                            <span className="material-symbols-outlined ml-6 text-primary">auto_awesome</span>
-                            <div className="flex-grow text-left px-4 text-on-surface-variant font-medium">
-                                Show fraud rate by country this month
-                            </div>
-                            <button onClick={handleLogin} className="bg-primary text-on-primary h-12 px-8 rounded-full font-bold shadow-lg hover:bg-primary-fixed transition-all active:scale-95">
-                                Ask AI
-                            </button>
-                        </div>
+                    <div className="max-w-2xl mx-auto mb-12 relative flex flex-col sm:flex-row items-center justify-center gap-4">
+                        <button onClick={handleLogin} className="w-full sm:w-auto bg-primary text-on-primary px-8 py-4 rounded-none font-bold text-lg hover:bg-primary-fixed transition-transform active:scale-95 shadow-md flex items-center justify-center group">
+                            Start Free Trial
+                            <span className="material-symbols-outlined ml-2 transition-transform group-hover:translate-x-1">arrow_forward</span>
+                        </button>
+                        <button onClick={handleLogin} className="w-full sm:w-auto bg-surface-container-high text-on-background px-8 py-4 rounded-none font-bold text-lg hover:bg-surface-variant transition-colors flex items-center justify-center gap-2">
+                            <span className="material-symbols-outlined">play_circle</span>
+                            View Demo
+                        </button>
                     </div>
                 </section>
 
@@ -84,7 +87,7 @@ export function LandingPage({ onShowLegal }: LandingPageProps) {
                             </p>
                         </div>
                         <div className="relative">
-                            <div className="absolute -inset-4 bg-primary/10 blur-3xl rounded-full"></div>
+                            <div className="absolute -inset-4 bg-primary/10 blur-3xl rounded-none"></div>
                             <div className="relative bg-surface p-10 rounded-[2rem] border border-surface-variant">
                                 <span className="text-sm uppercase tracking-widest text-tertiary font-bold mb-4 block">The Evolution</span>
                                 <h3 className="text-3xl font-bold mb-6 text-on-background font-display">Semantic Understanding</h3>
@@ -149,15 +152,28 @@ export function LandingPage({ onShowLegal }: LandingPageProps) {
                             @keyframes pulse-s3 { 0%, 55%, 85%, 100% { transform: scale(1); box-shadow: 0 0 0 transparent; } 65%, 75% { transform: scale(1.15); box-shadow: 0 0 25px rgba(0,225,171,0.6); z-index: 20; } }
                             @keyframes pulse-s4 { 0%, 85%, 100% { transform: scale(1); box-shadow: 0 0 0 transparent; } 92%, 98% { transform: scale(1.15); box-shadow: 0 0 30px rgba(123,208,255,0.8); z-index: 20; } }
                         `}</style>
-                        <div className="relative flex flex-col md:flex-row items-center justify-between gap-8 md:gap-0">
+                        <div className="relative flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0 mt-8 md:mt-0">
                             {/* Animated Flow Line */}
                             <div className="absolute top-1/2 left-0 w-full h-[3px] -translate-y-1/2 overflow-hidden pointer-events-none hidden md:block z-0">
                                 <div className="absolute h-full w-[25%] bg-gradient-to-r from-transparent via-primary to-transparent" style={{ animation: 'flow-slide 3.5s linear infinite' }}></div>
                             </div>
 
+                            {/* Mobile Animated Flow Line (Vertical) */}
+                            <div className="absolute left-1/2 top-0 w-[3px] h-full -translate-x-1/2 overflow-hidden pointer-events-none md:hidden z-0">
+                                <div className="absolute w-full h-[25%] bg-gradient-to-b from-transparent via-primary to-transparent" style={{ animation: 'flow-slide-vertical 3.5s linear infinite' }}></div>
+                            </div>
+                            <style>{`
+                                @keyframes flow-slide-vertical {
+                                    0% { top: -20%; opacity: 0; }
+                                    10% { opacity: 1; }
+                                    90% { opacity: 1; }
+                                    100% { top: 100%; opacity: 0; }
+                                }
+                            `}</style>
+
                             {/* Step 1 */}
                             <div className="flex flex-col items-center text-center z-10 group cursor-default">
-                                <div className="w-20 h-20 rounded-full bg-surface border border-outline flex items-center justify-center mb-4 transition-all duration-300 relative" style={{ animation: 'pulse-s1 3.5s linear infinite' }}>
+                                <div className="w-20 h-20 rounded-none bg-surface border border-outline flex items-center justify-center mb-4 transition-all duration-300 relative" style={{ animation: 'pulse-s1 3.5s linear infinite' }}>
                                     <span className="material-symbols-outlined text-on-surface-variant text-3xl">chat_bubble</span>
                                 </div>
                                 <span className="text-sm font-bold text-on-surface-variant">Question</span>
@@ -167,7 +183,7 @@ export function LandingPage({ onShowLegal }: LandingPageProps) {
                             
                             {/* Step 2 */}
                             <div className="flex flex-col items-center text-center z-10 group cursor-default">
-                                <div className="w-20 h-20 rounded-full bg-primary flex items-center justify-center mb-4 transition-all duration-300 relative" style={{ animation: 'pulse-s2 3.5s linear infinite' }}>
+                                <div className="w-20 h-20 rounded-none bg-primary flex items-center justify-center mb-4 transition-all duration-300 relative" style={{ animation: 'pulse-s2 3.5s linear infinite' }}>
                                     <span className="material-symbols-outlined text-on-primary text-3xl relative z-10">schema</span>
                                 </div>
                                 <span className="text-sm font-bold text-primary">Semantic</span>
@@ -177,7 +193,7 @@ export function LandingPage({ onShowLegal }: LandingPageProps) {
                             
                             {/* Step 3 */}
                             <div className="flex flex-col items-center text-center z-10 group cursor-default">
-                                <div className="w-20 h-20 rounded-full bg-surface border border-outline flex items-center justify-center mb-4 transition-all duration-300 relative" style={{ animation: 'pulse-s3 3.5s linear infinite' }}>
+                                <div className="w-20 h-20 rounded-none bg-surface border border-outline flex items-center justify-center mb-4 transition-all duration-300 relative" style={{ animation: 'pulse-s3 3.5s linear infinite' }}>
                                     <span className="material-symbols-outlined text-on-surface-variant text-3xl">database</span>
                                 </div>
                                 <span className="text-sm font-bold text-on-surface-variant">SQL</span>
@@ -187,7 +203,7 @@ export function LandingPage({ onShowLegal }: LandingPageProps) {
                             
                             {/* Step 4 */}
                             <div className="flex flex-col items-center text-center z-10 group cursor-default">
-                                <div className="w-20 h-20 rounded-full bg-tertiary flex items-center justify-center mb-4 transition-all duration-300 relative" style={{ animation: 'pulse-s4 3.5s linear infinite' }}>
+                                <div className="w-20 h-20 rounded-none bg-tertiary flex items-center justify-center mb-4 transition-all duration-300 relative" style={{ animation: 'pulse-s4 3.5s linear infinite' }}>
                                     <span className="material-symbols-outlined text-on-tertiary text-3xl relative z-10">lightbulb</span>
                                 </div>
                                 <span className="text-sm font-bold text-tertiary">Insight</span>
@@ -199,12 +215,12 @@ export function LandingPage({ onShowLegal }: LandingPageProps) {
                 {/* Final CTA Section */}
                 <section className="py-40">
                     <div className="max-w-4xl mx-auto px-8 text-center bg-surface-container-highest border border-surface-variant rounded-[3rem] py-24 relative overflow-hidden">
-                        <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 w-96 h-96 bg-primary/20 blur-[100px] rounded-full"></div>
+                        <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 w-96 h-96 bg-primary/20 blur-[100px] rounded-none"></div>
                         <h2 className="text-4xl md:text-5xl font-extrabold mb-8 text-on-background relative z-10 font-display">
                             Start exploring your data <br /> with real understanding
                         </h2>
                         <div className="relative z-10">
-                            <button onClick={handleLogin} className="bg-primary text-on-primary px-12 py-5 rounded-full font-bold text-xl hover:bg-primary-fixed transition-all hover:scale-105">
+                            <button onClick={handleLogin} className="bg-primary text-on-primary px-12 py-5 rounded-none font-bold text-xl hover:bg-primary-fixed transition-all hover:scale-105">
                                 Try for free
                             </button>
                             <p className="mt-6 text-on-surface-variant font-medium">No credit card required. Setup in minutes.</p>

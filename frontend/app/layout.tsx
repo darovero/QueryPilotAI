@@ -2,10 +2,11 @@ import "./globals.css";
 import { AuthProvider } from "../providers/AuthProvider";
 import { Toaster } from "sonner";
 import type { Metadata } from "next";
-import { Manrope, Space_Grotesk } from "next/font/google";
+import { Space_Grotesk, JetBrains_Mono } from "next/font/google";
 
-const uiFont = Manrope({ subsets: ["latin"], variable: "--font-ui" });
-const displayFont = Space_Grotesk({ subsets: ["latin"], variable: "--font-display" });
+const uiFont = Space_Grotesk({ subsets: ["latin"], weight: ["400", "500", "700"], variable: "--font-ui" });
+const displayFont = Space_Grotesk({ subsets: ["latin"], weight: ["700"], variable: "--font-display" });
+const monoFont = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" });
 
 export const metadata: Metadata = {
   title: "InsightForge AI",
@@ -22,7 +23,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <html lang="es" className="h-full">
-      <body className={`${uiFont.variable} ${displayFont.variable} h-full font-sans`}>
+      <body className={`${uiFont.variable} ${displayFont.variable} ${monoFont.variable} h-full font-sans bg-black text-[#f4f0e6]`}>
+        <div className="fixed inset-0 bg-space-mosaic pointer-events-none z-[-1]" />
         <AuthProvider config={authConfig}>
           <Toaster theme="dark" position="top-center" richColors />
           {children}
