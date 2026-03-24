@@ -1,5 +1,26 @@
 import { useState } from "react";
 
+type LegalDocumentKey = 'privacy' | 'terms';
+
+const legalDocuments: Record<LegalDocumentKey, { title: string; paragraphs: string[] }> = {
+    privacy: {
+        title: 'Política de Privacidad',
+        paragraphs: [
+            'InsightForge AI procesa unicamente la informacion necesaria para autenticarte, habilitar tu sesion corporativa y proteger el acceso a las capacidades analiticas del sistema.',
+            'Los datos de identidad y telemetria operativa se utilizan para auditoria, trazabilidad, seguridad y soporte. No se comparten con terceros fuera de los servicios autorizados por tu organizacion.',
+            'Puedes solicitar la revision o eliminacion de tus datos conforme a las politicas internas de gobierno y cumplimiento aplicables a tu tenant corporativo.'
+        ]
+    },
+    terms: {
+        title: 'Términos del Servicio',
+        paragraphs: [
+            'El acceso a InsightForge AI esta restringido a usuarios autorizados por la organizacion. Todo uso queda sujeto a monitoreo, controles de seguridad y registro de actividad.',
+            'No debes cargar informacion sin autorizacion, intentar eludir controles de seguridad ni utilizar la plataforma para consultas o acciones fuera de las politicas corporativas.',
+            'El servicio puede limitar o revocar el acceso cuando se detecten riesgos operativos, incumplimientos de seguridad o actividades incompatibles con el uso empresarial previsto.'
+        ]
+    }
+};
+
 interface WorkspaceOnboardingProps {
     handleOnboardingComplete: (data: { name: string; industry: string; }) => void;
     isAddingWorkspace: boolean;
@@ -18,6 +39,10 @@ export function WorkspaceOnboarding({ handleOnboardingComplete, isAddingWorkspac
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [analyticsEnabled, setAnalyticsEnabled] = useState(true);
   const [marketingEnabled, setMarketingEnabled] = useState(false);
+  const [sqlValidation, setSqlValidation] = useState(true);
+  const [dataMasking, setDataMasking] = useState(true);
+  const [auditLogging, setAuditLogging] = useState(true);
+  const [activeDocument, setActiveDocument] = useState<LegalDocumentKey | null>(null);
 
   const handleNext = () => setStep(prev => Math.min(prev + 1, totalSteps));
   const handleBack = () => setStep(prev => Math.max(prev - 1, 1));
@@ -46,17 +71,17 @@ export function WorkspaceOnboarding({ handleOnboardingComplete, isAddingWorkspac
                     <div className="w-14 h-14 bg-zinc-50 border border-zinc-200 rounded-2xl flex items-center justify-center mb-6">
                        <span className="material-symbols-outlined text-[28px] text-zinc-900">waving_hand</span>
                     </div>
-                    <h1 className="text-3xl font-bold tracking-tight text-zinc-900">Welcome to QueryPilotAI</h1>
+                    <h1 className="text-3xl font-bold tracking-tight text-zinc-900">Welcome to InsightForge AI</h1>
                     <p className="text-[15px] font-medium text-zinc-500">Let's set up your account in less than a minute.</p>
                  </div>
                  <div className="bg-white border border-zinc-200 rounded-3xl p-8 shadow-sm space-y-6">
                     <div className="space-y-1.5">
-                       <label className="text-[12px] font-bold text-zinc-500 uppercase tracking-widest">Your Name</label>
+                       <label className="text-[12px] font-bold text-zinc-500 uppercase tracking-widest">Company Name</label>
                        <input 
                          type="text" 
                          value={profile.name}
                          onChange={e => setProfile(prev => ({ ...prev, name: e.target.value }))}
-                         placeholder="Jane Doe"
+                         placeholder="e.g. Acme Corp"
                          className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3.5 text-[14px] text-zinc-900 focus:outline-none focus:border-zinc-400 focus:bg-white transition-colors" 
                        />
                     </div>
@@ -182,24 +207,79 @@ export function WorkspaceOnboarding({ handleOnboardingComplete, isAddingWorkspac
                         <input type="checkbox" className="hidden" checked={acceptedTerms} onChange={(e) => setAcceptedTerms(e.target.checked)} />
                         <div>
                             <div className="text-[14px] text-zinc-900 font-medium">I agree to the Terms of Service</div>
-                            <div className="text-[13px] text-zinc-500 leading-relaxed mt-1">I have read and agree to the <a href="#" className="underline hover:text-zinc-900">Terms of Service</a> and <a href="#" className="underline hover:text-zinc-900">Privacy Policy</a> governing the use of QueryPilotAI.</div>
+                            <div className="text-[13px] text-zinc-500 leading-relaxed mt-1">
+                                I have read and agree to the <button type="button" onClick={(e) => { e.preventDefault(); setActiveDocument('terms'); }} className="underline hover:text-zinc-900">Terms of Service</button> and <button type="button" onClick={(e) => { e.preventDefault(); setActiveDocument('privacy'); }} className="underline hover:text-zinc-900">Privacy Policy</button> governing the use of InsightForge AI.
+                            </div>
                         </div>
                     </label>
 
                     <hr className="border-zinc-100" />
 
                     {/* Toggles */}
-                    <div className="space-y-6">
-                        <h3 className="text-[13px] font-bold text-zinc-900 uppercase tracking-widest">Data & Privacy Settings</h3>
+                    <div className="space-y-4 pt-2">
+                        <h3 className="text-[13px] font-bold text-zinc-900 uppercase tracking-widest mb-4">Security & Compliance Settings</h3>
                         
-                        <div className="flex items-center justify-between gap-4">
+                        {/* SQL Validation */}
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center shrink-0">
+                                <span className="material-symbols-outlined text-zinc-700">verified_user</span>
+                            </div>
+                            <div className="flex-1">
+                                <div className="text-[14px] font-bold text-zinc-900">SQL Validation</div>
+                                <div className="text-[13px] text-zinc-500 leading-snug">Automatically check generated SQL for syntax errors and security vulnerabilities.</div>
+                            </div>
+                            <button 
+                                onClick={() => setSqlValidation(!sqlValidation)}
+                                className={`w-12 h-7 rounded-full transition-colors relative shrink-0 ${sqlValidation ? 'bg-blue-600' : 'bg-slate-200'}`}
+                            >
+                                <div className={`w-5 h-5 rounded-full bg-white shadow-sm absolute top-1 transition-transform ${sqlValidation ? 'left-6' : 'left-1'}`}></div>
+                            </button>
+                        </div>
+
+                        {/* Data Masking */}
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center shrink-0">
+                                <span className="material-symbols-outlined text-zinc-700">masks</span>
+                            </div>
+                            <div className="flex-1">
+                                <div className="text-[14px] font-bold text-zinc-900">Data Masking</div>
+                                <div className="text-[13px] text-zinc-500 leading-snug">Dynamically obfuscate sensitive data fields in query results based on user roles.</div>
+                            </div>
+                            <button 
+                                onClick={() => setDataMasking(!dataMasking)}
+                                className={`w-12 h-7 rounded-full transition-colors relative shrink-0 ${dataMasking ? 'bg-blue-600' : 'bg-slate-200'}`}
+                            >
+                                <div className={`w-5 h-5 rounded-full bg-white shadow-sm absolute top-1 transition-transform ${dataMasking ? 'left-6' : 'left-1'}`}></div>
+                            </button>
+                        </div>
+
+                        {/* Audit Logging */}
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center shrink-0">
+                                <span className="material-symbols-outlined text-zinc-700">receipt_long</span>
+                            </div>
+                            <div className="flex-1">
+                                <div className="text-[14px] font-bold text-zinc-900">Audit Logging</div>
+                                <div className="text-[13px] text-zinc-500 leading-snug">Maintain a comprehensive record of all queries, access attempts, and configuration changes.</div>
+                            </div>
+                            <button 
+                                onClick={() => setAuditLogging(!auditLogging)}
+                                className={`w-12 h-7 rounded-full transition-colors relative shrink-0 ${auditLogging ? 'bg-blue-600' : 'bg-slate-200'}`}
+                            >
+                                <div className={`w-5 h-5 rounded-full bg-white shadow-sm absolute top-1 transition-transform ${auditLogging ? 'left-6' : 'left-1'}`}></div>
+                            </button>
+                        </div>
+
+                        <hr className="border-zinc-100 my-4" />
+
+                        <div className="flex items-center justify-between gap-4 pt-2">
                             <div>
                                 <div className="text-[14px] text-zinc-900 font-medium">Telemetry & Telemetry Data</div>
                                 <div className="text-[13px] text-zinc-500">Allow us to monitor crash reports and feature usage to improve the app.</div>
                             </div>
                             <button 
                                 onClick={() => setAnalyticsEnabled(!analyticsEnabled)}
-                                className={`w-11 h-6 rounded-full transition-colors relative shrink-0 ${analyticsEnabled ? 'bg-zinc-900' : 'bg-zinc-200'}`}
+                                className={`w-11 h-6 rounded-full transition-colors relative shrink-0 ${analyticsEnabled ? 'bg-slate-900' : 'bg-slate-200'}`}
                             >
                                 <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${analyticsEnabled ? 'left-6' : 'left-1'}`}></div>
                             </button>
@@ -212,7 +292,7 @@ export function WorkspaceOnboarding({ handleOnboardingComplete, isAddingWorkspac
                             </div>
                             <button 
                                 onClick={() => setMarketingEnabled(!marketingEnabled)}
-                                className={`w-11 h-6 rounded-full transition-colors relative shrink-0 ${marketingEnabled ? 'bg-zinc-900' : 'bg-zinc-200'}`}
+                                className={`w-11 h-6 rounded-full transition-colors relative shrink-0 ${marketingEnabled ? 'bg-slate-900' : 'bg-slate-200'}`}
                             >
                                 <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${marketingEnabled ? 'left-6' : 'left-1'}`}></div>
                             </button>
@@ -266,6 +346,32 @@ export function WorkspaceOnboarding({ handleOnboardingComplete, isAddingWorkspac
            )}
 
         </div>
+
+        {activeDocument && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/45 px-4 animate-in fade-in duration-200">
+                <div className="w-full max-w-xl rounded-3xl border border-zinc-200 bg-white p-7 shadow-2xl animate-in zoom-in-95 duration-200">
+                    <div className="flex items-start justify-between gap-6">
+                        <div>
+                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">Legal Information</p>
+                            <h2 className="mt-2 text-2xl font-bold text-zinc-900">{legalDocuments[activeDocument].title}</h2>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setActiveDocument(null)}
+                            className="rounded-full border border-zinc-200 px-3 py-1.5 text-sm text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
+                        >
+                            Close
+                        </button>
+                    </div>
+
+                    <div className="mt-6 space-y-4 text-sm leading-6 text-zinc-600">
+                        {legalDocuments[activeDocument].paragraphs.map((paragraph, index) => (
+                            <p key={index}>{paragraph}</p>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        )}
     </div>
   );
 }
