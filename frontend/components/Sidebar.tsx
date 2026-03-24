@@ -46,7 +46,7 @@ export function Sidebar({
           
           <button 
              onClick={() => setIsSidebarOpen(false)}
-             className="absolute -right-4 top-7 w-9 h-9 bg-[#0a0a0a] border border-[#333333] rounded-xl flex items-center justify-center text-[#8a8a8a] hover:text-[#f4f0e6] hover:bg-[#111111] transition-colors z-50 shadow-sm"
+             className="absolute right-2 top-4 w-9 h-9 bg-[#0a0a0a] border border-[#333333] rounded-xl flex items-center justify-center text-[#8a8a8a] hover:text-[#f4f0e6] hover:bg-[#111111] transition-colors z-50 shadow-sm"
           >
              <span className="material-symbols-outlined text-[20px]">chevron_left</span>
           </button>
@@ -58,7 +58,7 @@ export function Sidebar({
             <div className="w-5 h-5 rounded-none overflow-hidden shadow-sm flex items-center justify-center bg-[#a78bfa]">
                <span className="text-black text-[10px] font-bold">{organization?.name?.charAt(0) || 'O'}</span>
             </div>
-            <span className="text-[13px] font-medium tracking-wide text-[#f4f0e6] transition-colors">
+            <span className="text-[11px] font-mono font-semibold tracking-wider text-[#f4f0e6] transition-colors">
               {organization?.name || `${userName.split(' ')[0]}'s workspace`}
             </span>
           </div>
@@ -69,7 +69,7 @@ export function Sidebar({
         <div className="flex-1 overflow-y-auto w-full">
           <div className="px-4 py-4 space-y-1 border-b border-[#333333]">
             <button 
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-none text-[13px] transition-all duration-200 group active:scale-[0.98] ${currentView === 'welcome' || currentView === 'integrations' || currentView === 'connect_postgres' ? 'bg-[#1a1a1a] text-[#f4f0e6] font-medium' : 'text-[#a3a3a3] hover:text-[#f4f0e6] hover:bg-[#1a1a1a]/50'}`}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-none text-[11px] font-mono tracking-wide transition-all duration-200 group active:scale-[0.98] ${currentView === 'welcome' || currentView === 'integrations' || currentView === 'connect_postgres' ? 'bg-[#1a1a1a] text-[#f4f0e6] font-medium' : 'text-[#a3a3a3] hover:text-[#f4f0e6] hover:bg-[#1a1a1a]/50'}`}
               onClick={() => setCurrentView('welcome')}
             >
               <span className="material-symbols-outlined text-[20px] transition-transform text-[#8a8a8a] group-hover:text-[#d1cdbd]">grid_view</span>
@@ -77,13 +77,13 @@ export function Sidebar({
             </button>
             <button 
               onClick={() => setCurrentView('manage_connections')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-none text-[13px] transition-all duration-200 group active:scale-[0.98] ${currentView === 'manage_connections' ? 'bg-[#1a1a1a] text-[#f4f0e6] font-medium' : 'text-[#a3a3a3] hover:text-[#f4f0e6] hover:bg-[#1a1a1a]/50'}`}>
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-none text-[11px] font-mono tracking-wide transition-all duration-200 group active:scale-[0.98] ${currentView === 'manage_connections' ? 'bg-[#1a1a1a] text-[#f4f0e6] font-medium' : 'text-[#a3a3a3] hover:text-[#f4f0e6] hover:bg-[#1a1a1a]/50'}`}>
               <span className="material-symbols-outlined text-[20px] transition-transform text-[#8a8a8a] group-hover:text-[#d1cdbd]">dns</span>
               <span className="group-hover:translate-x-1 transition-transform duration-200">Manage Connections</span>
             </button>
             <button 
               onClick={() => setCurrentView('settings')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-none text-[13px] transition-all duration-200 group active:scale-[0.98] ${currentView.startsWith('settings') ? 'bg-[#1a1a1a] text-[#f4f0e6] font-medium' : 'text-[#a3a3a3] hover:text-[#f4f0e6] hover:bg-[#1a1a1a]/50'}`}>
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-none text-[11px] font-mono tracking-wide transition-all duration-200 group active:scale-[0.98] ${currentView.startsWith('settings') ? 'bg-[#1a1a1a] text-[#f4f0e6] font-medium' : 'text-[#a3a3a3] hover:text-[#f4f0e6] hover:bg-[#1a1a1a]/50'}`}>
               <span className="material-symbols-outlined text-[20px] transition-transform text-[#8a8a8a] group-hover:text-[#d1cdbd]">tune</span>
               <span className="group-hover:translate-x-1 transition-transform duration-200">Settings</span>
             </button>
@@ -110,7 +110,7 @@ export function Sidebar({
                    
                    return (
                       <div key={conn.id} className="space-y-1">
-                         <div className={`flex items-center justify-between px-3 py-1.5 rounded-none text-[13px] font-medium transition-colors group ${isConnActive ? 'bg-[#1a1a1a] text-[#f4f0e6]' : 'text-[#b5b5b5] hover:bg-[#111111] hover:text-[#f4f0e6]'}`}>
+                         <div className={`flex items-center justify-between px-3 py-1.5 rounded-none text-[11px] font-mono font-medium tracking-wide transition-colors group ${isConnActive ? 'bg-[#1a1a1a] text-[#f4f0e6]' : 'text-[#b5b5b5] hover:bg-[#111111] hover:text-[#f4f0e6]'}`}>
                              <button 
                                 onClick={() => setExpandedConns(prev => ({ ...prev, [conn.id]: prev[conn.id] === false ? true : false }))}
                                 className="w-5 h-5 flex items-center justify-center text-[#8a8a8a] hover:text-[#f4f0e6] transition-colors shrink-0"
@@ -176,7 +176,7 @@ export function Sidebar({
                                   <div key={chat.id} className="group flex items-center pr-1">
                                      <button 
                                         onClick={() => openChat(chat.id)}
-                                        className={`flex-1 text-left truncate px-3 py-1.5 rounded-none text-[13px] transition-colors ${currentView === chat.id ? 'bg-[#1a1a1a] text-[#f4f0e6] font-medium' : 'text-[#a3a3a3] hover:text-[#f4f0e6] hover:bg-[#111111]'}`}
+                                         className={`flex-1 text-left truncate px-3 py-1.5 rounded-none text-[11px] font-mono tracking-wide transition-colors ${currentView === chat.id ? 'bg-[#1a1a1a] text-[#f4f0e6] font-medium' : 'text-[#a3a3a3] hover:text-[#f4f0e6] hover:bg-[#111111]'}`}
                                      >
                                         {chat.title}
                                      </button>
@@ -221,7 +221,7 @@ export function Sidebar({
               <div className="w-7 h-7 rounded-none bg-[#222222] flex items-center justify-center shrink-0">
                 <span className="text-[12px] font-bold text-[#b5b5b5]">{userName?.charAt(0)?.toUpperCase() || 'U'}</span>
               </div>
-              <span className="text-[13px] text-[#b5b5b5] truncate">{userName || 'User'}</span>
+              <span className="text-[11px] font-mono tracking-wide text-[#b5b5b5] truncate">{userName || 'User'}</span>
             </div>
             <button
               onClick={handleLogout}
