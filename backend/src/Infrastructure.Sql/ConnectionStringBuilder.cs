@@ -33,10 +33,14 @@ public static class ConnectionStringBuilder
             ConnectTimeout = timeoutSeconds
         };
 
-        var isAzureAd = string.Equals(config.AuthType, "AzureAD", StringComparison.OrdinalIgnoreCase)
-                     || string.Equals(config.AuthType, "AzureADToken", StringComparison.OrdinalIgnoreCase);
+        var isAzureAdPassword = string.Equals(config.AuthType, "AzureAD", StringComparison.OrdinalIgnoreCase);
+        var isAzureAdToken = string.Equals(config.AuthType, "AzureADToken", StringComparison.OrdinalIgnoreCase);
 
-        if (isAzureAd)
+        if (isAzureAdToken)
+        {
+            builder.Authentication = SqlAuthenticationMethod.NotSpecified;
+        }
+        else if (isAzureAdPassword)
         {
             if (!string.IsNullOrWhiteSpace(config.Username) && !string.IsNullOrWhiteSpace(config.Password))
             {

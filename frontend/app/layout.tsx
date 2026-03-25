@@ -19,6 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     authority: process.env.NEXT_PUBLIC_AZURE_AD_AUTHORITY,
     redirectUri: process.env.NEXT_PUBLIC_REDIRECT_URI,
     postLogoutRedirectUri: process.env.NEXT_PUBLIC_POST_LOGOUT_REDIRECT_URI,
+    apiScope: process.env.NEXT_PUBLIC_API_SCOPE,
   };
 
   return (

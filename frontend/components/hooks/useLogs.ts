@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { LogEntry } from "../types";
 
 export function useLogs() {
@@ -11,12 +11,12 @@ export function useLogs() {
     ]);
   }, []);
 
-  const addLog = (level: LogEntry["level"], msg: string) => {
+  const addLog = useCallback((level: LogEntry["level"], msg: string) => {
     setTerminalLogs((prev) => [
       ...prev,
       { id: Math.random().toString(), timestamp: new Date().toISOString(), level, message: msg },
     ]);
-  };
+  }, []);
 
   return { terminalLogs, addLog };
 }

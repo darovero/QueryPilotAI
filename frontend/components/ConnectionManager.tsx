@@ -17,19 +17,20 @@ interface ConnectionManagerProps {
   handleMsalLogin: () => void;
   handleSaveConnection: () => void;
   fetchWithAuth: (url: string, options?: any) => Promise<Response>;
-  chatSessions: ChatSession[];
   setChatSessions: React.Dispatch<React.SetStateAction<ChatSession[]>>;
   openTabs: DashboardTab[];
   setOpenTabs: React.Dispatch<React.SetStateAction<DashboardTab[]>>;
   setExpandedConns: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
   addLog: (level: any, msg: string) => void;
+  createChatSession: (connectionId: string, title?: string) => Promise<ChatSession>;
 }
 
 export function ConnectionManager({
   currentView, setCurrentView, connections, setConnections,
   editingConnId, setEditingConnId, connForm, setConnForm,
   connError, testSuccess, isTestingConnection, handleMsalLogin, handleSaveConnection,
-  fetchWithAuth, chatSessions, setChatSessions, openTabs, setOpenTabs, setExpandedConns, addLog
+  fetchWithAuth, setChatSessions, openTabs, setOpenTabs, setExpandedConns, addLog,
+  createChatSession
 }: ConnectionManagerProps) {
   const enabledIntegrations = new Set(['Azure SQL', 'PostgreSQL', 'MySQL', 'MariaDB', 'SQLite', 'Oracle']);
 
@@ -447,17 +448,24 @@ export function ConnectionManager({
                     <div className="col-span-2 flex justify-end gap-2">
                       <button 
                         onClick={() => {
-                           const newChatId = 'chat-' + Date.now();
-                           setChatSessions(prev => [...prev, { id: newChatId, connectionId: conn.id, title: 'New Chat', messages: [] }]);
-                           setOpenTabs(prev => { 
-                               if (!prev.find(t => t.id === newChatId)) {
-                                   return [...prev, { type: 'chat', id: newChatId, title: 'New Chat', connectionId: conn.id }];
-                               }
-                               return prev;
-                           });
-                           setCurrentView(newChatId);
-                           setExpandedConns(prev => ({ ...prev, [conn.id]: true }));
-                           addLog("SUCCESS", `Connected to ${conn.name}.`);
+                           void (async () => {
+                             try {
+                               const session = await createChatSession(conn.id, 'New Chat');
+                               setOpenTabs(prev => { 
+                                   if (!prev.find(t => t.id === session.id)) {
+                                       return [...prev, { type: 'chat', id: session.id, title: session.title, connectionId: conn.id }];
+                                   }
+                                   return prev;
+                               });
+                               setCurrentView(session.id);
+                               setExpandedConns(prev => ({ ...prev, [conn.id]: true }));
+                               addLog("SUCCESS", `Connected to ${conn.name}.`);
+                             } catch (error) {
+                               const message = error instanceof Error ? error.message : 'Failed to create chat.';
+                               toast.error(message);
+                               addLog("ERROR", message);
+                             }
+                           })();
                         }}
                         className="w-8 h-8 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-100 flex items-center justify-center transition-colors"
                         title="Connect & Chat"

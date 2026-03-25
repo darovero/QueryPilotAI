@@ -368,6 +368,7 @@ export function useChatEngine() {
       setConnError("");
       setIsTestingConnection(true);
       const res = await fetchWithAuth("/api/connections/test", {
+        allowInteractiveAuth: true,
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -386,47 +387,78 @@ export function useChatEngine() {
         } catch {}
         throw new Error(errorMsg);
       }
+      const persistConnection = async (connectionId: string, connectionToSave: Connection) => {
+        const saveRes = await fetchWithAuth('/api/connections', {
+          allowInteractiveAuth: true,
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: connectionId, userId, connectionName: connectionToSave.name,
+            dbType: connectionToSave.type || "PostgreSQL", host: connectionToSave.host, port: connectionToSave.port,
+            databaseName: connectionToSave.database, username: connectionToSave.username, encryptedPassword: connectionToSave.password || null,
+            authType: connectionToSave.authType
+          })
+        });
+
+        if (!saveRes.ok) {
+          let backendMessage = `Could not save the connection for your account (HTTP ${saveRes.status}).`;
+          try {
+            const bodyText = await saveRes.text();
+            if (bodyText) {
+              try {
+                const errorBody = JSON.parse(bodyText);
+                backendMessage = errorBody.error || backendMessage;
+              } catch {
+                backendMessage = bodyText;
+              }
+            }
+          } catch {
+            // Keep generic message if response body cannot be read.
+          }
+
+          addLog("ERROR", `Connection test passed, but persistence failed: ${backendMessage}`);
+          throw new Error(backendMessage);
+        }
+      };
+
       if (editingConnId) {
         setTestSuccess(true);
         setTimeout(async () => {
-          setTestSuccess(false);
-          const updatedConn = { ...connForm } as Connection;
-          setConnections(prev => prev.map(c => c.id === editingConnId ? { ...c, ...updatedConn } : c));
-          await fetchWithAuth('/api/connections', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              id: editingConnId, userId, connectionName: updatedConn.name,
-              dbType: updatedConn.type || "PostgreSQL", host: updatedConn.host, port: updatedConn.port,
-              databaseName: updatedConn.database, username: updatedConn.username, encryptedPassword: updatedConn.password || null,
-              authType: updatedConn.authType
-            })
-          });
-          setConnError("");
-          setCurrentView('manage_connections');
-          addLog("SUCCESS", `Connection ${connForm.name} updated successfully.`);
-          toast.success(`Connection ${connForm.name} updated successfully.`);
+          try {
+            setTestSuccess(false);
+            const updatedConn = { ...connForm } as Connection;
+            await persistConnection(editingConnId, updatedConn);
+            setConnections(prev => prev.map(c => c.id === editingConnId ? { ...c, ...updatedConn } : c));
+            setConnError("");
+            setCurrentView('manage_connections');
+            addLog("SUCCESS", `Connection ${connForm.name} updated successfully.`);
+            toast.success(`Connection ${connForm.name} updated successfully.`);
+          } catch (error: unknown) {
+            const message = getErrorMessage(error);
+            setConnError(message);
+            addLog("ERROR", "Connection persistence failed: " + message);
+            toast.error(message);
+          }
         }, 1500);
       } else {
         setTestSuccess(true);
         setTimeout(async () => {
-          setTestSuccess(false);
-          setConnError("");
-          const newConnId = crypto.randomUUID();
-          const { id: _ignoreId, ...formWithoutId } = connForm;
-          const newConn = { ...formWithoutId, id: newConnId, name: connForm.name!.trim() } as Connection;
-          setConnections(prev => [...prev, newConn]);
-          await fetchWithAuth('/api/connections', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              id: newConnId, userId, connectionName: newConn.name,
-              dbType: newConn.type || "PostgreSQL", host: newConn.host, port: newConn.port,
-              databaseName: newConn.database, username: newConn.username, encryptedPassword: newConn.password,
-              authType: newConn.authType
-            })
-          });
-          setCurrentView('manage_connections');
-          addLog("SUCCESS", `Connected to ${connForm.name!.trim()} successfully.`);
-          toast.success(`Connected to ${connForm.name!.trim()} successfully.`);
+          try {
+            setTestSuccess(false);
+            setConnError("");
+            const newConnId = crypto.randomUUID();
+            const { id: _ignoreId, ...formWithoutId } = connForm;
+            const newConn = { ...formWithoutId, id: newConnId, name: connForm.name!.trim() } as Connection;
+            await persistConnection(newConnId, newConn);
+            setConnections(prev => [...prev, newConn]);
+            setCurrentView('manage_connections');
+            addLog("SUCCESS", `Connected to ${connForm.name!.trim()} successfully.`);
+            toast.success(`Connected to ${connForm.name!.trim()} successfully.`);
+          } catch (error: unknown) {
+            const message = getErrorMessage(error);
+            setConnError(message);
+            addLog("ERROR", "Connection persistence failed: " + message);
+            toast.error(message);
+          }
         }, 1500);
       }
     } catch (e: unknown) {
@@ -462,6 +494,7 @@ export function useChatEngine() {
   const handleOnboardingComplete = async (orgData: { name: string; industry: string }) => {
     try {
       const res = await fetchWithAuth('/api/organizations', {
+        allowInteractiveAuth: true,
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(orgData)
       });

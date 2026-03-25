@@ -1,5 +1,8 @@
 import { useState, useEffect } from "react";
-import { ChatSession, Message, Connection } from "../types";
+import { ChatSession, Message, Connection, ServerSessionRecord, ServerConversationTurnRecord } from "../types";
+
+const getChatSessionsStorageKey = (userId?: string) =>
+  userId ? `qp_chatSessions:${userId}` : "qp_chatSessions";
 
 export function useChatSessions(
   userId: string | undefined,
@@ -13,17 +16,122 @@ export function useChatSessions(
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
 
-  // Load from localStorage on mount
+  // Load from localStorage using a per-user cache when available.
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const savedChats = localStorage.getItem('qp_chatSessions');
+      const savedChats =
+        localStorage.getItem(getChatSessionsStorageKey(userId)) ??
+        (userId ? localStorage.getItem('qp_chatSessions') : null);
+
       if (savedChats) try { setChatSessions(JSON.parse(savedChats)); } catch {}
     }
-  }, []);
+  }, [userId]);
 
   useEffect(() => { 
-    localStorage.setItem('qp_chatSessions', JSON.stringify(chatSessions)); 
-  }, [chatSessions]);
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    localStorage.setItem(getChatSessionsStorageKey(userId), JSON.stringify(chatSessions)); 
+  }, [chatSessions, userId]);
+
+  useEffect(() => {
+    if (!userId) return;
+
+    let cancelled = false;
+
+    const loadSessionsFromBackend = async () => {
+      try {
+        const res = await fetchWithAuth('/api/sessions/me', {
+          allowInteractiveAuth: true,
+        });
+
+        if (!res.ok) return;
+
+        const serverSessions: ServerSessionRecord[] = await res.json();
+        if (cancelled || !Array.isArray(serverSessions)) return;
+
+        setChatSessions(prev => {
+          const localById = new Map(prev.map(session => [session.id, session]));
+          const hydrated = serverSessions.map((session) => {
+            return {
+              id: session.id,
+              connectionId: session.connectionId || localById.get(session.id)?.connectionId || "",
+              title: session.title || localById.get(session.id)?.title || "New Chat",
+              messages: [],
+            } satisfies ChatSession;
+          });
+
+          return hydrated;
+        });
+
+        addLog("INFO", `Loaded ${serverSessions.length} chat session(s) from server.`);
+      } catch {
+        // Keep working from the local cache when backend hydration is unavailable.
+      }
+    };
+
+    loadSessionsFromBackend();
+    return () => { cancelled = true; };
+  }, [addLog, fetchWithAuth, userId]);
+
+  useEffect(() => {
+    if (!userId) return;
+
+    const activeSession = chatSessions.find(session => session.id === currentView);
+    if (!activeSession || activeSession.messages.length > 0) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const hydrateSessionTurns = async () => {
+      try {
+        const res = await fetchWithAuth(`/api/sessions/${activeSession.id}/turns`, {
+          allowInteractiveAuth: true,
+        });
+
+        if (!res.ok) return;
+
+        const turns: ServerConversationTurnRecord[] = await res.json();
+        if (cancelled || !Array.isArray(turns)) return;
+
+        const hydratedMessages: Message[] = [];
+        turns.forEach((turn) => {
+          const role = turn.role?.toLowerCase() === "user" ? "user" : "ai";
+
+          if (role === "user") {
+            hydratedMessages.push({
+              id: `${turn.id}-user`,
+              role: "user",
+              content: turn.question,
+            } satisfies Message);
+            return;
+          }
+
+          const aiContent = turn.agentResponse || turn.summary || "Respuesta generada.";
+          hydratedMessages.push({
+            id: `${turn.id}-ai`,
+            role: "ai",
+            content: aiContent,
+            insight: turn.summary || undefined,
+            sql: turn.sqlGenerated || undefined,
+            status: "Completed",
+          } satisfies Message);
+        });
+
+        setChatSessions((prev) => prev.map((session) =>
+          session.id === activeSession.id
+            ? { ...session, messages: hydratedMessages }
+            : session));
+      } catch {
+        // Leave the session as-is if turn hydration is unavailable.
+      }
+    };
+
+    hydrateSessionTurns();
+    return () => { cancelled = true; };
+  }, [chatSessions, currentView, fetchWithAuth, userId]);
 
   const activeChatSession = chatSessions.find(c => c.id === currentView) || null;
 
@@ -227,6 +335,74 @@ export function useChatSessions(
     }
   };
 
+  const createChatSession = async (connectionId: string, title = "New Chat") => {
+    if (!userId) {
+      throw new Error("No hay un usuario autenticado para crear la sesion.");
+    }
+
+    const requestedId = crypto.randomUUID();
+    const res = await fetchWithAuth('/api/sessions', {
+      allowInteractiveAuth: true,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: requestedId,
+        userId,
+        connectionId,
+        title,
+      }),
+    });
+
+    if (!res.ok) {
+      let message = `No fue posible crear la sesion (HTTP ${res.status}).`;
+
+      try {
+        const raw = await res.text();
+        if (raw) {
+          try {
+            const body = JSON.parse(raw);
+            message = body.error || message;
+          } catch {
+            message = raw;
+          }
+        }
+      } catch {
+        // Keep the fallback message.
+      }
+
+      throw new Error(message);
+    }
+
+    const body = await res.json().catch(() => ({}));
+    const persistedId = body.id || requestedId;
+    const nextSession: ChatSession = {
+      id: persistedId,
+      connectionId,
+      title,
+      messages: [],
+    };
+
+    setChatSessions(prev => {
+      const withoutRequested = prev.filter(session => session.id !== requestedId && session.id !== persistedId);
+      return [...withoutRequested, nextSession];
+    });
+
+    return nextSession;
+  };
+
+  const deleteChatSession = async (sessionId: string) => {
+    const res = await fetchWithAuth(`/api/sessions/${sessionId}`, {
+      allowInteractiveAuth: true,
+      method: 'DELETE',
+    });
+
+    if (!res.ok) {
+      throw new Error("No fue posible eliminar la sesion.");
+    }
+
+    setChatSessions(prev => prev.filter(session => session.id !== sessionId));
+  };
+
   return {
     chatSessions,
     setChatSessions,
@@ -238,5 +414,7 @@ export function useChatSessions(
     isTyping,
     handleSubmit,
     handleApproval,
+    createChatSession,
+    deleteChatSession,
   };
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { TypewriterTitle } from './TypewriterTitle';
 
 interface LandingPageProps {
     onShowLegal: (doc: 'privacy' | 'terms') => void;
@@ -9,6 +10,7 @@ interface LandingPageProps {
 export function LandingPage({ onShowLegal }: LandingPageProps) {
     const router = useRouter();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const titleSpeedMs = 34;
 
     const handleLogin = () => {
         router.push('/login');
@@ -66,9 +68,21 @@ export function LandingPage({ onShowLegal }: LandingPageProps) {
                         <span className="text-sm font-medium text-on-surface-variant">Enterprise-grade Security First</span>
                     </div>
                     
-                    <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-8 text-on-background leading-tight">
-                        Conversational analytics <br/>
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-tertiary">for private databases.</span>
+                    <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-8 text-on-background leading-tight font-mono">
+                        <TypewriterTitle
+                            text="Conversational analytics"
+                            speedMs={titleSpeedMs}
+                            startDelayMs={140}
+                            showCaret={false}
+                            className="mono-theme"
+                        />
+                        <br />
+                        <TypewriterTitle
+                            text="for private databases."
+                            speedMs={titleSpeedMs}
+                            startDelayMs={1000}
+                            className="mono-theme text-transparent bg-clip-text bg-gradient-to-r from-primary to-tertiary"
+                        />
                     </h1>
                     
                     <p className="text-lg md:text-xl text-on-surface-variant mb-12 max-w-3xl mx-auto leading-relaxed">
@@ -91,8 +105,29 @@ export function LandingPage({ onShowLegal }: LandingPageProps) {
                     <div className="max-w-7xl mx-auto px-8 grid md:grid-cols-2 gap-24 items-center">
                         <div>
                             <span className="text-sm uppercase tracking-widest text-primary font-bold mb-4 block">The Friction</span>
-                            <h2 className="text-4xl md:text-5xl font-bold mb-8 leading-tight text-on-background font-display">
-                                Legacy data stacks are <span className="opacity-40">silent killers</span> of speed.
+                            <h2 className="text-4xl md:text-5xl font-bold mb-8 leading-tight text-on-background font-mono">
+                                <TypewriterTitle
+                                    text="Legacy data stacks are"
+                                    speedMs={30}
+                                    startDelayMs={180}
+                                    showCaret={false}
+                                    className="mono-theme"
+                                />{' '}
+                                <span className="opacity-40">
+                                    <TypewriterTitle
+                                        text="silent killers"
+                                        speedMs={30}
+                                        startDelayMs={920}
+                                        showCaret={false}
+                                        className="mono-theme"
+                                    />
+                                </span>{' '}
+                                <TypewriterTitle
+                                    text="of speed."
+                                    speedMs={30}
+                                    startDelayMs={1450}
+                                    className="mono-theme"
+                                />
                             </h2>
                             <p className="text-on-surface-variant text-lg leading-relaxed mb-8">
                                 Traditional tools wait for humans to map schemas. Questions rot in queues. Decisions are made on gut feeling while your warehouse sits idle.
@@ -228,8 +263,21 @@ export function LandingPage({ onShowLegal }: LandingPageProps) {
                 <section className="py-40">
                     <div className="max-w-4xl mx-auto px-8 text-center bg-surface-container-highest border border-surface-variant rounded-[3rem] py-24 relative overflow-hidden">
                         <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 w-96 h-96 bg-primary/20 blur-[100px] rounded-none"></div>
-                        <h2 className="text-4xl md:text-5xl font-extrabold mb-8 text-on-background relative z-10 font-display">
-                            Start exploring your data <br /> with real understanding
+                        <h2 className="text-4xl md:text-5xl font-extrabold mb-8 text-on-background relative z-10 font-mono leading-tight">
+                            <TypewriterTitle
+                                text="Start exploring your data"
+                                speedMs={32}
+                                startDelayMs={140}
+                                showCaret={false}
+                                className="mono-theme"
+                            />
+                            <br />
+                            <TypewriterTitle
+                                text="with real understanding"
+                                speedMs={32}
+                                startDelayMs={1020}
+                                className="mono-theme"
+                            />
                         </h2>
                         <div className="relative z-10">
                             <button onClick={handleLogin} className="bg-primary text-on-primary px-12 py-5 rounded-none font-bold text-xl hover:bg-primary-fixed transition-all hover:scale-105">

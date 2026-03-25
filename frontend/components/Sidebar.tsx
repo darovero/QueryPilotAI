@@ -1,4 +1,4 @@
-import { Connection, ChatSession, DashboardTab, Organization } from "./types";
+import { ChatSession } from "./types";
 import { toast } from "sonner";
 import { useMsal } from "@azure/msal-react";
 
@@ -9,13 +9,8 @@ interface SidebarProps {
   userName: string;
   currentView: string;
   setCurrentView: (view: string) => void;
-  fetchWithAuth: (url: string, options?: any) => Promise<Response>;
-  userId: string | undefined;
-  setHistoryData: (data: any[]) => void;
   connections: any[];
-  setConnections: React.Dispatch<React.SetStateAction<any[]>>;
   chatSessions: any[];
-  setChatSessions: React.Dispatch<React.SetStateAction<any[]>>;
   openTabs: any[];
   setOpenTabs: React.Dispatch<React.SetStateAction<any[]>>;
   expandedConns: Record<string, boolean>;
@@ -24,12 +19,14 @@ interface SidebarProps {
   setEditingConnId: (id: string | null) => void;
   setConnForm: React.Dispatch<React.SetStateAction<Partial<any>>>;
   addLog: (level: any, msg: string) => void;
+  createChatSession: (connectionId: string, title?: string) => Promise<ChatSession>;
+  deleteChatSession: (sessionId: string) => Promise<void>;
 }
 
 export function Sidebar({
-  isSidebarOpen, setIsSidebarOpen, organization, userName, currentView, setCurrentView, fetchWithAuth, userId, setHistoryData,
-  connections, setConnections, chatSessions, setChatSessions, openTabs, setOpenTabs, expandedConns, setExpandedConns,
-  openChat, setEditingConnId, setConnForm, addLog
+  isSidebarOpen, setIsSidebarOpen, organization, userName, currentView, setCurrentView,
+  connections, chatSessions, openTabs, setOpenTabs, expandedConns, setExpandedConns,
+  openChat, setEditingConnId, setConnForm, addLog, createChatSession, deleteChatSession
 }: SidebarProps) {
   const { instance } = useMsal();
 
@@ -120,20 +117,24 @@ export function Sidebar({
                              <button 
                                 onClick={() => {
                                    if (chats.length === 0) {
-                                       const newChatId = crypto.randomUUID();
-                                       fetchWithAuth('/api/sessions', {
-                                          method: 'POST',
-                                          headers: { 'Content-Type': 'application/json' },
-                                          body: JSON.stringify({ id: newChatId, userId: userId, connectionId: conn.id, title: "New Chat" })
-                                       });
-                                       setChatSessions(prev => [...prev, { id: newChatId, connectionId: conn.id, title: 'New Chat', messages: [] }]);
-                                       setOpenTabs(prev => { 
-                                           if (!prev.find(t => t.id === newChatId)) {
-                                               return [...prev, { type: 'chat', id: newChatId, title: 'New Chat', connectionId: conn.id }];
-                                           }
-                                           return prev;
-                                       });
-                                       setCurrentView(newChatId);
+                                       void (async () => {
+                                         try {
+                                           const session = await createChatSession(conn.id, 'New Chat');
+                                           setOpenTabs(prev => { 
+                                               if (!prev.find(t => t.id === session.id)) {
+                                                   return [...prev, { type: 'chat', id: session.id, title: session.title, connectionId: conn.id }];
+                                               }
+                                               return prev;
+                                           });
+                                           setCurrentView(session.id);
+                                           setExpandedConns(prev => ({ ...prev, [conn.id]: true }));
+                                           addLog("SUCCESS", `Chat session created for ${conn.name}.`);
+                                         } catch (error) {
+                                           const message = error instanceof Error ? error.message : 'Failed to create chat.';
+                                           toast.error(message);
+                                           addLog("ERROR", message);
+                                         }
+                                       })();
                                    } else {
                                        openChat(chats[chats.length - 1].id);
                                    }
@@ -154,16 +155,25 @@ export function Sidebar({
                              <button 
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    const newChatId = crypto.randomUUID();
-                                    fetchWithAuth('/api/sessions', {
-                                       method: 'POST',
-                                       headers: { 'Content-Type': 'application/json' },
-                                       body: JSON.stringify({ id: newChatId, userId: userId, connectionId: conn.id, title: "New Chat" })
-                                    });
-                                    setChatSessions(prev => [...prev, { id: newChatId, connectionId: conn.id, title: 'New Chat', messages: [] }]);
-                                    setOpenTabs(prev => [...prev, { type: 'chat', id: newChatId, title: 'New Chat', connectionId: conn.id }]);
-                                    setCurrentView(newChatId);
-                                    setExpandedConns(prev => ({ ...prev, [conn.id]: true }));
+                                    void (async () => {
+                                      try {
+                                        const session = await createChatSession(conn.id, 'New Chat');
+                                        setOpenTabs(prev => {
+                                          if (prev.find(t => t.id === session.id)) {
+                                            return prev;
+                                          }
+
+                                          return [...prev, { type: 'chat', id: session.id, title: session.title, connectionId: conn.id }];
+                                        });
+                                        setCurrentView(session.id);
+                                        setExpandedConns(prev => ({ ...prev, [conn.id]: true }));
+                                        addLog("SUCCESS", `Chat session created for ${conn.name}.`);
+                                      } catch (error) {
+                                        const message = error instanceof Error ? error.message : 'Failed to create chat.';
+                                        toast.error(message);
+                                        addLog("ERROR", message);
+                                      }
+                                    })();
                                 }}
                                 className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-[#222222] rounded-none text-[#a3a3a3] hover:text-[#f4f0e6] transition-all shrink-0 ml-1" 
                                 title="New Chat">
@@ -184,9 +194,8 @@ export function Sidebar({
                                           onClick={(e) => {
                                               e.stopPropagation();
                                               if (!confirm('Are you sure you want to delete this chat? All messages will be lost.')) return;
-                                              fetchWithAuth(`/api/sessions/${chat.id}`, { method: 'DELETE' }).then(r => {
-                                                if (r.ok) {
-                                                  setChatSessions(prev => prev.filter(c => c.id !== chat.id));
+                                              void deleteChatSession(chat.id)
+                                                .then(() => {
                                                   setOpenTabs(prev => {
                                                       const newTabs = prev.filter(t => t.id !== chat.id);
                                                       if (currentView === chat.id) {
@@ -195,8 +204,11 @@ export function Sidebar({
                                                       return newTabs;
                                                   });
                                                   toast.success('Chat deleted.');
-                                                } else { toast.error('Failed to delete chat.'); }
-                                              }).catch(() => toast.error('Failed to delete chat.'));
+                                                })
+                                                .catch((error) => {
+                                                  const message = error instanceof Error ? error.message : 'Failed to delete chat.';
+                                                  toast.error(message);
+                                                });
                                           }}
                                         className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-900/10 text-red-500 hover:text-red-500 rounded-none transition-all shrink-0 ml-1"
                                         title="Delete Chat"

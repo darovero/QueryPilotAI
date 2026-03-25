@@ -71,6 +71,20 @@ export type ServerSessionRecord = {
   title?: string;
 };
 
+export type ServerConversationTurnRecord = {
+  id: string;
+  sessionId: string;
+  userId: string;
+  role: string;
+  question: string;
+  sqlGenerated?: string | null;
+  agentResponse?: string | null;
+  summary?: string | null;
+  intentType?: string | null;
+  metric?: string | null;
+  createdAt: string;
+};
+
 export type HistorySession = {
   id: string;
   title: string;

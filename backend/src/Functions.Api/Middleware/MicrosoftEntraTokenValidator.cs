@@ -36,6 +36,7 @@ public sealed class MicrosoftEntraTokenValidator : IEntraTokenValidator
         _validAudiences = configuredAudiences
             .Append(defaultAudience)
             .Where(value => !string.IsNullOrWhiteSpace(value))
+            .SelectMany(value => ExpandAudienceAliases(value!))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
     }
@@ -92,7 +93,8 @@ public sealed class MicrosoftEntraTokenValidator : IEntraTokenValidator
             ValidateIssuerSigningKey = true,
             IssuerSigningKeys = oidcConfig.SigningKeys,
             ValidateIssuer = false,        // Personal MS accounts use different issuers
-            ValidateAudience = false,      // idToken audience varies by account type
+            ValidateAudience = _validAudiences.Length > 0,
+            ValidAudiences = _validAudiences,
             ValidateLifetime = true,
             ClockSkew = TimeSpan.FromMinutes(5)
         };
@@ -105,6 +107,16 @@ public sealed class MicrosoftEntraTokenValidator : IEntraTokenValidator
         {
             _logger.LogWarning(ex, "JWT token validation failed for tenant {TenantId}.", tenantId);
             return null;
+        }
+    }
+
+    private static IEnumerable<string> ExpandAudienceAliases(string audience)
+    {
+        yield return audience;
+
+        if (Guid.TryParse(audience, out _))
+        {
+            yield return $"api://{audience}";
         }
     }
 }

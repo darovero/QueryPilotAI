@@ -53,7 +53,18 @@ export function AuthProvider({ children, config }: AuthProviderProps) {
                 const instance = new PublicClientApplication(createMsalConfig(runtimeConfig));
 
                 await instance.initialize();
-                await instance.handleRedirectPromise();
+                instance.enableAccountStorageEvents();
+
+                const redirectResponse = await instance.handleRedirectPromise();
+                const activeAccount =
+                    redirectResponse?.account ??
+                    instance.getActiveAccount() ??
+                    instance.getAllAccounts()[0] ??
+                    null;
+
+                if (activeAccount) {
+                    instance.setActiveAccount(activeAccount);
+                }
 
                 if (!cancelled) {
                     setMsalInstance(instance);

@@ -1,7 +1,7 @@
 -- ============================================
 -- InsightForge Application Database Schema
 -- Database: insightforge-appdb
--- Purpose: Session persistence, user connections, conversation history
+-- Purpose: Workspace, session persistence, user connections, conversation history
 -- ============================================
 
 -- User database connections
@@ -24,6 +24,29 @@ BEGIN
         updated_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
         is_active BIT NOT NULL DEFAULT 1,
         CONSTRAINT UQ_user_connection_name UNIQUE(user_id, connection_name)
+    );
+END;
+
+-- Organizations / workspaces
+IF OBJECT_ID(N'dbo.organizations', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.organizations (
+        id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+        name NVARCHAR(150) NOT NULL,
+        industry NVARCHAR(100) NULL,
+        created_at DATETIMEOFFSET NOT NULL DEFAULT SYSUTCDATETIME()
+    );
+END;
+
+IF OBJECT_ID(N'dbo.organization_members', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.organization_members (
+        organization_id UNIQUEIDENTIFIER NOT NULL
+            REFERENCES dbo.organizations(id) ON DELETE CASCADE,
+        user_id NVARCHAR(256) NOT NULL,
+        role NVARCHAR(50) NOT NULL DEFAULT 'Member',
+        joined_at DATETIMEOFFSET NOT NULL DEFAULT SYSUTCDATETIME(),
+        CONSTRAINT PK_organization_members PRIMARY KEY (organization_id, user_id)
     );
 END;
 
@@ -81,6 +104,11 @@ END;
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_user_connections_user_id' AND object_id = OBJECT_ID(N'dbo.user_connections'))
 BEGIN
     CREATE INDEX IX_user_connections_user_id ON dbo.user_connections(user_id);
+END;
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_organization_members_user_id' AND object_id = OBJECT_ID(N'dbo.organization_members'))
+BEGIN
+    CREATE INDEX IX_organization_members_user_id ON dbo.organization_members(user_id);
 END;
 
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_chat_sessions_user_id' AND object_id = OBJECT_ID(N'dbo.chat_sessions'))

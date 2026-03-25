@@ -1,10 +1,12 @@
 using Core.Application.Contracts;
+using Functions.Api.Auth;
 using Infrastructure.Sql;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Text.Json;
+using Microsoft.Data.SqlClient;
 
 namespace Functions.Api.Functions;
 
@@ -25,7 +27,7 @@ public class AppDatabaseFunctions(
             var body = await new StreamReader(req.Body).ReadToEndAsync();
             var config = JsonSerializer.Deserialize<UserConnectionRecord>(body, _jsonOptions);
 
-            var authenticatedUserId = req.FunctionContext.Items.TryGetValue("UserId", out var uid) ? uid?.ToString() : null;
+            var authenticatedUserId = AuthContextHelpers.GetAuthenticatedUserId(req.FunctionContext);
             
             if (config == null || string.IsNullOrWhiteSpace(config.ConnectionName))
                 return req.CreateResponse(HttpStatusCode.BadRequest);
@@ -47,6 +49,13 @@ public class AppDatabaseFunctions(
         }
         catch (Exception ex)
         {
+            if (ex is SqlException sqlEx && (sqlEx.Number == 2627 || sqlEx.Number == 2601))
+            {
+                var conflict = req.CreateResponse(HttpStatusCode.Conflict);
+                await conflict.WriteAsJsonAsync(new { error = "A connection with the same identifier or name already exists." });
+                return conflict;
+            }
+
             logger.LogError(ex, "Failed to save connection.");
             return req.CreateResponse(HttpStatusCode.InternalServerError);
         }
@@ -58,13 +67,13 @@ public class AppDatabaseFunctions(
     {
         try
         {
-            var authenticatedUserId = req.FunctionContext.Items.TryGetValue("UserId", out var uid) ? uid?.ToString() : null;
-            if (string.IsNullOrEmpty(authenticatedUserId))
+            var userAliases = AuthContextHelpers.GetAuthenticatedUserAliases(req.FunctionContext);
+            if (userAliases.Count == 0)
             {
                 return req.CreateResponse(HttpStatusCode.Unauthorized);
             }
 
-            var list = await appDb.GetConnectionsByUserAsync(authenticatedUserId);
+            var list = await appDb.GetConnectionsByUserIdsAsync(userAliases);
             var res = req.CreateResponse(HttpStatusCode.OK);
             res.Headers.Add("Content-Type", "application/json");
             await res.WriteStringAsync(JsonSerializer.Serialize(list, _jsonOptions));
@@ -83,14 +92,14 @@ public class AppDatabaseFunctions(
     {
         try
         {
-            var authenticatedUserId = req.FunctionContext.Items.TryGetValue("UserId", out var uid) ? uid?.ToString() : null;
-            if (string.IsNullOrEmpty(authenticatedUserId))
+            var userAliases = AuthContextHelpers.GetAuthenticatedUserAliases(req.FunctionContext);
+            if (userAliases.Count == 0)
                 return req.CreateResponse(HttpStatusCode.Unauthorized);
 
             if (!Guid.TryParse(id, out var connectionId))
                 return req.CreateResponse(HttpStatusCode.BadRequest);
 
-            await appDb.DeleteConnectionAsync(connectionId, authenticatedUserId);
+            await appDb.DeleteConnectionAsync(connectionId, userAliases);
             return req.CreateResponse(HttpStatusCode.OK);
         }
         catch (Exception ex)
@@ -106,11 +115,11 @@ public class AppDatabaseFunctions(
     {
         try
         {
-            var authenticatedUserId = req.FunctionContext.Items.TryGetValue("UserId", out var uid) ? uid?.ToString() : null;
-            if (string.IsNullOrEmpty(authenticatedUserId))
+            var userAliases = AuthContextHelpers.GetAuthenticatedUserAliases(req.FunctionContext);
+            if (userAliases.Count == 0)
                 return req.CreateResponse(HttpStatusCode.Unauthorized);
 
-            await appDb.DeleteUserAccountAsync(authenticatedUserId);
+            await appDb.DeleteUserAccountAsync(userAliases);
             return req.CreateResponse(HttpStatusCode.OK);
         }
         catch (Exception ex)
@@ -129,8 +138,9 @@ public class AppDatabaseFunctions(
             var body = await new StreamReader(req.Body).ReadToEndAsync();
             var config = JsonSerializer.Deserialize<UserConnectionRecord>(body, _jsonOptions);
 
-            var authenticatedUserId = req.FunctionContext.Items.TryGetValue("UserId", out var uid) ? uid?.ToString() : null;
-            if (string.IsNullOrEmpty(authenticatedUserId))
+            var userAliases = AuthContextHelpers.GetAuthenticatedUserAliases(req.FunctionContext);
+            var authenticatedUserId = AuthContextHelpers.GetAuthenticatedUserId(req.FunctionContext);
+            if (string.IsNullOrEmpty(authenticatedUserId) || userAliases.Count == 0)
                 return req.CreateResponse(HttpStatusCode.Unauthorized);
 
             if (config == null || string.IsNullOrWhiteSpace(config.Host))
@@ -138,7 +148,7 @@ public class AppDatabaseFunctions(
 
             if (string.IsNullOrWhiteSpace(config.EncryptedPassword) && config.Id != Guid.Empty)
             {
-                var savedConnection = await appDb.GetConnectionForUserAsync(config.Id, authenticatedUserId);
+                var savedConnection = await appDb.GetConnectionForUsersAsync(config.Id, userAliases);
                 if (savedConnection != null)
                 {
                     config = config with
@@ -172,16 +182,16 @@ public class AppDatabaseFunctions(
             else if (config.DbType?.Equals("SQLServer", StringComparison.OrdinalIgnoreCase) == true
                   || config.DbType?.Equals("Azure SQL", StringComparison.OrdinalIgnoreCase) == true)
             {
-                var builder = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder
-                {
-                    DataSource = string.IsNullOrWhiteSpace(config.Port) ? config.Host : $"{config.Host},{config.Port}",
-                    InitialCatalog = config.DatabaseName,
-                    UserID = config.Username,
-                    Password = config.EncryptedPassword,
-                    ConnectTimeout = 5,
-                    TrustServerCertificate = true
-                };
-                using var conn = new Microsoft.Data.SqlClient.SqlConnection(builder.ConnectionString);
+                var sqlConfig = new DatabaseConfig(
+                    config.DbType,
+                    config.Host,
+                    config.Port ?? string.Empty,
+                    config.DatabaseName,
+                    config.Username ?? string.Empty,
+                    config.EncryptedPassword ?? string.Empty,
+                    config.AuthType);
+
+                using var conn = SqlConnectionFactory.Create(sqlConfig, 5);
                 await conn.OpenAsync();
                 success = true;
             }
@@ -218,7 +228,7 @@ public class AppDatabaseFunctions(
             var body = await new StreamReader(req.Body).ReadToEndAsync();
             var payload = JsonSerializer.Deserialize<CreateSessionRequest>(body, _jsonOptions);
 
-            var authenticatedUserId = req.FunctionContext.Items.TryGetValue("UserId", out var uid) ? uid?.ToString() : null;
+            var authenticatedUserId = AuthContextHelpers.GetAuthenticatedUserId(req.FunctionContext);
             if (string.IsNullOrEmpty(authenticatedUserId))
             {
                 return req.CreateResponse(HttpStatusCode.Unauthorized);
@@ -247,11 +257,11 @@ public class AppDatabaseFunctions(
     {
         try
         {
-            var authenticatedUserId = req.FunctionContext.Items.TryGetValue("UserId", out var uid) ? uid?.ToString() : null;
-            if (string.IsNullOrWhiteSpace(authenticatedUserId))
+            var userAliases = AuthContextHelpers.GetAuthenticatedUserAliases(req.FunctionContext);
+            if (userAliases.Count == 0)
                 return req.CreateResponse(HttpStatusCode.Unauthorized);
 
-            var list = await appDb.GetSessionsByUserAsync(authenticatedUserId);
+            var list = await appDb.GetSessionsByUserIdsAsync(userAliases);
             var res = req.CreateResponse(HttpStatusCode.OK);
             res.Headers.Add("Content-Type", "application/json");
             await res.WriteStringAsync(JsonSerializer.Serialize(list, _jsonOptions));
@@ -270,11 +280,14 @@ public class AppDatabaseFunctions(
     {
         try
         {
-            var authenticatedUserId = req.FunctionContext.Items.TryGetValue("UserId", out var uid) ? uid?.ToString() : null;
-            if (string.IsNullOrEmpty(authenticatedUserId))
+            var userAliases = AuthContextHelpers.GetAuthenticatedUserAliases(req.FunctionContext);
+            if (userAliases.Count == 0)
                 return req.CreateResponse(HttpStatusCode.Unauthorized);
 
-            await appDb.DeleteSessionAsync(Guid.Parse(sessionId), authenticatedUserId);
+            if (!Guid.TryParse(sessionId, out var parsedSessionId))
+                return req.CreateResponse(HttpStatusCode.BadRequest);
+
+            await appDb.DeleteSessionAsync(parsedSessionId, userAliases);
 
             var res = req.CreateResponse(HttpStatusCode.OK);
             await res.WriteAsJsonAsync(new { success = true });
@@ -287,17 +300,47 @@ public class AppDatabaseFunctions(
         }
     }
 
+    [Function("GetSessionTurns")]
+    public async Task<HttpResponseData> GetSessionTurns(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "sessions/{sessionId}/turns")] HttpRequestData req, string sessionId)
+    {
+        try
+        {
+            var userAliases = AuthContextHelpers.GetAuthenticatedUserAliases(req.FunctionContext);
+            if (userAliases.Count == 0)
+                return req.CreateResponse(HttpStatusCode.Unauthorized);
+
+            if (!Guid.TryParse(sessionId, out var parsedSessionId))
+                return req.CreateResponse(HttpStatusCode.BadRequest);
+
+            var userSessions = await appDb.GetSessionsByUserIdsAsync(userAliases);
+            if (!userSessions.Any(session => session.Id == parsedSessionId))
+                return req.CreateResponse(HttpStatusCode.NotFound);
+
+            var turns = await appDb.GetRecentTurnsAsync(parsedSessionId, 50);
+            var res = req.CreateResponse(HttpStatusCode.OK);
+            res.Headers.Add("Content-Type", "application/json");
+            await res.WriteStringAsync(JsonSerializer.Serialize(turns, _jsonOptions));
+            return res;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to get session turns.");
+            return req.CreateResponse(HttpStatusCode.InternalServerError);
+        }
+    }
+
     [Function("GetOrganizations")]
     public async Task<HttpResponseData> GetOrganizations(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "organizations/me")] HttpRequestData req)
     {
         try
         {
-            var authenticatedUserId = req.FunctionContext.Items.TryGetValue("UserId", out var uid) ? uid?.ToString() : null;
-            if (string.IsNullOrEmpty(authenticatedUserId))
+            var userAliases = AuthContextHelpers.GetAuthenticatedUserAliases(req.FunctionContext);
+            if (userAliases.Count == 0)
                 return req.CreateResponse(HttpStatusCode.Unauthorized);
 
-            var orgs = await appDb.GetOrganizationsByUserIdAsync(authenticatedUserId);
+            var orgs = await appDb.GetOrganizationsByUserIdsAsync(userAliases);
             var res = req.CreateResponse(HttpStatusCode.OK);
             res.Headers.Add("Content-Type", "application/json");
             await res.WriteStringAsync(JsonSerializer.Serialize(orgs, _jsonOptions));
@@ -316,8 +359,8 @@ public class AppDatabaseFunctions(
     {
         try
         {
-            var authenticatedUserId = req.FunctionContext.Items.TryGetValue("UserId", out var uid) ? uid?.ToString() : null;
-            if (string.IsNullOrEmpty(authenticatedUserId))
+            var authenticatedUserId = AuthContextHelpers.GetAuthenticatedUserId(req.FunctionContext);
+            if (string.IsNullOrWhiteSpace(authenticatedUserId))
                 return req.CreateResponse(HttpStatusCode.Unauthorized);
 
             var body = await new StreamReader(req.Body).ReadToEndAsync();
@@ -352,14 +395,14 @@ public class AppDatabaseFunctions(
     {
         try
         {
-            var authenticatedUserId = req.FunctionContext.Items.TryGetValue("UserId", out var uid) ? uid?.ToString() : null;
-            if (string.IsNullOrEmpty(authenticatedUserId))
+            var userAliases = AuthContextHelpers.GetAuthenticatedUserAliases(req.FunctionContext);
+            if (userAliases.Count == 0)
                 return req.CreateResponse(HttpStatusCode.Unauthorized);
             
             if (!Guid.TryParse(id, out var orgId))
                 return req.CreateResponse(HttpStatusCode.BadRequest);
 
-            await appDb.DeleteOrganizationAsync(orgId, authenticatedUserId);
+            await appDb.DeleteOrganizationAsync(orgId, userAliases);
             
             var res = req.CreateResponse(HttpStatusCode.OK);
             await res.WriteAsJsonAsync(new { success = true });

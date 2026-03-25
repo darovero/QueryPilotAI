@@ -5,7 +5,10 @@ export type AuthRuntimeConfig = {
     authority: string;
     redirectUri: string;
     postLogoutRedirectUri: string;
+    apiScope?: string;
 };
+
+export const DEFAULT_API_SCOPE = 'api://439a8182-8c80-49ce-8dc7-703af41c724c/access_as_user';
 
 function normalizeUri(value: string | undefined, origin: string): string {
     const trimmed = value?.trim();
@@ -52,11 +55,14 @@ export function resolveAuthRuntimeConfig(config: Partial<AuthRuntimeConfig>): Au
     const redirectUri = normalizeUri(config.redirectUri, origin);
     const postLogoutRedirectUri = normalizeUri(config.postLogoutRedirectUri ?? config.redirectUri, origin);
 
+    const configuredApiScope = config.apiScope?.trim();
+
     return {
         clientId,
         authority: ensureValidAuthority(config.authority ?? ''),
         redirectUri,
-        postLogoutRedirectUri
+        postLogoutRedirectUri,
+        apiScope: configuredApiScope || DEFAULT_API_SCOPE
     };
 }
 
@@ -69,7 +75,8 @@ export function createMsalConfig(config: AuthRuntimeConfig): Configuration {
             postLogoutRedirectUri: config.postLogoutRedirectUri
         },
         cache: {
-            cacheLocation: 'sessionStorage',
+            // Keep the Entra session across refreshes and browser restarts.
+            cacheLocation: 'localStorage',
             storeAuthStateInCookie: false,
         },
         system: {
@@ -78,6 +85,14 @@ export function createMsalConfig(config: AuthRuntimeConfig): Configuration {
                     if (containsPii) {
                         return;
                     }
+
+                    // This is common when users close consent/auth popup manually.
+                    // Avoid surfacing it as a hard runtime error overlay in Next.js dev.
+                    if (message.includes('PopupHandler.monitorPopupForHash - window closed')) {
+                        console.warn(message);
+                        return;
+                    }
+
                     switch (level) {
                         case LogLevel.Error:
                             console.error(message);
@@ -93,6 +108,6 @@ export function createMsalConfig(config: AuthRuntimeConfig): Configuration {
 }
 
 export const loginRequest = {
-    scopes: ['openid', 'profile', 'offline_access'],
+    scopes: ['openid', 'profile', 'offline_access', DEFAULT_API_SCOPE],
     prompt: 'select_account'
 };

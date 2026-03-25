@@ -31,6 +31,14 @@ Thumbs.db
 
 ### Azurite local storage
 .azurite/
+__azurite_db_*.json
+__blobstorage__/
+__queuestorage__/
+
+### Local SDK and package caches
+.nuget/
+.dotnet/
+.runlogs/
 
 ### One-off scripts and credentials
 payload.json
@@ -44,6 +52,11 @@ deploy/Deploy.Configuration.psd1
 deploy/.state/
 deploy/artifacts/
 **/deploy/artifacts/
+artifacts/functions-publish/
+artifacts/functions-publish.zip
+
+### Local ad-hoc outputs
+build-output.txt
 
 ### Generated infrastructure output
 infra/bicep/main.json

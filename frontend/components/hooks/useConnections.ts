@@ -6,6 +6,9 @@ import { useMsal } from "@azure/msal-react";
 const sanitizeConnectionsForStorage = (items: Connection[]) =>
   items.map(({ password: _password, ...connection }) => connection);
 
+const getConnectionsStorageKey = (userId?: string) =>
+  userId ? `qp_connections:${userId}` : "qp_connections";
+
 export function useConnections(
   userId: string | undefined, 
   fetchWithAuth: (url: string, options?: any) => Promise<Response>,
@@ -23,13 +26,16 @@ export function useConnections(
   const [testSuccess, setTestSuccess] = useState(false);
   const { instance } = useMsal();
 
-  // Load from localStorage on mount (immediate, offline-first)
+  // Load from localStorage (immediate, offline-first) using a per-user cache when available.
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const savedConns = localStorage.getItem('qp_connections');
+      const savedConns =
+        localStorage.getItem(getConnectionsStorageKey(userId)) ??
+        (userId ? localStorage.getItem('qp_connections') : null);
+
       if (savedConns) try { setConnections(sanitizeConnectionsForStorage(JSON.parse(savedConns))); } catch {}
     }
-  }, []);
+  }, [userId]);
 
   // Fetch connections from backend when user is authenticated
   useEffect(() => {
@@ -38,7 +44,9 @@ export function useConnections(
 
     const loadFromBackend = async () => {
       try {
-        const res = await fetchWithAuth('/api/connections');
+        const res = await fetchWithAuth('/api/connections', {
+          allowInteractiveAuth: true,
+        });
         if (!res.ok) return;
         const backendConns: any[] = await res.json();
         if (cancelled || !backendConns.length) return;
@@ -72,12 +80,16 @@ export function useConnections(
 
     loadFromBackend();
     return () => { cancelled = true; };
-  }, [userId]);
+  }, [addLog, fetchWithAuth, userId]);
 
   // Save to localStorage
   useEffect(() => { 
-    localStorage.setItem('qp_connections', JSON.stringify(sanitizeConnectionsForStorage(connections))); 
-  }, [connections]);
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    localStorage.setItem(getConnectionsStorageKey(userId), JSON.stringify(sanitizeConnectionsForStorage(connections))); 
+  }, [connections, userId]);
 
   const handleMsalLogin = async () => {
     try {
@@ -124,6 +136,7 @@ export function useConnections(
         let testRes: Response;
         try {
             testRes = await fetchWithAuth("/api/connections/test", {
+                allowInteractiveAuth: true,
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -162,35 +175,50 @@ export function useConnections(
         const connId = editingConnId || crypto.randomUUID();
         const connToSave = { ...connForm, id: connId, name: connForm.name!.trim() } as Connection;
 
+        // Persist to backend before committing locally, so the UI only shows
+        // connections that will survive a new session/login.
+        const saveRes = await fetchWithAuth('/api/connections', {
+            allowInteractiveAuth: true,
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                id: connId,
+                userId: userId,
+                connectionName: connToSave.name,
+                dbType: connToSave.type || "Azure SQL",
+                host: connToSave.host,
+                port: connToSave.port,
+                databaseName: connToSave.database,
+                username: connToSave.username,
+                encryptedPassword: connToSave.password,
+                authType: connToSave.authType
+            })
+        });
+
+        if (!saveRes.ok) {
+            let backendMessage = `Could not save the connection for your account (HTTP ${saveRes.status}).`;
+            try {
+                const bodyText = await saveRes.text();
+                if (bodyText) {
+                    try {
+                        const errorBody = JSON.parse(bodyText);
+                        backendMessage = errorBody.error || backendMessage;
+                    } catch {
+                        backendMessage = bodyText;
+                    }
+                }
+            } catch {
+                // Keep generic message if we cannot read the backend response.
+            }
+
+            addLog("ERROR", `Connection test passed, but persistence failed: ${backendMessage}`);
+            throw new Error(backendMessage);
+        }
+
         if (editingConnId) {
             setConnections(prev => prev.map(c => c.id === editingConnId ? { ...c, ...connToSave } : c));
         } else {
             setConnections(prev => [...prev, connToSave]);
-        }
-
-        // Persist to backend so connection survives across sessions/devices
-        try {
-            const saveRes = await fetchWithAuth('/api/connections', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    id: connId,
-                    userId: userId,
-                    connectionName: connToSave.name,
-                    dbType: connToSave.type || "Azure SQL",
-                    host: connToSave.host,
-                    port: connToSave.port,
-                    databaseName: connToSave.database,
-                    username: connToSave.username,
-                    encryptedPassword: connToSave.password,
-                    authType: connToSave.authType
-                })
-            });
-            if (!saveRes.ok) {
-                addLog("WARN", "Connection saved locally but failed to sync to server. It may not persist across sessions.");
-            }
-        } catch (saveErr) {
-            addLog("WARN", "Connection saved locally but could not reach the server. It may not persist across sessions.");
         }
 
         setConnError("");

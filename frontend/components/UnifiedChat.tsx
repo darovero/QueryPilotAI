@@ -21,12 +21,10 @@ import { IDEArea } from "./IDEArea";
 import { TerminalLogs } from "./TerminalLogs";
 import { WelcomeArea } from "./WelcomeArea";
 import { WorkspaceOnboarding } from "./WorkspaceOnboarding";
-import { useMsal } from "@azure/msal-react";
 
 export function UnifiedChat() {
-  const { accounts } = useMsal();
-  const userName = accounts.length > 0 ? accounts[0].name || "Analyst" : "Analyst";
-  const { fetchWithAuth, userId } = useApi();
+  const { fetchWithAuth, userId, account } = useApi();
+  const userName = account?.name || "Analyst";
   
   // App UI State
   const [currentView, setCurrentView] = useState("welcome");
@@ -34,7 +32,6 @@ export function UnifiedChat() {
   const [isFullView, setIsFullView] = useState(false);
   const [openTabs, setOpenTabs] = useState<DashboardTab[]>([]);
   const [expandedConns, setExpandedConns] = useState<Record<string, boolean>>({});
-  const [historyData, setHistoryData] = useState<any[]>([]);
    const [pendingFirstConnectionType, setPendingFirstConnectionType] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -44,7 +41,7 @@ export function UnifiedChat() {
   const { terminalLogs, addLog } = useLogs();
   
   const {
-    organization, organizations, setOrganization,
+    organization, organizations,
     isLoadingOrg, isAddingWorkspace, setIsAddingWorkspace,
       handleOnboardingComplete: handleWorkspaceOnboardingComplete, handleDeleteWorkspace
   } = useWorkspace(userId, fetchWithAuth);
@@ -60,9 +57,10 @@ export function UnifiedChat() {
 
   const {
     chatSessions, setChatSessions,
-    activeChatSession, activePoll, setActivePoll,
+    activeChatSession,
     input, setInput, isTyping,
-    handleSubmit, handleApproval
+    handleSubmit, handleApproval,
+    createChatSession, deleteChatSession
   } = useChatSessions(userId, fetchWithAuth, connections, addLog, currentView);
 
   const activeIdeTab = openTabs.find(t => t.id === currentView && t.type === 'ide') || null;
@@ -138,10 +136,11 @@ export function UnifiedChat() {
            isSidebarOpen={isSidebarOpen}
            setIsSidebarOpen={setIsSidebarOpen}
            organization={organization} userName={userName} currentView={currentView}
-           setCurrentView={setCurrentView} fetchWithAuth={fetchWithAuth} userId={userId} setHistoryData={setHistoryData}
-           connections={connections} setConnections={setConnections} chatSessions={chatSessions} setChatSessions={setChatSessions}
+           setCurrentView={setCurrentView}
+           connections={connections} chatSessions={chatSessions}
            openTabs={openTabs} setOpenTabs={setOpenTabs} expandedConns={expandedConns} setExpandedConns={setExpandedConns}
            openChat={openChat} setEditingConnId={setEditingConnId} setConnForm={setConnForm} addLog={addLog}
+           createChatSession={createChatSession} deleteChatSession={deleteChatSession}
         />
 
       <main className={`mosaic-center flex-1 flex overflow-hidden relative transition-all duration-300 ${isFullView && (activeChatSession || activeIdeTab) ? 'bg-[#111111]' : 'bg-transparent'}`}>
@@ -170,8 +169,9 @@ export function UnifiedChat() {
                     setConnections={setConnections} editingConnId={editingConnId} setEditingConnId={setEditingConnId}
                     connForm={connForm} setConnForm={setConnForm} connError={connError} testSuccess={testSuccess}
                     isTestingConnection={isTestingConnection} handleMsalLogin={handleMsalLogin} handleSaveConnection={handleSaveConnection}
-                    fetchWithAuth={fetchWithAuth} chatSessions={chatSessions} setChatSessions={setChatSessions}
+                    fetchWithAuth={fetchWithAuth} setChatSessions={setChatSessions}
                     openTabs={openTabs} setOpenTabs={setOpenTabs} setExpandedConns={setExpandedConns} addLog={addLog}
+                    createChatSession={createChatSession}
                  />
              </div>
           )}

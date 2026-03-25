@@ -3,6 +3,7 @@ using Microsoft.Azure.Functions.Worker.Middleware;
 using Microsoft.Extensions.Logging;
 using System.Net;
 using Microsoft.Azure.Functions.Worker.Http;
+using Functions.Api.Auth;
 
 namespace Functions.Api.Middleware;
 
@@ -47,19 +48,17 @@ public class JwtValidationMiddleware : IFunctionsWorkerMiddleware
             return;
         }
 
-        var userId = principal.Claims.FirstOrDefault(c =>
-            c.Type == "oid" ||
-            c.Type == "sub" ||
-            c.Type == "http://schemas.microsoft.com/identity/claims/objectidentifier" ||
-            c.Type == "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value;
+        var userId = AuthContextHelpers.GetCanonicalUserId(principal);
+        var userAliases = AuthContextHelpers.BuildUserAliases(principal);
 
-        if (string.IsNullOrWhiteSpace(userId))
+        if (string.IsNullOrWhiteSpace(userId) || userAliases.Count == 0)
         {
             await RejectAsync(context, req, "Validated token is missing user identifier claims.");
             return;
         }
 
         context.Items["UserId"] = userId;
+        context.Items["UserAliases"] = userAliases;
         context.Items["UserPrincipal"] = principal;
 
         await next(context);

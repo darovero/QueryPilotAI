@@ -1,4 +1,5 @@
 using Core.Application.Contracts;
+using Functions.Api.Auth;
 using Infrastructure.Sql;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
@@ -21,8 +22,9 @@ public class QueryIntakeFunction(IAppDatabaseService appDb)
             PropertyNameCaseInsensitive = true
         });
 
-        var authenticatedUserId = req.FunctionContext.Items.TryGetValue("UserId", out var uid) ? uid?.ToString() : null;
-        if (string.IsNullOrEmpty(authenticatedUserId))
+        var authenticatedUserId = AuthContextHelpers.GetAuthenticatedUserId(req.FunctionContext);
+        var userAliases = AuthContextHelpers.GetAuthenticatedUserAliases(req.FunctionContext);
+        if (string.IsNullOrEmpty(authenticatedUserId) || userAliases.Count == 0)
         {
             return req.CreateResponse(HttpStatusCode.Unauthorized);
         }
@@ -38,7 +40,7 @@ public class QueryIntakeFunction(IAppDatabaseService appDb)
 
         if (request.ConnectionId.HasValue && (request.Connection is null || string.IsNullOrWhiteSpace(request.Connection.Password)))
         {
-            var savedConnection = await appDb.GetConnectionForUserAsync(request.ConnectionId.Value, authenticatedUserId);
+            var savedConnection = await appDb.GetConnectionForUsersAsync(request.ConnectionId.Value, userAliases);
             if (savedConnection is null)
             {
                 var missingConnection = req.CreateResponse(HttpStatusCode.BadRequest);
@@ -94,6 +96,14 @@ public class OrchestrationStatusFunction
             });
 
             return notFound;
+        }
+
+        var userAliases = AuthContextHelpers.GetAuthenticatedUserAliases(req.FunctionContext);
+        if (userAliases.Count == 0 || !OrchestrationOwnershipHelpers.BelongsToUser(metadata, userAliases))
+        {
+            var forbidden = req.CreateResponse(HttpStatusCode.NotFound);
+            await forbidden.WriteAsJsonAsync(new { error = "Orchestration not found.", instanceId });
+            return forbidden;
         }
 
         var ok = req.CreateResponse(HttpStatusCode.OK);
@@ -160,7 +170,7 @@ public class ApprovalFunction
             return bad;
         }
 
-        var authenticatedUserId = req.FunctionContext.Items.TryGetValue("UserId", out var uid) ? uid?.ToString() : null;
+        var authenticatedUserId = AuthContextHelpers.GetAuthenticatedUserId(req.FunctionContext);
         if (string.IsNullOrWhiteSpace(authenticatedUserId))
         {
             return req.CreateResponse(HttpStatusCode.Unauthorized);
@@ -168,12 +178,20 @@ public class ApprovalFunction
 
         decision = decision with { ApproverUserId = authenticatedUserId };
 
-        var metadata = await durableClient.GetInstanceAsync(instanceId);
+        var metadata = await durableClient.GetInstanceAsync(instanceId, getInputsAndOutputs: true);
         if (metadata is null)
         {
             var notFound = req.CreateResponse(HttpStatusCode.NotFound);
             await notFound.WriteAsJsonAsync(new { error = "Orchestration not found.", instanceId });
             return notFound;
+        }
+
+        var userAliases = AuthContextHelpers.GetAuthenticatedUserAliases(req.FunctionContext);
+        if (userAliases.Count == 0 || !OrchestrationOwnershipHelpers.BelongsToUser(metadata, userAliases))
+        {
+            var forbidden = req.CreateResponse(HttpStatusCode.NotFound);
+            await forbidden.WriteAsJsonAsync(new { error = "Orchestration not found.", instanceId });
+            return forbidden;
         }
 
         await durableClient.RaiseEventAsync(instanceId, "ApprovalEvent", decision);
@@ -197,9 +215,36 @@ public class AuditHistoryFunction(Infrastructure.Sql.ISqlExecutionService sqlExe
     public async Task<HttpResponseData> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "history")] HttpRequestData req)
     {
-        var audits = await sqlExecutionService.GetRecentAuditsAsync(50);
+        var authenticatedUserId = AuthContextHelpers.GetAuthenticatedUserId(req.FunctionContext);
+        if (string.IsNullOrWhiteSpace(authenticatedUserId))
+        {
+            return req.CreateResponse(HttpStatusCode.Unauthorized);
+        }
+
+        var audits = await sqlExecutionService.GetRecentAuditsByUserAsync(authenticatedUserId, 50);
         var ok = req.CreateResponse(HttpStatusCode.OK);
         await ok.WriteAsJsonAsync(audits);
         return ok;
+    }
+}
+
+internal static class OrchestrationOwnershipHelpers
+{
+    internal static bool BelongsToUser(Microsoft.DurableTask.Client.OrchestrationMetadata metadata, IReadOnlyCollection<string> userIds)
+    {
+        if (string.IsNullOrWhiteSpace(metadata.SerializedInput) || userIds.Count == 0)
+        {
+            return false;
+        }
+
+        try
+        {
+            var request = JsonSerializer.Deserialize<QueryRequest>(metadata.SerializedInput);
+            return userIds.Any(userId => string.Equals(userId, request?.UserId, StringComparison.OrdinalIgnoreCase));
+        }
+        catch
+        {
+            return false;
+        }
     }
 }
