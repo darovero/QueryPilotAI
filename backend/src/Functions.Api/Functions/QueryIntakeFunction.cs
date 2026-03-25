@@ -1,4 +1,6 @@
 using Core.Application.Contracts;
+using Functions.Api.Auth;
+using Infrastructure.Sql;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.DurableTask.Client;
@@ -7,11 +9,11 @@ using System.Text.Json;
 
 namespace Functions.Api.Functions;
 
-public class QueryIntakeFunction
+public class QueryIntakeFunction(IAppDatabaseService appDb)
 {
     [Function(nameof(QueryIntakeFunction))]
     public async Task<HttpResponseData> Run(
-        [HttpTrigger(AuthorizationLevel.Function, "post", Route = "query")] HttpRequestData req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "query")] HttpRequestData req,
         [DurableClient] DurableTaskClient durableClient,
         FunctionContext executionContext)
     {
@@ -20,8 +22,9 @@ public class QueryIntakeFunction
             PropertyNameCaseInsensitive = true
         });
 
-        var authenticatedUserId = req.FunctionContext.Items.TryGetValue("UserId", out var uid) ? uid?.ToString() : null;
-        if (string.IsNullOrEmpty(authenticatedUserId))
+        var authenticatedUserId = AuthContextHelpers.GetAuthenticatedUserId(req.FunctionContext);
+        var userAliases = AuthContextHelpers.GetAuthenticatedUserAliases(req.FunctionContext);
+        if (string.IsNullOrEmpty(authenticatedUserId) || userAliases.Count == 0)
         {
             return req.CreateResponse(HttpStatusCode.Unauthorized);
         }
@@ -34,6 +37,29 @@ public class QueryIntakeFunction
         }
 
         request = request with { UserId = authenticatedUserId };
+
+        if (request.ConnectionId.HasValue && (request.Connection is null || string.IsNullOrWhiteSpace(request.Connection.Password)))
+        {
+            var savedConnection = await appDb.GetConnectionForUsersAsync(request.ConnectionId.Value, userAliases);
+            if (savedConnection is null)
+            {
+                var missingConnection = req.CreateResponse(HttpStatusCode.BadRequest);
+                await missingConnection.WriteAsJsonAsync(new { error = "The selected connection is not available for the authenticated user." });
+                return missingConnection;
+            }
+
+            request = request with
+            {
+                Connection = new DatabaseConfig(
+                    savedConnection.DbType,
+                    savedConnection.Host,
+                    savedConnection.Port ?? string.Empty,
+                    savedConnection.DatabaseName,
+                    savedConnection.Username ?? string.Empty,
+                    savedConnection.EncryptedPassword ?? string.Empty,
+                    savedConnection.AuthType)
+            };
+        }
 
         var instanceId = await durableClient.ScheduleNewOrchestrationInstanceAsync(
             nameof(FraudInsightOrchestrator),
@@ -55,7 +81,7 @@ public class OrchestrationStatusFunction
 {
     [Function(nameof(OrchestrationStatusFunction))]
     public async Task<HttpResponseData> Run(
-        [HttpTrigger(AuthorizationLevel.Function, "get", Route = "orchestrations/{instanceId}")] HttpRequestData req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "orchestrations/{instanceId}")] HttpRequestData req,
         string instanceId,
         [DurableClient] DurableTaskClient durableClient)
     {
@@ -70,6 +96,14 @@ public class OrchestrationStatusFunction
             });
 
             return notFound;
+        }
+
+        var userAliases = AuthContextHelpers.GetAuthenticatedUserAliases(req.FunctionContext);
+        if (userAliases.Count == 0 || !OrchestrationOwnershipHelpers.BelongsToUser(metadata, userAliases))
+        {
+            var forbidden = req.CreateResponse(HttpStatusCode.NotFound);
+            await forbidden.WriteAsJsonAsync(new { error = "Orchestration not found.", instanceId });
+            return forbidden;
         }
 
         var ok = req.CreateResponse(HttpStatusCode.OK);
@@ -120,7 +154,7 @@ public class ApprovalFunction
 {
     [Function(nameof(ApprovalFunction))]
     public async Task<HttpResponseData> Run(
-        [HttpTrigger(AuthorizationLevel.Function, "post", Route = "orchestrations/{instanceId}/approve")] HttpRequestData req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "orchestrations/{instanceId}/approve")] HttpRequestData req,
         string instanceId,
         [DurableClient] DurableTaskClient durableClient)
     {
@@ -136,12 +170,28 @@ public class ApprovalFunction
             return bad;
         }
 
-        var metadata = await durableClient.GetInstanceAsync(instanceId);
+        var authenticatedUserId = AuthContextHelpers.GetAuthenticatedUserId(req.FunctionContext);
+        if (string.IsNullOrWhiteSpace(authenticatedUserId))
+        {
+            return req.CreateResponse(HttpStatusCode.Unauthorized);
+        }
+
+        decision = decision with { ApproverUserId = authenticatedUserId };
+
+        var metadata = await durableClient.GetInstanceAsync(instanceId, getInputsAndOutputs: true);
         if (metadata is null)
         {
             var notFound = req.CreateResponse(HttpStatusCode.NotFound);
             await notFound.WriteAsJsonAsync(new { error = "Orchestration not found.", instanceId });
             return notFound;
+        }
+
+        var userAliases = AuthContextHelpers.GetAuthenticatedUserAliases(req.FunctionContext);
+        if (userAliases.Count == 0 || !OrchestrationOwnershipHelpers.BelongsToUser(metadata, userAliases))
+        {
+            var forbidden = req.CreateResponse(HttpStatusCode.NotFound);
+            await forbidden.WriteAsJsonAsync(new { error = "Orchestration not found.", instanceId });
+            return forbidden;
         }
 
         await durableClient.RaiseEventAsync(instanceId, "ApprovalEvent", decision);
@@ -163,11 +213,38 @@ public class AuditHistoryFunction(Infrastructure.Sql.ISqlExecutionService sqlExe
 {
     [Function(nameof(AuditHistoryFunction))]
     public async Task<HttpResponseData> Run(
-        [HttpTrigger(AuthorizationLevel.Function, "get", Route = "history")] HttpRequestData req)
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "history")] HttpRequestData req)
     {
-        var audits = await sqlExecutionService.GetRecentAuditsAsync(50);
+        var authenticatedUserId = AuthContextHelpers.GetAuthenticatedUserId(req.FunctionContext);
+        if (string.IsNullOrWhiteSpace(authenticatedUserId))
+        {
+            return req.CreateResponse(HttpStatusCode.Unauthorized);
+        }
+
+        var audits = await sqlExecutionService.GetRecentAuditsByUserAsync(authenticatedUserId, 50);
         var ok = req.CreateResponse(HttpStatusCode.OK);
         await ok.WriteAsJsonAsync(audits);
         return ok;
+    }
+}
+
+internal static class OrchestrationOwnershipHelpers
+{
+    internal static bool BelongsToUser(Microsoft.DurableTask.Client.OrchestrationMetadata metadata, IReadOnlyCollection<string> userIds)
+    {
+        if (string.IsNullOrWhiteSpace(metadata.SerializedInput) || userIds.Count == 0)
+        {
+            return false;
+        }
+
+        try
+        {
+            var request = JsonSerializer.Deserialize<QueryRequest>(metadata.SerializedInput);
+            return userIds.Any(userId => string.Equals(userId, request?.UserId, StringComparison.OrdinalIgnoreCase));
+        }
+        catch
+        {
+            return false;
+        }
     }
 }

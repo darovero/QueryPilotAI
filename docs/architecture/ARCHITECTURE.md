@@ -264,3 +264,12 @@ Campos mínimos:
 - telemetría fina,
 - polish UX,
 - pruebas de abuso y presentación.
+
+## 16. Diagramas de Arquitectura
+La arquitectura, proceso y despliegue se documentan en diagramas PlantUML ubicados en el directorio `diagrams/`:
+
+- **[01-architecture.puml](diagrams/01-architecture.puml)** — Componentes, capas y relaciones estructurales de todo el sistema.
+- **[02-process-flow.puml](diagrams/02-process-flow.puml)** — Secuencia end-to-end de una consulta desde el usuario hasta el insight final.
+- **[03-deployment-pipeline.puml](diagrams/03-deployment-pipeline.puml)** — Pipeline de despliegue con 8 fases ordenadas y capacidad de resumir.
+
+Ver [diagrams/README.md](diagrams/README.md) para instrucciones de visualización.

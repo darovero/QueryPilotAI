@@ -1,17 +1,21 @@
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Middleware;
 using Microsoft.Extensions.Logging;
-using System.IdentityModel.Tokens.Jwt;
+using System.Net;
+using Microsoft.Azure.Functions.Worker.Http;
+using Functions.Api.Auth;
 
 namespace Functions.Api.Middleware;
 
 public class JwtValidationMiddleware : IFunctionsWorkerMiddleware
 {
     private readonly ILogger<JwtValidationMiddleware> _logger;
+    private readonly IEntraTokenValidator _tokenValidator;
 
-    public JwtValidationMiddleware(ILogger<JwtValidationMiddleware> logger)
+    public JwtValidationMiddleware(ILogger<JwtValidationMiddleware> logger, IEntraTokenValidator tokenValidator)
     {
         _logger = logger;
+        _tokenValidator = tokenValidator;
     }
 
     public async Task Invoke(FunctionContext context, FunctionExecutionDelegate next)
@@ -24,43 +28,46 @@ public class JwtValidationMiddleware : IFunctionsWorkerMiddleware
             return;
         }
 
-        if (req.Headers.TryGetValues("Authorization", out var authHeaders))
+        if (!req.Headers.TryGetValues("Authorization", out var authHeaders))
         {
-            var tokenStr = authHeaders.FirstOrDefault()?.Replace("Bearer ", "", StringComparison.OrdinalIgnoreCase);
-            if (!string.IsNullOrEmpty(tokenStr))
-            {
-                try
-                {
-                    var handler = new JwtSecurityTokenHandler();
-                    if (handler.CanReadToken(tokenStr))
-                    {
-                        var token = handler.ReadJwtToken(tokenStr);
-                        
-                        // Try multiple claim types used by Microsoft Entra ID
-                        var userId = token.Claims.FirstOrDefault(c => 
-                            c.Type == "oid" || 
-                            c.Type == "sub" ||
-                            c.Type == "http://schemas.microsoft.com/identity/claims/objectidentifier" ||
-                            c.Type == "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value;
-                        
-                        if (!string.IsNullOrEmpty(userId))
-                        {
-                            context.Items["UserId"] = userId;
-                            _logger.LogInformation($"JWT UserId extracted: {userId}");
-                        }
-                        else
-                        {
-                            _logger.LogWarning($"JWT token present but no UserId claim found. Available claims: {string.Join(", ", token.Claims.Select(c => c.Type))}");
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning($"Fallo al parsear el Token JWT: {ex.Message}");
-                }
-            }
+            await RejectAsync(context, req, "Authorization header is required.");
+            return;
         }
 
+        var tokenStr = authHeaders.FirstOrDefault()?.Replace("Bearer ", "", StringComparison.OrdinalIgnoreCase);
+        if (string.IsNullOrWhiteSpace(tokenStr))
+        {
+            await RejectAsync(context, req, "Bearer token is required.");
+            return;
+        }
+
+        var principal = await _tokenValidator.ValidateAsync(tokenStr, context.CancellationToken);
+        if (principal == null)
+        {
+            await RejectAsync(context, req, "Invalid bearer token.");
+            return;
+        }
+
+        var userId = AuthContextHelpers.GetCanonicalUserId(principal);
+        var userAliases = AuthContextHelpers.BuildUserAliases(principal);
+
+        if (string.IsNullOrWhiteSpace(userId) || userAliases.Count == 0)
+        {
+            await RejectAsync(context, req, "Validated token is missing user identifier claims.");
+            return;
+        }
+
+        context.Items["UserId"] = userId;
+        context.Items["UserAliases"] = userAliases;
+        context.Items["UserPrincipal"] = principal;
+
         await next(context);
+    }
+
+    private static async Task RejectAsync(FunctionContext context, HttpRequestData req, string message)
+    {
+        var response = req.CreateResponse(HttpStatusCode.Unauthorized);
+        await response.WriteAsJsonAsync(new { error = message });
+        context.GetInvocationResult().Value = response;
     }
 }

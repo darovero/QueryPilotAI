@@ -80,6 +80,26 @@ NEXT_PUBLIC_REDIRECT_URI=http://localhost:3000/
 NEXT_PUBLIC_POST_LOGOUT_REDIRECT_URI=http://localhost:3000/
 ```
 
+### Requisito de App Registration
+
+Antes de intentar iniciar sesion, configura en el App Registration de Microsoft Entra ID el tipo de plataforma `Single-page application` o `Web` segun tu estrategia de autenticacion y agrega las URIs de redireccion que realmente va a usar el frontend.
+
+Valores minimos recomendados para este proyecto:
+
+- Local: `http://localhost:3000/`
+- Azure App Service: `https://ifdev2-web.azurewebsites.net`
+
+Si despliegas con otro hostname, agrega tambien esa URL exacta como Redirect URI y, si aplica, como Post Logout Redirect URI. Si la URI enviada por el frontend no coincide exactamente con la registrada en Entra ID, aparecera el error `AADSTS50011`.
+
+Para despliegues en Azure, la authority del frontend debe componerse con:
+
+- `Auth.AuthorityHost`
+- `Auth.TenantId`
+
+Ejemplo:
+
+- `https://login.microsoftonline.com/<tenant-id>`
+
 ## Estado
 Este repositorio contiene la arquitectura, seguridad, base de datos, infraestructura, agentes Foundry AI y lineamientos de desarrollo para comenzar en VS Code.
 

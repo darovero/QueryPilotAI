@@ -22,8 +22,8 @@ public class ExtractSchemaActivity(ISchemaExtractorService schemaExtractor)
     public async Task<string> Run([ActivityTrigger] UserConnectionRecord connection) 
     {
         var config = new DatabaseConfig(
-            connection.DbType, connection.Host, connection.Port, 
-            connection.DatabaseName, connection.Username, connection.EncryptedPassword, connection.AuthType);
+            connection.DbType, connection.Host, connection.Port ?? "",
+            connection.DatabaseName, connection.Username ?? "", connection.EncryptedPassword ?? "", connection.AuthType);
         try 
         {
             return await schemaExtractor.ExtractSchemaAsync(config);

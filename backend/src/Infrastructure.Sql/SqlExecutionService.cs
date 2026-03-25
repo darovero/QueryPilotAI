@@ -9,6 +9,7 @@ public interface ISqlExecutionService
     Task<List<Dictionary<string, object?>>> ExecuteQueryAsync(string sql, DatabaseConfig? config = null);
     Task SaveAuditAsync(AuditTrailRecord audit);
     Task<List<Dictionary<string, object?>>> GetRecentAuditsAsync(int count);
+    Task<List<Dictionary<string, object?>>> GetRecentAuditsByUserAsync(string userId, int count);
 }
 
 public sealed class SqlExecutionService(IConfiguration configuration) : ISqlExecutionService
@@ -19,47 +20,10 @@ public sealed class SqlExecutionService(IConfiguration configuration) : ISqlExec
 
     public async Task<List<Dictionary<string, object?>>> ExecuteQueryAsync(string sql, DatabaseConfig? config = null)
     {
-        string connectionString = _connectionString;
-        
-        if (config != null && !string.IsNullOrWhiteSpace(config.Host) && string.Equals(config.Type, "Azure SQL", StringComparison.OrdinalIgnoreCase))
-        {
-            var portPart = string.IsNullOrWhiteSpace(config.Port) ? "" : $",{config.Port}";
-            
-            if (string.Equals(config.AuthType, "AzureAD", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(config.Username))
-            {
-                // ActiveDirectoryPassword requires Username and Password of the Microsoft Entra ID user
-                connectionString = $"Server={config.Host}{portPart};Initial Catalog={config.Database};User ID={config.Username};Password={config.Password};Encrypt=True;TrustServerCertificate=True;Authentication=Active Directory Password;Connection Timeout=30;";
-            }
-            else if (string.IsNullOrWhiteSpace(config.Username))
-            {
-                connectionString = $"Server={config.Host}{portPart};Initial Catalog={config.Database};Encrypt=True;TrustServerCertificate=True;Authentication=Active Directory Default;Connection Timeout=30;";
-            }
-            else
-            {
-                connectionString = $"Server={config.Host}{portPart};Initial Catalog={config.Database};User ID={config.Username};Password={config.Password};Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;";
-            }
-        }
-
-        SqlConnection connection;
-        try 
-        {
-            connection = new SqlConnection(connectionString);
-            await connection.OpenAsync();
-        } 
-        catch 
-        {
-            if (connectionString != _connectionString) 
-            {
-                // Fallback to default if custom connection fails
-                connectionString = _connectionString;
-                connection = new SqlConnection(connectionString);
-                await connection.OpenAsync();
-            }
-            else 
-            {
-                throw;
-            }
-        }
+        var connection = config != null && !string.IsNullOrWhiteSpace(config.Host) && string.Equals(config.Type, "Azure SQL", StringComparison.OrdinalIgnoreCase)
+            ? SqlConnectionFactory.Create(config)
+            : new SqlConnection(_connectionString);
+        await connection.OpenAsync();
 
         await using var cmdConnection = connection; // Ensure disposal
         
@@ -149,5 +113,44 @@ FROM dbo.analytics_requests_audit
 ORDER BY created_at DESC";
 
         return await ExecuteQueryAsync(sql);
+    }
+
+    public async Task<List<Dictionary<string, object?>>> GetRecentAuditsByUserAsync(string userId, int count)
+    {
+        var safeCnt = Math.Clamp(count, 1, 200);
+        const string sql = @"
+SELECT TOP (@Count)
+    request_id,
+    user_id,
+    role_name,
+    original_question,
+    status,
+    generated_sql,
+    created_at,
+    completed_at
+FROM dbo.analytics_requests_audit
+WHERE user_id = @UserId
+ORDER BY created_at DESC";
+
+        await using var connection = new SqlConnection(_connectionString);
+        await connection.OpenAsync();
+        await using var command = new SqlCommand(sql, connection);
+        command.Parameters.AddWithValue("@Count", safeCnt);
+        command.Parameters.AddWithValue("@UserId", userId);
+
+        var rows = new List<Dictionary<string, object?>>();
+        await using var reader = await command.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+        {
+            var row = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+            for (var i = 0; i < reader.FieldCount; i++)
+            {
+                row[reader.GetName(i)] = reader.IsDBNull(i) ? null : reader.GetValue(i);
+            }
+
+            rows.Add(row);
+        }
+
+        return rows;
     }
 }

@@ -1,6 +1,8 @@
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Functions.Api.Middleware;
+using Infrastructure.AzureOpenAI.Configuration;
 
 var host = new HostBuilder()
     .ConfigureFunctionsWorkerDefaults(builder =>
@@ -15,6 +17,8 @@ var host = new HostBuilder()
 
         services.AddLogging();
         services.AddHttpClient();
+        services.AddDataProtection();
+        services.AddSingleton<IEntraTokenValidator, MicrosoftEntraTokenValidator>();
 
         // --- Core ---
         services.AddSingleton<Core.Application.Services.IClock, Core.Application.Services.SystemClock>();
@@ -22,6 +26,7 @@ var host = new HostBuilder()
 
         // --- Database Services ---
         services.AddSingleton<Infrastructure.Sql.ISqlExecutionService, Infrastructure.Sql.SqlExecutionService>();
+        services.AddSingleton<Infrastructure.Sql.IConnectionSecretProtector, Infrastructure.Sql.ConnectionSecretProtector>();
         services.AddSingleton<Infrastructure.Sql.IAppDatabaseService, Infrastructure.Sql.AppDatabaseService>();
         services.AddSingleton<Infrastructure.Sql.ISchemaExtractorService, Infrastructure.Sql.SchemaExtractorService>();
 
@@ -37,10 +42,19 @@ var host = new HostBuilder()
             ?? throw new InvalidOperationException("FoundryAgent__ResultInterpreterAgentId is required.");
         var conciergeAgentId = Environment.GetEnvironmentVariable("FoundryAgent__ConciergeAgentId")
             ?? throw new InvalidOperationException("FoundryAgent__ConciergeAgentId is required.");
+        var foundryApiKey = Environment.GetEnvironmentVariable("AzureOpenAI__ApiKey"); // optional: use key auth for local dev
+        var foundryTenantId = Environment.GetEnvironmentVariable("FoundryAgent__TenantId");
 
         services.AddSingleton<Infrastructure.AzureOpenAI.IFoundryAgentClient>(
             _ => new Infrastructure.AzureOpenAI.FoundryAgentClient(
-                projectEndpoint, sqlPlannerAgentId, resultInterpreterAgentId, conciergeAgentId));
+                projectEndpoint, sqlPlannerAgentId, resultInterpreterAgentId, conciergeAgentId, foundryApiKey, foundryTenantId));
+
+        // --- Semantic Kernel Integration ---
+        // Variables de entorno cargadas por el host de Azure Functions
+        services.AddSemanticKernelServices();
+
+        // Register advanced patterns example (optional; for demonstration)
+        services.AddTransient<Infrastructure.AzureOpenAI.Examples.AdvancedSemanticKernelPatterns>();
     })
     .Build();
 

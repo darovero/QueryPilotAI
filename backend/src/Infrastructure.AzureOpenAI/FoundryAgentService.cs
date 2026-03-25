@@ -1,6 +1,9 @@
 using Azure.Identity;
-using Azure.AI.Agents.Persistent;
+using Azure.Core;
+using Azure.AI.Projects;
+using Azure.AI.Extensions.OpenAI;
 using Core.Application.Contracts;
+using OpenAI.Responses;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -136,6 +139,18 @@ public sealed class ResultInterpretation
 
     [JsonPropertyName("response_for_user")]
     public string? ResponseForUser { get; set; }
+
+    [JsonPropertyName("reason")]
+    public string? Reason { get; set; }
+
+    [JsonPropertyName("warnings")]
+    public string[]? Warnings { get; set; }
+
+    [JsonPropertyName("title")]
+    public string? Title { get; set; }
+
+    [JsonPropertyName("subtitle")]
+    public string? Subtitle { get; set; }
 }
 
 public sealed class KeyFinding
@@ -163,10 +178,9 @@ public sealed class RiskInterpretation
 
 public sealed class FoundryAgentClient : IFoundryAgentClient
 {
-    private readonly PersistentAgentsClient _agentsClient;
-    private readonly string _sqlPlannerAgentId;
-    private readonly string _resultInterpreterAgentId;
-    private readonly string _conciergeAgentId;
+    private readonly ProjectResponsesClient _sqlPlannerResponsesClient;
+    private readonly ProjectResponsesClient _resultInterpreterResponsesClient;
+    private readonly ProjectResponsesClient _conciergeResponsesClient;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -177,20 +191,46 @@ public sealed class FoundryAgentClient : IFoundryAgentClient
 
     public FoundryAgentClient(
         string projectEndpoint,
-        string sqlPlannerAgentId,
-        string resultInterpreterAgentId,
-        string conciergeAgentId)
+        string sqlPlannerAgentReference,
+        string resultInterpreterAgentReference,
+        string conciergeAgentReference,
+        string? apiKey = null,
+        string? tenantId = null)
     {
-        _agentsClient = new PersistentAgentsClient(projectEndpoint, new DefaultAzureCredential());
-        _sqlPlannerAgentId = sqlPlannerAgentId;
-        _resultInterpreterAgentId = resultInterpreterAgentId;
-        _conciergeAgentId = conciergeAgentId;
+        var credentialOptions = new DefaultAzureCredentialOptions();
+        if (!string.IsNullOrWhiteSpace(tenantId))
+        {
+            credentialOptions.TenantId = tenantId;
+        }
+
+        TokenCredential credential = new ChainedTokenCredential(
+            new AzureCliCredential(new AzureCliCredentialOptions
+            {
+                TenantId = credentialOptions.TenantId
+            }),
+            new DefaultAzureCredential(credentialOptions));
+
+        AIProjectClient projectClient = new(
+            endpoint: new Uri(projectEndpoint.Trim()),
+            tokenProvider: credential);
+
+        var sqlPlannerAgent = ParseAgentReference(sqlPlannerAgentReference, nameof(sqlPlannerAgentReference));
+        var resultInterpreterAgent = ParseAgentReference(resultInterpreterAgentReference, nameof(resultInterpreterAgentReference));
+        var conciergeAgent = ParseAgentReference(conciergeAgentReference, nameof(conciergeAgentReference));
+
+        Console.WriteLine($"[FOUNDRY AGENT CONFIG] SQL Planner: {sqlPlannerAgent.Name}:{sqlPlannerAgent.Version}");
+        Console.WriteLine($"[FOUNDRY AGENT CONFIG] Result Interpreter: {resultInterpreterAgent.Name}:{resultInterpreterAgent.Version}");
+        Console.WriteLine($"[FOUNDRY AGENT CONFIG] Concierge: {conciergeAgent.Name}:{conciergeAgent.Version}");
+
+        _sqlPlannerResponsesClient = projectClient.OpenAI.GetProjectResponsesClientForAgent(sqlPlannerAgent);
+        _resultInterpreterResponsesClient = projectClient.OpenAI.GetProjectResponsesClientForAgent(resultInterpreterAgent);
+        _conciergeResponsesClient = projectClient.OpenAI.GetProjectResponsesClientForAgent(conciergeAgent);
     }
 
     public async Task<SqlPlannerResponse> PlanSqlAsync(string question, string dbSchema, string? conversationContext = null)
     {
         var userMessage = BuildSqlPlannerMessage(question, dbSchema, conversationContext);
-        var responseText = await RunAgentAsync(_sqlPlannerAgentId, userMessage);
+        var responseText = await RunAgentAsync(_sqlPlannerResponsesClient, userMessage, "sql-planner");
         
         Console.WriteLine($"[SQL PLANNER RAW RESPONSE]:\n{responseText}\n----------------------");
 
@@ -216,7 +256,7 @@ public sealed class FoundryAgentClient : IFoundryAgentClient
         List<Dictionary<string, object?>> rows, string? governanceJson = null)
     {
         var userMessage = BuildResultInterpreterMessage(question, intentJson, sql, rows, governanceJson);
-        var responseText = await RunAgentAsync(_resultInterpreterAgentId, userMessage);
+        var responseText = await RunAgentAsync(_resultInterpreterResponsesClient, userMessage, "result-interpreter");
 
         Console.WriteLine("[RESULT INTERPRETER RAW RESPONSE]:");
         Console.WriteLine(responseText);
@@ -244,102 +284,120 @@ public sealed class FoundryAgentClient : IFoundryAgentClient
     {
         try
         {
-            var responseText = await RunAgentAsync(_conciergeAgentId, message);
+            var classificationPrompt = BuildConciergeClassificationMessage(message);
+            var responseText = await RunAgentAsync(_conciergeResponsesClient, classificationPrompt, "concierge");
 
-            // If the Concierge responded with text, it's conversational
-            // If it returned an analytical classification JSON, parse it
-            if (string.IsNullOrWhiteSpace(responseText))
-                return null;
+            Console.WriteLine($"[CONCIERGE RAW RESPONSE]:\n{responseText}\n----------------------");
 
-            // Try to detect if the response is a direct conversational reply
-            // vs. a structured classification
+            if (string.IsNullOrWhiteSpace(responseText) || responseText == "{}")
+            {
+                Console.WriteLine("[CONCIERGE] Empty response — defaulting to analytical.");
+                return new ConversationalClassification("analytical", string.Empty, 0.5);
+            }
+
             try
             {
                 var classification = JsonSerializer.Deserialize<ConciergeClassification>(responseText, JsonOptions);
                 if (classification?.Category != null)
                 {
+                    Console.WriteLine($"[CONCIERGE CLASSIFICATION] Category={classification.Category}, Confidence={classification.Confidence}");
                     return new ConversationalClassification(
                         classification.Category,
                         classification.Reply ?? string.Empty,
                         classification.Confidence);
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // Not JSON — it's a direct conversational reply
+                Console.WriteLine($"[CONCIERGE DESERIALIZATION ERROR]: {ex.Message}\nRaw: {responseText}");
             }
 
-            // Treat as direct conversational response
-            return new ConversationalClassification("conversational", responseText, 1.0);
+            // Could not parse JSON — default to analytical so the pipeline runs.
+            // The SQL Planner and safety checks will handle non-data queries gracefully.
+            Console.WriteLine("[CONCIERGE] Could not parse JSON classification — defaulting to analytical.");
+            return new ConversationalClassification("analytical", string.Empty, 0.5);
         }
-        catch
+        catch (Exception ex)
         {
+            Console.WriteLine($"[CONCIERGE EXCEPTION]: {ex.Message}");
             return null;
         }
     }
 
-    private async Task<string> RunAgentAsync(string agentId, string userMessage)
+    private static async Task<string> RunAgentAsync(ProjectResponsesClient responseClient, string userMessage, string agentRole)
     {
-        // Create thread options with the user message included
-        var options = new ThreadAndRunOptions
-        {
-            ThreadOptions = new PersistentAgentThreadCreationOptions
-            {
-                Messages =
-                {
-                    new ThreadMessageOptions(MessageRole.User, userMessage)
-                }
-            }
-        };
+        ResponseResult response = await responseClient.CreateResponseAsync(userMessage);
+        var output = response.GetOutputText()?.Trim();
 
-        // Create thread and run in one call 
-        ThreadRun run = await _agentsClient.CreateThreadAndRunAsync(agentId, options);
-        var threadId = run.ThreadId;
-
-        // Poll until complete
-        while (run.Status == RunStatus.Queued || run.Status == RunStatus.InProgress)
+        if (string.IsNullOrWhiteSpace(output))
         {
-            await Task.Delay(1000);
-            run = await _agentsClient.Runs.GetRunAsync(threadId, run.Id);
+            Console.WriteLine($"[FOUNDRY RESPONSE EMPTY] role={agentRole}; responseId={response.Id}; status={response.Status}");
+            return "{}";
         }
 
-        if (run.Status != RunStatus.Completed)
+        if (output.StartsWith("```json", StringComparison.OrdinalIgnoreCase))
+            output = output[7..];
+        else if (output.StartsWith("```", StringComparison.OrdinalIgnoreCase))
+            output = output[3..];
+        if (output.EndsWith("```", StringComparison.OrdinalIgnoreCase))
+            output = output[..^3];
+
+        return output.Trim();
+    }
+
+    private static AgentReference ParseAgentReference(string rawReference, string settingName)
+    {
+        if (string.IsNullOrWhiteSpace(rawReference))
         {
-            if (run.Status == RunStatus.RequiresAction)
-            {
-                await _agentsClient.Runs.CancelRunAsync(threadId, run.Id);
-            }
-            throw new InvalidOperationException($"Agent run failed with status: {run.Status}");
+            throw new ArgumentException($"Missing Foundry agent reference: {settingName}.", settingName);
         }
 
-        // Get the assistant's response
-        var messages = _agentsClient.Messages.GetMessagesAsync(threadId, order: ListSortOrder.Descending);
-        await foreach (var msg in messages)
+        var trimmed = rawReference.Trim();
+        var separatorIndex = trimmed.IndexOf(':');
+        if (separatorIndex <= 0 || separatorIndex == trimmed.Length - 1)
         {
-            if (msg.Role == MessageRole.Agent)
-            {
-                foreach (var content in msg.ContentItems)
-                {
-                    if (content is MessageTextContent textContent)
-                    {
-                        var text = textContent.Text;
-                        // Clean markdown wrapping if present
-                        if (text.StartsWith("```json", StringComparison.OrdinalIgnoreCase))
-                            text = text[7..];
-                        else if (text.StartsWith("```", StringComparison.OrdinalIgnoreCase))
-                            text = text[3..];
-                        if (text.EndsWith("```", StringComparison.OrdinalIgnoreCase))
-                            text = text[..^3];
-                        return text.Trim();
-                    }
-                }
-            }
+            return new AgentReference(name: trimmed);
         }
 
-        // Cleanup
-        await _agentsClient.Threads.DeleteThreadAsync(threadId);
+        var name = trimmed[..separatorIndex].Trim();
+        var version = trimmed[(separatorIndex + 1)..].Trim();
+        if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(version))
+        {
+            return new AgentReference(name: trimmed);
+        }
 
-        return "{}";
+        return new AgentReference(name: name, version: version);
+    }
+
+    private static string BuildConciergeClassificationMessage(string userMessage)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("=== INSTRUCCIÓN DE CLASIFICACIÓN ===");
+        sb.AppendLine("Tu tarea es clasificar si el mensaje del usuario requiere análisis de datos (consulta a base de datos, métricas, estadísticas, reportes, gráficas, tendencias, fraude) o es conversacional (saludo, pregunta general, ayuda, agradecimiento, prueba).");
+        sb.AppendLine();
+        sb.AppendLine("=== MENSAJE DEL USUARIO ===");
+        sb.AppendLine(userMessage);
+        sb.AppendLine();
+        sb.AppendLine("=== INSTRUCCIÓN CRÍTICA DE RESPUESTA ===");
+        sb.AppendLine("RESPONDE ÚNICAMENTE CON UN OBJETO JSON VÁLIDO. SIN TEXTO ADICIONAL, SIN MARKDOWN, SIN EXPLICACIONES.");
+        sb.AppendLine("Reglas:");
+        sb.AppendLine("- Si el mensaje pide datos, métricas, reportes, gráficas, estadísticas, consultas SQL o análisis → category: \"analytical\"");
+        sb.AppendLine("- Si es un saludo, conversación casual, prueba o pregunta de ayuda → category: \"conversational\" y reply con tu respuesta");
+        sb.AppendLine();
+        sb.AppendLine("FORMATO SI ES ANALÍTICO:");
+        sb.AppendLine("{");
+        sb.AppendLine("  \"category\": \"analytical\",");
+        sb.AppendLine("  \"reply\": \"\",");
+        sb.AppendLine("  \"confidence\": 0.95");
+        sb.AppendLine("}");
+        sb.AppendLine();
+        sb.AppendLine("FORMATO SI ES CONVERSACIONAL:");
+        sb.AppendLine("{");
+        sb.AppendLine("  \"category\": \"conversational\",");
+        sb.AppendLine("  \"reply\": \"Tu respuesta amigable al usuario aquí\",");
+        sb.AppendLine("  \"confidence\": 0.95");
+        sb.AppendLine("}");
+        return sb.ToString();
     }
 
     private static string BuildSqlPlannerMessage(string question, string dbSchema, string? conversationContext)
@@ -353,6 +411,11 @@ public sealed class FoundryAgentClient : IFoundryAgentClient
         {
             sb.AppendLine("=== CONTEXTO DE CONVERSACIÓN ===");
             sb.AppendLine(conversationContext);
+            sb.AppendLine();
+            sb.AppendLine("=== REGLAS DE MEMORIA CONVERSACIONAL ===");
+            sb.AppendLine("- Si la pregunta actual hace referencia al contexto previo (por ejemplo: 'esa', 'dicha', 'la misma', 'genera una gráfica de eso'), debes resolverla usando el último turno analítico disponible.");
+            sb.AppendLine("- Si el usuario pide visualización o continuación de un análisis previo, reutiliza la misma lógica analítica y produce SQL listo para ejecutarse.");
+            sb.AppendLine("- No marques 'unsupported' cuando exista contexto suficiente en los turnos previos para responder la intención actual.");
             sb.AppendLine();
         }
 

@@ -5,5 +5,15 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
     <LangVersion>latest</LangVersion>
+    <!-- NU1608: intentional override of transitive SDK package versions (SK vs OpenAI/AzureOpenAI) -->
+    <NoWarn>$(NoWarn);NU1608</NoWarn>
+    <DefaultItemExcludes>$(DefaultItemExcludes);**\deploy\artifacts\**</DefaultItemExcludes>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="**\deploy\artifacts\**" />
+    <Content Remove="**\deploy\artifacts\**" />
+    <EmbeddedResource Remove="**\deploy\artifacts\**" />
+    <None Remove="**\deploy\artifacts\**" />
+  </ItemGroup>
 </Project>

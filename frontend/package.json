@@ -2,6 +2,9 @@
   "name": "insightforge-frontend",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "^20.19.0 || ^22.12.0 || >=24.0.0"
+  },
   "scripts": {
     "dev": "next dev --turbo",
     "build": "next build",
@@ -12,7 +15,7 @@
     "@azure/msal-browser": "^4.30.0",
     "@azure/msal-react": "^3.0.29",
     "@types/react-syntax-highlighter": "^15.5.13",
-    "next": "15.0.0",
+    "next": "^15.5.14",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "react-markdown": "^10.1.0",
