@@ -54,12 +54,12 @@ export function ChartSuggestion({ chart, data }: ChartSuggestionProps) {
 
     // Renderizado SVG simple para gráfica de líneas
     if (chart.type === "line") {
-      return <LineChartSVG data={chartData} label={chart.y_axis_label} />;
+      return <LineChartSVG data={chartData} xLabel={chart.x_axis_label} yLabel={chart.y_axis_label} />;
     }
 
     // Renderizado SVG simple para gráfica de barras
     if (chart.type === "bar") {
-      return <BarChartSVG data={chartData} label={chart.y_axis_label} />;
+      return <BarChartSVG data={chartData} xLabel={chart.x_axis_label} yLabel={chart.y_axis_label} />;
     }
 
     return (
@@ -97,36 +97,45 @@ export function ChartSuggestion({ chart, data }: ChartSuggestionProps) {
 
 function LineChartSVG({
   data,
-  label,
+  xLabel,
+  yLabel,
 }: {
   data: Array<{ name: string; values: Array<{ x: string; y: number }> }>;
-  label?: string;
+  xLabel?: string;
+  yLabel?: string;
 }) {
-  const width = 400;
-  const height = 200;
-  const padding = 40;
+  const width = 640;
+  const height = 300;
+  const paddingLeft = 58;
+  const paddingRight = 24;
+  const paddingTop = 24;
+  const paddingBottom = 62;
 
   const allValues = data.flatMap((d) => d.values.map((v) => v.y));
   const maxY = Math.max(...allValues, 1);
   const minY = 0;
 
   const xCount = data[0]?.values.length || 1;
-  const xStep = (width - 2 * padding) / (xCount - 1 || 1);
+  const chartWidth = width - paddingLeft - paddingRight;
+  const chartHeight = height - paddingTop - paddingBottom;
+  const xStep = chartWidth / (xCount - 1 || 1);
   const yRange = maxY - minY || 1;
-  const yScale = (height - 2 * padding) / yRange;
+  const yScale = chartHeight / yRange;
 
-  const colors = ["#3b82f6", "#ef4444", "#10b981", "#f59e0b"];
+  const colors = ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6", "#f97316"];
+  const xValues = data[0]?.values.map((v) => v.x) ?? [];
+  const tickIndices = getTickIndices(xValues.length, 6);
 
   return (
-    <svg width="100%" height="240" viewBox={`0 0 ${width} ${height}`}>
+    <svg width="100%" height="300" viewBox={`0 0 ${width} ${height}`}>
       {/* Grid */}
       {[0, 0.25, 0.5, 0.75, 1].map((ratio) => (
         <line
           key={`grid-${ratio}`}
-          x1={padding}
-          y1={height - padding - ratio * (height - 2 * padding)}
-          x2={width - padding}
-          y2={height - padding - ratio * (height - 2 * padding)}
+          x1={paddingLeft}
+          y1={height - paddingBottom - ratio * chartHeight}
+          x2={width - paddingRight}
+          y2={height - paddingBottom - ratio * chartHeight}
           stroke="#27272a"
           strokeWidth="1"
         />
@@ -134,20 +143,20 @@ function LineChartSVG({
 
       {/* Y-axis */}
       <line
-        x1={padding}
-        y1={padding}
-        x2={padding}
-        y2={height - padding}
+        x1={paddingLeft}
+        y1={paddingTop}
+        x2={paddingLeft}
+        y2={height - paddingBottom}
         stroke="#52525b"
         strokeWidth="2"
       />
 
       {/* X-axis */}
       <line
-        x1={padding}
-        y1={height - padding}
-        x2={width - padding}
-        y2={height - padding}
+        x1={paddingLeft}
+        y1={height - paddingBottom}
+        x2={width - paddingRight}
+        y2={height - paddingBottom}
         stroke="#52525b"
         strokeWidth="2"
       />
@@ -156,8 +165,8 @@ function LineChartSVG({
       {[0, 0.25, 0.5, 0.75, 1].map((ratio) => (
         <text
           key={`y-label-${ratio}`}
-          x={padding - 8}
-          y={height - padding - ratio * (height - 2 * padding) + 4}
+          x={paddingLeft - 10}
+          y={height - paddingBottom - ratio * chartHeight + 4}
           fontSize="11"
           fill="#9ca3af"
           textAnchor="end"
@@ -166,6 +175,32 @@ function LineChartSVG({
         </text>
       ))}
 
+      {/* X-axis ticks */}
+      {tickIndices.map((idx) => {
+        const x = paddingLeft + idx * xStep;
+        return (
+          <g key={`x-tick-${idx}`}>
+            <line
+              x1={x}
+              y1={height - paddingBottom}
+              x2={x}
+              y2={height - paddingBottom + 5}
+              stroke="#71717a"
+              strokeWidth="1"
+            />
+            <text
+              x={x}
+              y={height - paddingBottom + 18}
+              fontSize="10"
+              fill="#a1a1aa"
+              textAnchor="middle"
+            >
+              {truncateLabel(xValues[idx] ?? "", 10)}
+            </text>
+          </g>
+        );
+      })}
+
       {/* Data lines */}
       {data.map((series, seriesIdx) => (
         <g key={`series-${seriesIdx}`}>
@@ -173,8 +208,8 @@ function LineChartSVG({
           <polyline
             points={series.values
               .map((v, i) => {
-                const x = padding + i * xStep;
-                const y = height - padding - ((v.y - minY) * yScale);
+                const x = paddingLeft + i * xStep;
+                const y = height - paddingBottom - ((v.y - minY) * yScale);
                 return `${x},${y}`;
               })
               .join(" ")}
@@ -187,17 +222,29 @@ function LineChartSVG({
 
           {/* Points */}
           {series.values.map((v, i) => {
-            const x = padding + i * xStep;
-            const y = height - padding - ((v.y - minY) * yScale);
+            const x = paddingLeft + i * xStep;
+            const y = height - paddingBottom - ((v.y - minY) * yScale);
             return (
-              <circle
-                key={`point-${seriesIdx}-${i}`}
-                cx={x}
-                cy={y}
-                r="3"
-                fill={colors[seriesIdx % colors.length]}
-                opacity="0.8"
-              />
+              <g key={`point-${seriesIdx}-${i}`}>
+                <circle
+                  cx={x}
+                  cy={y}
+                  r="3"
+                  fill={colors[seriesIdx % colors.length]}
+                  opacity="0.8"
+                />
+                {series.values.length <= 12 && (
+                  <text
+                    x={x}
+                    y={y - 8}
+                    fontSize="9"
+                    fill="#d4d4d8"
+                    textAnchor="middle"
+                  >
+                    {v.y.toFixed(1)}
+                  </text>
+                )}
+              </g>
             );
           })}
         </g>
@@ -207,89 +254,255 @@ function LineChartSVG({
       {data.map((series, idx) => (
         <g key={`legend-${idx}`}>
           <rect
-            x={padding}
-            y={height - 25}
+            x={width - 170}
+            y={paddingTop + idx * 16}
             width={10}
             height={10}
             fill={colors[idx % colors.length]}
             rx="2"
           />
-          <text x={padding + 16} y={height - 17} fontSize="11" fill="#d4d4d8">
-            {series.name}
+          <text x={width - 154} y={paddingTop + idx * 16 + 9} fontSize="10" fill="#d4d4d8">
+            {truncateLabel(series.name, 20)}
           </text>
         </g>
       ))}
+
+      {/* Axis labels */}
+      {xLabel && (
+        <text
+          x={paddingLeft + chartWidth / 2}
+          y={height - 10}
+          fontSize="11"
+          fill="#c4c4cc"
+          textAnchor="middle"
+        >
+          {xLabel}
+        </text>
+      )}
+      {yLabel && (
+        <text
+          x={16}
+          y={paddingTop + chartHeight / 2}
+          fontSize="11"
+          fill="#c4c4cc"
+          textAnchor="middle"
+          transform={`rotate(-90 16 ${paddingTop + chartHeight / 2})`}
+        >
+          {yLabel}
+        </text>
+      )}
     </svg>
   );
 }
 
 function BarChartSVG({
   data,
-  label,
+  xLabel,
+  yLabel,
 }: {
   data: Array<{ name: string; values: Array<{ x: string; y: number }> }>;
-  label?: string;
+  xLabel?: string;
+  yLabel?: string;
 }) {
-  const width = 400;
-  const height = 200;
-  const padding = 40;
+  const width = 640;
+  const height = 300;
+  const paddingLeft = 58;
+  const paddingRight = 24;
+  const paddingTop = 24;
+  const paddingBottom = 62;
 
   const allValues = data.flatMap((d) => d.values.map((v) => v.y));
   const maxY = Math.max(...allValues, 1);
 
   const xCount = data[0]?.values.length || 1;
-  const barWidth = (width - 2 * padding) / xCount / (data.length + 0.5);
-  const yScale = (height - 2 * padding) / maxY;
+  const chartWidth = width - paddingLeft - paddingRight;
+  const chartHeight = height - paddingTop - paddingBottom;
+  const groupWidth = chartWidth / xCount;
+  const barWidth = Math.max(8, groupWidth / (data.length + 0.6));
+  const yScale = chartHeight / maxY;
 
-  const colors = ["#3b82f6", "#ef4444", "#10b981", "#f59e0b"];
+  const colors = ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6", "#f97316"];
+  const xValues = data[0]?.values.map((v) => v.x) ?? [];
+  const tickIndices = getTickIndices(xValues.length, 6);
 
   return (
-    <svg width="100%" height="240" viewBox={`0 0 ${width} ${height}`}>
+    <svg width="100%" height="300" viewBox={`0 0 ${width} ${height}`}>
+      {/* Grid */}
+      {[0, 0.25, 0.5, 0.75, 1].map((ratio) => (
+        <line
+          key={`grid-${ratio}`}
+          x1={paddingLeft}
+          y1={height - paddingBottom - ratio * chartHeight}
+          x2={width - paddingRight}
+          y2={height - paddingBottom - ratio * chartHeight}
+          stroke="#27272a"
+          strokeWidth="1"
+        />
+      ))}
+
       {/* Y-axis */}
       <line
-        x1={padding}
-        y1={padding}
-        x2={padding}
-        y2={height - padding}
+        x1={paddingLeft}
+        y1={paddingTop}
+        x2={paddingLeft}
+        y2={height - paddingBottom}
         stroke="#52525b"
         strokeWidth="2"
       />
 
       {/* X-axis */}
       <line
-        x1={padding}
-        y1={height - padding}
-        x2={width - padding}
-        y2={height - padding}
+        x1={paddingLeft}
+        y1={height - paddingBottom}
+        x2={width - paddingRight}
+        y2={height - paddingBottom}
         stroke="#52525b"
         strokeWidth="2"
       />
+
+      {/* Y-axis labels */}
+      {[0, 0.25, 0.5, 0.75, 1].map((ratio) => (
+        <text
+          key={`y-label-${ratio}`}
+          x={paddingLeft - 10}
+          y={height - paddingBottom - ratio * chartHeight + 4}
+          fontSize="11"
+          fill="#9ca3af"
+          textAnchor="end"
+        >
+          {(ratio * maxY).toFixed(0)}
+        </text>
+      ))}
+
+      {/* X-axis ticks */}
+      {tickIndices.map((idx) => {
+        const x = paddingLeft + idx * groupWidth + groupWidth / 2;
+        return (
+          <g key={`x-tick-${idx}`}>
+            <line
+              x1={x}
+              y1={height - paddingBottom}
+              x2={x}
+              y2={height - paddingBottom + 5}
+              stroke="#71717a"
+              strokeWidth="1"
+            />
+            <text
+              x={x}
+              y={height - paddingBottom + 18}
+              fontSize="10"
+              fill="#a1a1aa"
+              textAnchor="middle"
+            >
+              {truncateLabel(xValues[idx] ?? "", 10)}
+            </text>
+          </g>
+        );
+      })}
 
       {/* Bars */}
       {data.map((series, seriesIdx) =>
         series.values.map((v, valueIdx) => {
           const barX =
-            padding +
-            (valueIdx * (width - 2 * padding)) / xCount +
+            paddingLeft +
+            valueIdx * groupWidth +
             seriesIdx * barWidth +
-            5;
+            3;
           const barHeight = (v.y * yScale);
-          const barY = height - padding - barHeight;
+          const barY = height - paddingBottom - barHeight;
 
           return (
-            <rect
-              key={`bar-${seriesIdx}-${valueIdx}`}
-              x={barX}
-              y={barY}
-              width={barWidth - 2}
-              height={barHeight}
-              fill={colors[seriesIdx % colors.length]}
-              opacity="0.85"
-              rx="2"
-            />
+            <g key={`bar-${seriesIdx}-${valueIdx}`}>
+              <rect
+                x={barX}
+                y={barY}
+                width={barWidth - 2}
+                height={barHeight}
+                fill={colors[seriesIdx % colors.length]}
+                opacity="0.85"
+                rx="2"
+              />
+              {xCount <= 12 && (
+                <text
+                  x={barX + (barWidth - 2) / 2}
+                  y={barY - 6}
+                  fontSize="9"
+                  fill="#d4d4d8"
+                  textAnchor="middle"
+                >
+                  {v.y.toFixed(1)}
+                </text>
+              )}
+            </g>
           );
         })
       )}
+
+      {/* Legend */}
+      {data.map((series, idx) => (
+        <g key={`legend-${idx}`}>
+          <rect
+            x={width - 170}
+            y={paddingTop + idx * 16}
+            width={10}
+            height={10}
+            fill={colors[idx % colors.length]}
+            rx="2"
+          />
+          <text x={width - 154} y={paddingTop + idx * 16 + 9} fontSize="10" fill="#d4d4d8">
+            {truncateLabel(series.name, 20)}
+          </text>
+        </g>
+      ))}
+
+      {/* Axis labels */}
+      {xLabel && (
+        <text
+          x={paddingLeft + chartWidth / 2}
+          y={height - 10}
+          fontSize="11"
+          fill="#c4c4cc"
+          textAnchor="middle"
+        >
+          {xLabel}
+        </text>
+      )}
+      {yLabel && (
+        <text
+          x={16}
+          y={paddingTop + chartHeight / 2}
+          fontSize="11"
+          fill="#c4c4cc"
+          textAnchor="middle"
+          transform={`rotate(-90 16 ${paddingTop + chartHeight / 2})`}
+        >
+          {yLabel}
+        </text>
+      )}
     </svg>
   );
+}
+
+function truncateLabel(value: string, maxLength: number) {
+  if (value.length <= maxLength) return value;
+  return `${value.slice(0, maxLength - 1)}…`;
+}
+
+function getTickIndices(total: number, maxTicks: number) {
+  if (total <= 0) return [] as number[];
+  if (total <= maxTicks) {
+    return Array.from({ length: total }, (_, i) => i);
+  }
+
+  const step = Math.ceil(total / maxTicks);
+  const indices: number[] = [];
+  for (let i = 0; i < total; i += step) {
+    indices.push(i);
+  }
+
+  if (indices[indices.length - 1] !== total - 1) {
+    indices.push(total - 1);
+  }
+
+  return indices;
 }
