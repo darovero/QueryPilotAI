@@ -87,19 +87,13 @@ export function useChatEngine() {
   const normalizeSuggestedChart = (raw: any) => {
     if (!raw) return undefined;
 
-    const normalizedTypeRaw = String(raw.type ?? raw.Type ?? raw.chart_type ?? raw.chartType ?? "").toLowerCase();
-    let type: "line" | "bar" | "pie" | "area" | null = null;
-    if (normalizedTypeRaw === "stacked_bar" || normalizedTypeRaw === "stackedbar" || normalizedTypeRaw === "bar") {
-      type = "bar";
-    } else if (normalizedTypeRaw === "line") {
-      type = "line";
-    } else if (normalizedTypeRaw === "pie") {
-      type = "pie";
-    } else if (normalizedTypeRaw === "area") {
-      type = "area";
-    }
+    const validTypes = ["line","bar","horizontal_bar","stacked_bar","pie","donut","area","scatter","heatmap","combo","table","none"] as const;
+    const rawTypeStr = String(raw.type ?? raw.Type ?? raw.chart_type ?? raw.chartType ?? "").toLowerCase().trim();
+    const aliasMap: Record<string, string> = { stackedbar: "stacked_bar", horizontalbar: "horizontal_bar", doughnut: "donut", torta: "pie", circular: "pie" };
+    const resolved = aliasMap[rawTypeStr] ?? rawTypeStr;
+    const type = validTypes.includes(resolved as any) ? resolved as typeof validTypes[number] : null;
 
-    if (!type) {
+    if (!type || type === "none") {
       return undefined;
     }
 
@@ -311,12 +305,19 @@ export function useChatEngine() {
 
   // --- Chart change shortcircuit helpers ---
 
-  const detectChartTypeFromText = (text: string): "bar" | "line" | "pie" | "area" | null => {
+  const detectChartTypeFromText = (text: string): import("../types").ChartType | null => {
     const lower = text.toLowerCase();
-    if (/\b(pie|torta|donut|dona|pastel|circular)\b/.test(lower)) return "pie";
+    if (/\b(pie|torta|circular|pastel)\b/.test(lower)) return "pie";
+    if (/\b(donut|dona|dona|doughnut|anillo)\b/.test(lower)) return "donut";
+    if (/\b(horizontal[_\s]?bar|barra?s?\s+horizontal(?:es)?|horizontal)\b/.test(lower)) return "horizontal_bar";
+    if (/\b(stacked[_\s]?bar|apilad[ao]s?|barra?s?\s+apilad(?:as?)?)\b/.test(lower)) return "stacked_bar";
     if (/\b(barra?s?|bar|histograma|columnas?)\b/.test(lower)) return "bar";
     if (/\b(l[ií]nea|lineal|line|tendencia)\b/.test(lower)) return "line";
     if (/\b([áa]rea|area)\b/.test(lower)) return "area";
+    if (/\b(scatter|dispersi[oó]n|puntos?)\b/.test(lower)) return "scatter";
+    if (/\b(heatmap|calor|mapa\s+de\s+calor)\b/.test(lower)) return "heatmap";
+    if (/\b(combo|combinad[ao])\b/.test(lower)) return "combo";
+    if (/\b(tabla?|table)\b/.test(lower)) return "table";
     return null;
   };
 
@@ -328,7 +329,7 @@ export function useChatEngine() {
 
   const inferChartFromResults = (
     results: Record<string, unknown>[],
-    chartType: "bar" | "line" | "pie" | "area"
+    chartType: import("../types").ChartType
   ): import("../types").SuggestedChart | undefined => {
     if (!results || results.length === 0) return undefined;
     const sample = results[0];
@@ -361,8 +362,10 @@ export function useChatEngine() {
             type: requestedType,
             title: baseChart.title,
           };
-          const typeLabel: Record<typeof requestedType, string> = {
+          const typeLabel: Partial<Record<import("../types").ChartType, string>> = {
             pie: "pie", bar: "barras", line: "líneas", area: "área",
+            donut: "dona", horizontal_bar: "barras horizontales", stacked_bar: "barras apiladas",
+            scatter: "dispersión", heatmap: "mapa de calor", combo: "combinado", table: "tabla",
           };
           setMessages((prev) => [
             ...prev,

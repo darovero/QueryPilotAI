@@ -519,13 +519,21 @@ public class FraudInsightOrchestrator
 
         return chartType.Trim().ToLowerInvariant() switch
         {
-            "line" => "line",
-            "bar" => "bar",
-            "pie" => "pie",
-            "area" => "area",
-            "stacked_bar" => "bar",
-            "stackedbar" => "bar",
-            _ => null
+            "line"           => "line",
+            "bar"            => "bar",
+            "horizontal_bar" => "horizontal_bar",
+            "stacked_bar"    => "stacked_bar",
+            "stackedbar"     => "stacked_bar",
+            "pie"            => "pie",
+            "donut"          => "donut",
+            "doughnut"       => "donut",
+            "area"           => "area",
+            "scatter"        => "scatter",
+            "heatmap"        => "heatmap",
+            "combo"          => "combo",
+            "table"          => "table",
+            "none"           => null,
+            _                => null
         };
     }
 

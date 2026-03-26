@@ -15,12 +15,13 @@ export function useChatSessions(
   const normalizeSuggestedChart = (raw: any) => {
     if (!raw) return undefined;
 
-    const normalizedTypeRaw = String(raw.type ?? raw.Type ?? raw.chart_type ?? raw.chartType ?? "").toLowerCase();
-    const type = normalizedTypeRaw === "stacked_bar" || normalizedTypeRaw === "stackedbar"
-      ? "bar"
-      : normalizedTypeRaw;
+    const validTypes = ["line","bar","horizontal_bar","stacked_bar","pie","donut","area","scatter","heatmap","combo","table","none"] as const;
+    const rawTypeStr = String(raw.type ?? raw.Type ?? raw.chart_type ?? raw.chartType ?? "").toLowerCase().trim();
+    const aliasMap: Record<string, string> = { stackedbar: "stacked_bar", horizontalbar: "horizontal_bar", doughnut: "donut", torta: "pie", circular: "pie" };
+    const resolved = aliasMap[rawTypeStr] ?? rawTypeStr;
+    const type = validTypes.includes(resolved as any) ? resolved as typeof validTypes[number] : null;
 
-    if (!["line", "bar", "pie", "area"].includes(type)) {
+    if (!type || type === "none") {
       return undefined;
     }
 

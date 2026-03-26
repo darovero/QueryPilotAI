@@ -20,8 +20,22 @@ export type Message = {
   suggestedChart?: SuggestedChart;
 };
 
+export type ChartType =
+  | "line"
+  | "bar"
+  | "horizontal_bar"
+  | "stacked_bar"
+  | "pie"
+  | "donut"
+  | "area"
+  | "scatter"
+  | "heatmap"
+  | "combo"
+  | "table"
+  | "none";
+
 export type SuggestedChart = {
-  type: "line" | "bar" | "pie" | "area";
+  type: ChartType;
   title: string;
   description?: string;
   x_axis_label?: string;
