@@ -1648,7 +1648,15 @@ try {
 
                 Build-FrontendPackage -SourceRoot (Join-Path $repoRoot 'frontend') -DestinationRoot $frontendPackageDir -BuildEnvironment $frontendBuildEnvironment
                 New-ZipFromDirectory -SourceDirectory $frontendPackageDir -ZipPath $zipPath
+
+                # WebApp deploy tracking can produce false negatives if cold-start exceeds CLI timeout.
+                # We disable CLI startup tracking and verify readiness via HTTP, which reflects real availability.
                 Invoke-AzCli -Arguments @('webapp', 'deploy', '--resource-group', $resourceGroupName, '--name', $webAppName, '--src-path', $zipPath, '--type', 'zip', '--clean', 'true', '--restart', 'true', '--track-status', 'false', '-o', 'none') | Out-Null
+
+                $deployWebReady = Wait-ForHttp -Url ("https://$webAppHostname") -MaxAttempts 30 -DelaySeconds 10 -SuccessStatusFloor 200 -SuccessStatusCeiling 499
+                if (-not $deployWebReady) {
+                    Write-WarnLine "Web app did not become reachable right after deployment. The Verify phase will perform a final smoke check."
+                }
 
                 $completedPhases.Add($phase)
             }
