@@ -218,6 +218,7 @@ public class AppDatabaseFunctions(
     // --- Sessions ---
 
     public record CreateSessionRequest(Guid Id, string UserId, Guid? ConnectionId, string? Title);
+    public record UpdateSessionTitleRequest(string? Title);
 
     [Function("CreateSession")]
     public async Task<HttpResponseData> CreateSession(
@@ -296,6 +297,45 @@ public class AppDatabaseFunctions(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to delete session.");
+            return req.CreateResponse(HttpStatusCode.InternalServerError);
+        }
+    }
+
+    [Function("UpdateSessionTitle")]
+    public async Task<HttpResponseData> UpdateSessionTitle(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "patch", Route = "sessions/{sessionId}")] HttpRequestData req, string sessionId)
+    {
+        try
+        {
+            var userAliases = AuthContextHelpers.GetAuthenticatedUserAliases(req.FunctionContext);
+            if (userAliases.Count == 0)
+                return req.CreateResponse(HttpStatusCode.Unauthorized);
+
+            if (!Guid.TryParse(sessionId, out var parsedSessionId))
+                return req.CreateResponse(HttpStatusCode.BadRequest);
+
+            var body = await new StreamReader(req.Body).ReadToEndAsync();
+            var payload = JsonSerializer.Deserialize<UpdateSessionTitleRequest>(body, _jsonOptions);
+            var title = payload?.Title?.Trim();
+
+            if (string.IsNullOrWhiteSpace(title))
+            {
+                var bad = req.CreateResponse(HttpStatusCode.BadRequest);
+                await bad.WriteAsJsonAsync(new { error = "Session title is required." });
+                return bad;
+            }
+
+            var updated = await appDb.UpdateSessionTitleAsync(parsedSessionId, title, userAliases);
+            if (!updated)
+                return req.CreateResponse(HttpStatusCode.NotFound);
+
+            var res = req.CreateResponse(HttpStatusCode.OK);
+            await res.WriteAsJsonAsync(new { success = true, title });
+            return res;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to update session title.");
             return req.CreateResponse(HttpStatusCode.InternalServerError);
         }
     }

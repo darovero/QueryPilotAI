@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { ChatSession, Message, Connection } from "./types";
 import { TypewriterTitle } from "./TypewriterTitle";
 import { AppIcon } from "./AppIcon";
+import { ChartSuggestion } from "./ChartSuggestion";
 
 interface ChatAreaProps {
   activeChatSession: ChatSession | null;
@@ -18,11 +19,36 @@ interface ChatAreaProps {
   isTyping: boolean;
 }
 
+function extractQuestionnaireItems(content?: string): string[] {
+   if (!content) return [];
+
+   const listItems: string[] = [];
+   const lines = content.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+
+   for (const line of lines) {
+      const cleaned = line.replace(/^(?:\d+[\)\.\-:]|[-*•])\s*/, "").trim();
+      if (cleaned && cleaned !== line) {
+         listItems.push(cleaned.replace(/[.;]+$/, ""));
+      }
+   }
+
+   if (listItems.length > 0) {
+      return Array.from(new Set(listItems)).slice(0, 5);
+   }
+
+   const questionLines = lines
+      .filter(line => line.includes("?"))
+      .map(line => line.replace(/[.;]+$/, ""));
+
+   return Array.from(new Set(questionLines)).slice(0, 5);
+}
+
 export function ChatArea({
    activeChatSession, connections, isFullView, messagesEndRef,
   addLog, fetchWithAuth, handleApproval, handleSubmit, input, setInput, isTyping
 }: ChatAreaProps) {
   const [approvalComments, setApprovalComments] = useState<Record<string, string>>({});
+   const [expandedProgress, setExpandedProgress] = useState<Record<string, boolean>>({});
    const messagesScrollRef = useRef<HTMLDivElement>(null);
 
   const activeConnection = connections.find(c => c.id === activeChatSession?.connectionId);
@@ -88,8 +114,17 @@ export function ChatArea({
                   </div>
                </div>
             ) : (
-                activeChatSession.messages.map((msg, i) => (
-                           <div key={msg.id} className={`flex gap-5 w-full ${msg.role === 'user' ? 'flex-row-reverse text-right' : ''}`}>
+                        activeChatSession.messages.map((msg, i) => {
+                           const questionnaireItems = extractQuestionnaireItems(msg.content);
+                           const isClarificationQuestionnaire =
+                              msg.role === "ai" &&
+                              !!msg.content &&
+                              !msg.insight &&
+                              questionnaireItems.length > 0 &&
+                              /mini cuestionario|aclar|precis|más contexto|necesito/i.test(msg.content);
+
+                           return (
+                                        <div key={msg.id} className={`flex gap-5 w-full ${msg.role === 'user' ? 'flex-row-reverse text-right' : ''}`}>
                               <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${msg.role === 'user' ? 'bg-indigo-500/80 text-white ring-1 ring-indigo-300/40' : 'surface-base text-zinc-300 ring-1 ring-zinc-700/70'}`}>
                       {msg.role === 'user' ? (
                           <span className="text-[14px] font-bold">U</span>
@@ -118,9 +153,49 @@ export function ChatArea({
                                     </div>
                                 )}
 
-                                {msg.content && !msg.insight && (
+                                {msg.content && !msg.insight && !isClarificationQuestionnaire && (
                                    <div className="text-[15px] text-zinc-100 whitespace-pre-wrap break-words leading-relaxed">
                                       {msg.content}
+                                   </div>
+                                )}
+
+                                {msg.suggestedChart && msg.results && msg.results.length > 0 && (
+                                   <div className="mt-4 p-4 rounded-xl border border-zinc-700/50 bg-zinc-900/40">
+                                      <div className="flex items-center gap-2 mb-3">
+                                         <AppIcon name="bar_chart" className="h-[16px] w-[16px] text-indigo-400" />
+                                         <span className="text-[12px] font-bold uppercase tracking-widest text-zinc-400">Suggested Visualization</span>
+                                      </div>
+                                      <ChartSuggestion 
+                                         chart={msg.suggestedChart}
+                                         data={msg.results}
+                                      />
+                                   </div>
+                                )}
+
+                                {isClarificationQuestionnaire && (
+                                   <div className="rounded-2xl border border-sky-500/30 bg-sky-500/5 p-4 space-y-4">
+                                      <div className="flex items-start gap-3">
+                                         <div className="mt-0.5 h-7 w-7 rounded-full bg-sky-500/20 text-sky-300 flex items-center justify-center shrink-0">
+                                            <AppIcon name="help" className="h-[16px] w-[16px]" />
+                                         </div>
+                                         <div className="space-y-1">
+                                            <h4 className="text-[14px] font-semibold text-sky-200">Necesito un poco más de contexto</h4>
+                                            <p className="text-[13px] text-zinc-300">Respóndeme este mini cuestionario y continúo con el análisis.</p>
+                                         </div>
+                                      </div>
+
+                                      <div className="space-y-2.5">
+                                         {questionnaireItems.map((item, qIdx) => (
+                                            <div key={`${msg.id}-question-${qIdx}`} className="flex items-start gap-3 rounded-xl border border-zinc-700/70 bg-zinc-900/70 px-3 py-2.5">
+                                               <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-sky-500/15 text-sky-300 text-[12px] font-semibold px-1.5">
+                                                  {qIdx + 1}
+                                               </span>
+                                               <span className="text-[13px] text-zinc-100 leading-relaxed">{item}</span>
+                                            </div>
+                                         ))}
+                                      </div>
+
+                                      <div className="text-[12px] text-zinc-400">Tip: puedes responder todo en un solo mensaje.</div>
                                    </div>
                                 )}
                                 
@@ -213,34 +288,53 @@ export function ChatArea({
                                 )}
                                 
                                 {msg.progressEvents && msg.progressEvents.length > 0 && msg.status !== 'PendingApproval' && (
-                                   <div className={`mt-6 pt-5 border-t border-zinc-800 flex flex-col gap-3 ${msg.status === 'Completed' || msg.status === 'Failed' ? 'opacity-60' : ''}`}>
-                                      <div className="text-[10px] uppercase tracking-widest text-zinc-400 font-bold flex items-center justify-between">
-                                          <span>Agent Progress</span>
-                                          <span>{msg.progressEvents[msg.progressEvents.length-1].time}</span>
-                                      </div>
-                                      <div className="space-y-3">
-                                         {msg.progressEvents.map((evt, j) => (
-                                            <div key={j} className="flex gap-3 text-[13px] items-start animate-in fade-in slide-in-from-left-2 duration-300">
-                                               <div className="flex flex-col items-center mt-0.5">
-                                                  <div className="w-4 h-4 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
-                                                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+                                   <div className={`mt-6 pt-5 border-t border-zinc-800 ${msg.status === 'Completed' || msg.status === 'Failed' ? 'opacity-60' : ''}`}>
+                                      <button
+                                         type="button"
+                                         className="w-full text-[10px] uppercase tracking-widest text-zinc-400 font-bold flex items-center justify-between gap-3 hover:text-zinc-200 transition-colors"
+                                         onClick={() => setExpandedProgress(prev => {
+                                            const isCompleted = msg.status === 'Completed' || msg.status === 'Failed';
+                                            const isOpen = prev[msg.id] ?? !isCompleted;
+                                            return { ...prev, [msg.id]: !isOpen };
+                                         })}
+                                         aria-expanded={expandedProgress[msg.id] ?? !(msg.status === 'Completed' || msg.status === 'Failed')}
+                                      >
+                                         <span className="flex items-center gap-2">
+                                            <AppIcon
+                                               name="chevron_right"
+                                               className={`h-[14px] w-[14px] transition-transform ${(expandedProgress[msg.id] ?? !(msg.status === 'Completed' || msg.status === 'Failed')) ? 'rotate-90' : ''}`}
+                                            />
+                                            Agent Progress
+                                         </span>
+                                         <span>{msg.progressEvents[msg.progressEvents.length - 1].time}</span>
+                                      </button>
+
+                                      {(expandedProgress[msg.id] ?? !(msg.status === 'Completed' || msg.status === 'Failed')) && (
+                                         <div className="space-y-3 mt-3">
+                                            {msg.progressEvents.map((evt, j) => (
+                                               <div key={j} className="flex gap-3 text-[13px] items-start animate-in fade-in slide-in-from-left-2 duration-300">
+                                                  <div className="flex flex-col items-center mt-0.5">
+                                                     <div className="w-4 h-4 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+                                                     </div>
+                                                     {j < msg.progressEvents!.length - 1 && <div className="w-[1px] h-6 bg-emerald-100 my-1"></div>}
                                                   </div>
-                                                  {j < msg.progressEvents!.length - 1 && <div className="w-[1px] h-6 bg-emerald-100 my-1"></div>}
+                                                  <div className="flex flex-col">
+                                                     <span className="font-semibold text-zinc-100">{evt.label}</span>
+                                                     <span className="text-zinc-400 text-[12px]">{evt.status}</span>
+                                                  </div>
                                                </div>
-                                               <div className="flex flex-col">
-                                                  <span className="font-semibold text-zinc-100">{evt.label}</span>
-                                                  <span className="text-zinc-400 text-[12px]">{evt.status}</span>
-                                               </div>
-                                            </div>
-                                         ))}
-                                      </div>
+                                            ))}
+                                         </div>
+                                      )}
                                    </div>
                                 )}
                             </div>
                         )}
                     </div>
-                  </div>
-                ))
+                           </div>
+                        );
+                        })
             )}
             <div ref={messagesEndRef} className="h-4 w-full" />
           </div>

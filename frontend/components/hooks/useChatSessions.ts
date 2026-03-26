@@ -599,6 +599,30 @@ export function useChatSessions(
     setChatSessions(prev => prev.filter(session => session.id !== sessionId));
   };
 
+  const renameChatSession = async (sessionId: string, title: string) => {
+    const normalizedTitle = title.trim();
+    if (!normalizedTitle) {
+      throw new Error("El nombre del chat no puede estar vacío.");
+    }
+
+    const res = await fetchWithAuth(`/api/sessions/${sessionId}`, {
+      allowInteractiveAuth: true,
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: normalizedTitle }),
+    });
+
+    if (!res.ok) {
+      throw new Error("No fue posible renombrar la sesión.");
+    }
+
+    setChatSessions(prev => prev.map(session =>
+      session.id === sessionId ? { ...session, title: normalizedTitle } : session
+    ));
+
+    return normalizedTitle;
+  };
+
   return {
     chatSessions,
     setChatSessions,
@@ -612,5 +636,6 @@ export function useChatSessions(
     handleApproval,
     createChatSession,
     deleteChatSession,
+    renameChatSession,
   };
 }

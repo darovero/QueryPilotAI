@@ -17,6 +17,19 @@ export type Message = {
   approvalSql?: string;
   riskLevel?: string;
   reasons?: string[];
+  suggestedChart?: SuggestedChart;
+};
+
+export type SuggestedChart = {
+  type: "line" | "bar" | "pie" | "area";
+  title: string;
+  description?: string;
+  x_axis_label?: string;
+  y_axis_label?: string;
+  x_field?: string;
+  y_field?: string;
+  group_by?: string;
+  filtered_rows_count?: number;
 };
 
 export type LogEntry = {

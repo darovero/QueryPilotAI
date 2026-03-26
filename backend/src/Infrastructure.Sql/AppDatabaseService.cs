@@ -28,6 +28,7 @@ public interface IAppDatabaseService
     Task<List<ChatSessionRecord>> GetSessionsByUserAsync(string userId);
     Task<List<ChatSessionRecord>> GetSessionsByUserIdsAsync(IReadOnlyCollection<string> userIds);
     Task TouchSessionAsync(Guid sessionId);
+    Task<bool> UpdateSessionTitleAsync(Guid sessionId, string title, IReadOnlyCollection<string> userIds);
     Task DeleteSessionAsync(Guid sessionId, string userId);
     Task DeleteSessionAsync(Guid sessionId, IReadOnlyCollection<string> userIds);
 
@@ -329,6 +330,26 @@ VALUES (@Id, @UserId, @ConnectionId, @Title)";
         await using var cmd = new SqlCommand(sql, conn);
         cmd.Parameters.AddWithValue("@Id", sessionId);
         await cmd.ExecuteNonQueryAsync();
+    }
+
+    public async Task<bool> UpdateSessionTitleAsync(Guid sessionId, string title, IReadOnlyCollection<string> userIds)
+    {
+        var normalizedTitle = string.IsNullOrWhiteSpace(title) ? "New Chat" : title.Trim();
+        var (userFilter, parameters) = BuildUserIdsQuery("user_id IN ({0})", userIds);
+        var sql = "UPDATE dbo.chat_sessions SET title = @Title, last_activity = SYSUTCDATETIME() WHERE id = @SessionId AND " + userFilter + ";";
+
+        await using var conn = new SqlConnection(_connectionString);
+        await conn.OpenAsync();
+        await using var cmd = new SqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("@SessionId", sessionId);
+        cmd.Parameters.AddWithValue("@Title", normalizedTitle);
+        foreach (var parameter in parameters)
+        {
+            cmd.Parameters.AddWithValue(parameter.Key, parameter.Value);
+        }
+
+        var affectedRows = await cmd.ExecuteNonQueryAsync();
+        return affectedRows > 0;
     }
 
     public async Task DeleteSessionAsync(Guid sessionId, string userId)

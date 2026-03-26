@@ -61,7 +61,7 @@ export function UnifiedChat() {
     activeChatSession,
     input, setInput, isTyping,
     handleSubmit, handleApproval,
-    createChatSession, deleteChatSession
+      createChatSession, deleteChatSession, renameChatSession
   } = useChatSessions(userId, fetchWithAuth, connections, addLog, currentView);
 
   const activeIdeTab = openTabs.find(t => t.id === currentView && t.type === 'ide') || null;
@@ -140,7 +140,7 @@ export function UnifiedChat() {
            connections={connections} chatSessions={chatSessions}
            openTabs={openTabs} setOpenTabs={setOpenTabs} expandedConns={expandedConns} setExpandedConns={setExpandedConns}
            openChat={openChat} setEditingConnId={setEditingConnId} setConnForm={setConnForm} addLog={addLog}
-           createChatSession={createChatSession} deleteChatSession={deleteChatSession}
+           createChatSession={createChatSession} deleteChatSession={deleteChatSession} renameChatSession={renameChatSession}
         />
 
       <main className={`mosaic-center flex-1 min-h-0 h-full flex items-stretch justify-start overflow-hidden relative transition-all duration-300 ${isFullView && (activeChatSession || activeIdeTab) ? 'bg-[#111111]' : 'bg-transparent'}`}>

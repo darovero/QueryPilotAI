@@ -1,6 +1,7 @@
 import { ChatSession } from "./types";
 import { toast } from "sonner";
 import { useMsal } from "@azure/msal-react";
+import { useState } from "react";
 
 type SidebarIconName =
   | "chevron_left"
@@ -11,6 +12,7 @@ type SidebarIconName =
   | "database"
   | "add"
   | "chevron_right"
+  | "edit"
   | "delete"
   | "logout";
 
@@ -80,6 +82,13 @@ function SidebarIcon({ name, className = "" }: { name: SidebarIconName; classNam
           <path d="M9 6L15 12L9 18" stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       );
+    case "edit":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+          <path d="M4 20H20" stroke={stroke} strokeWidth="2" strokeLinecap="round" />
+          <path d="M6 14L14.5 5.5C15.3 4.7 16.6 4.7 17.4 5.5L18.5 6.6C19.3 7.4 19.3 8.7 18.5 9.5L10 18H6V14Z" stroke={stroke} strokeWidth="2" strokeLinejoin="round" />
+        </svg>
+      );
     case "delete":
       return (
         <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
@@ -122,17 +131,44 @@ interface SidebarProps {
   addLog: (level: any, msg: string) => void;
   createChatSession: (connectionId: string, title?: string) => Promise<ChatSession>;
   deleteChatSession: (sessionId: string) => Promise<void>;
+  renameChatSession: (sessionId: string, title: string) => Promise<string>;
 }
 
 export function Sidebar({
   isSidebarOpen, setIsSidebarOpen, organization, userName, currentView, setCurrentView,
   connections, chatSessions, openTabs, setOpenTabs, expandedConns, setExpandedConns,
-  openChat, setEditingConnId, setConnForm, addLog, createChatSession, deleteChatSession
+  openChat, setEditingConnId, setConnForm, addLog, createChatSession, deleteChatSession, renameChatSession
 }: SidebarProps) {
   const { instance } = useMsal();
+  const [editingChatId, setEditingChatId] = useState<string | null>(null);
+  const [editingChatTitle, setEditingChatTitle] = useState("");
 
   const handleLogout = () => {
     instance.logoutRedirect({ postLogoutRedirectUri: window.location.origin });
+  };
+
+  const beginRenameChat = (chatId: string, currentTitle: string) => {
+    setEditingChatId(chatId);
+    setEditingChatTitle(currentTitle);
+  };
+
+  const commitRenameChat = async (chatId: string) => {
+    const normalizedTitle = editingChatTitle.trim();
+    if (!normalizedTitle) {
+      toast.error("El nombre del chat no puede estar vacío.");
+      return;
+    }
+
+    try {
+      const savedTitle = await renameChatSession(chatId, normalizedTitle);
+      setOpenTabs(prev => prev.map(tab => tab.id === chatId ? { ...tab, title: savedTitle } : tab));
+      setEditingChatId(null);
+      setEditingChatTitle("");
+      toast.success("Nombre del chat actualizado.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No fue posible renombrar el chat.";
+      toast.error(message);
+    }
   };
 
   return (
@@ -285,12 +321,43 @@ export function Sidebar({
                             <div className="pl-6 pr-2 space-y-0.5">
                                {chats.map(chat => (
                                   <div key={chat.id} className="group flex items-center pr-1">
+                                   {editingChatId === chat.id ? (
+                                     <input
+                                       autoFocus
+                                       value={editingChatTitle}
+                                       onChange={(e) => setEditingChatTitle(e.target.value)}
+                                       onBlur={() => { void commitRenameChat(chat.id); }}
+                                       onKeyDown={(e) => {
+                                         if (e.key === 'Enter') {
+                                          e.preventDefault();
+                                          void commitRenameChat(chat.id);
+                                         }
+                                         if (e.key === 'Escape') {
+                                          e.preventDefault();
+                                          setEditingChatId(null);
+                                          setEditingChatTitle("");
+                                         }
+                                       }}
+                                       className="flex-1 px-3 py-1.5 rounded-none text-[11px] font-mono tracking-wide bg-[#111111] text-[#f4f0e6] border border-[#333333] focus:outline-none focus:border-[#a78bfa]"
+                                     />
+                                   ) : (
                                      <button 
-                                        onClick={() => openChat(chat.id)}
-                                         className={`flex-1 text-left truncate px-3 py-1.5 rounded-none text-[11px] font-mono tracking-wide transition-colors ${currentView === chat.id ? 'bg-[#1a1a1a] text-[#f4f0e6] font-medium' : 'text-[#a3a3a3] hover:text-[#f4f0e6] hover:bg-[#111111]'}`}
+                                       onClick={() => openChat(chat.id)}
+                                        className={`flex-1 text-left truncate px-3 py-1.5 rounded-none text-[11px] font-mono tracking-wide transition-colors ${currentView === chat.id ? 'bg-[#1a1a1a] text-[#f4f0e6] font-medium' : 'text-[#a3a3a3] hover:text-[#f4f0e6] hover:bg-[#111111]'}`}
                                      >
-                                        {chat.title}
+                                       {chat.title}
                                      </button>
+                                   )}
+                                   <button
+                                     onClick={(e) => {
+                                      e.stopPropagation();
+                                      beginRenameChat(chat.id, chat.title || "New Chat");
+                                     }}
+                                     className="opacity-0 group-hover:opacity-100 p-1 hover:bg-[#222222] text-[#a3a3a3] hover:text-[#f4f0e6] rounded-none transition-all shrink-0 ml-1"
+                                     title="Rename Chat"
+                                   >
+                                     <SidebarIcon name="edit" className="h-3.5 w-3.5" />
+                                   </button>
                                      <button 
                                           onClick={(e) => {
                                               e.stopPropagation();

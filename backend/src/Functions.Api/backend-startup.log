@@ -1,0 +1,15 @@
+
+Azure Functions Core Tools
+Core Tools Version:       4.0.5907 Commit hash: N/A +807e89766a92b14fd07b9f0bc2bea1d8777ab209 (64-bit)
+Function Runtime Version: 4.834.3.22875
+
+[2026-03-25T21:38:54.615Z] Found C:\Users\OlmanM\source\repos\QueryPilotAI\backend\src\Functions.Api\Functions.Api.csproj. Using for user secrets file configuration.
+Skipping 'FUNCTIONS_WORKER_RUNTIME' from local settings as it's already defined in current environment variables.
+[2026-03-25T21:39:34.143Z] There was an error performing a read operation on the Blob Storage Secret Repository.
+[2026-03-25T21:39:34.222Z] Azure.Core: Host desconocido. (ifdev3str.blob.core.windows.net:443). System.Net.Http: Host desconocido. (ifdev3str.blob.core.windows.net:443). System.Net.Sockets: Host desconocido.
+[2026-03-25T21:39:34.875Z] A host error has occurred during startup operation '8232fcdc-2af7-4f8e-84f8-91f41c6a63dc'.
+[2026-03-25T21:39:35.232Z] Azure.Core: Host desconocido. (ifdev3str.blob.core.windows.net:443). System.Net.Http: Host desconocido. (ifdev3str.blob.core.windows.net:443). System.Net.Sockets: Host desconocido.
+[2026-03-25T21:39:59.389Z] There was an error performing a read operation on the Blob Storage Secret Repository.
+[2026-03-25T21:39:59.396Z] Azure.Core: Host desconocido. (ifdev3str.blob.core.windows.net:443). System.Net.Http: Host desconocido. (ifdev3str.blob.core.windows.net:443). System.Net.Sockets: Host desconocido.
+Value cannot be null. (Parameter 'provider')
+[2026-03-25T21:39:59.473Z] Host startup operation has been canceled

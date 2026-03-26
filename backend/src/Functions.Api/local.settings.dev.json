@@ -1,0 +1,25 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "DefaultEndpointsProtocol=https;AccountName=ifdev3str;AccountKey=+/OkGM0gsvLU3W7KMhHz6V+nCAqwVV3BRYlUy8KF5xG7DxYPZzFP7hPKUSvvt7M5nTjJDZKBZGRXACSTaYxNVQ==;EndpointSuffix=core.windows.net",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+    "SqlConnectionString": "Server=tcp:ifdev-sql-zqm3l7q2bco2s.database.windows.net,1433;Initial Catalog=ifdev-sqldb;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;User ID=sqladminif;Password=IfDev_2026!Deploy#01;",
+    "AppDbConnectionString": "Server=tcp:ifdev-sql-zqm3l7q2bco2s.database.windows.net,1433;Initial Catalog=ifdev-appdb;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;User ID=sqladminif;Password=IfDev_2026!Deploy#01;",
+    "AzureOpenAI__Endpoint": "https://ifdev-aoai.openai.azure.com/openai/v1",
+    "AzureOpenAI__Deployment": "gpt-5.4",
+    "AzureOpenAI__ApiKey": "B8G3tcwKPqzzPjK2Z1N8m6fBMLirPc8pm8p1rCL5B5FkViO6AIb4JQQJ99CCACHYHv6XJ3w3AAABACOGd5jZ",
+    "ContentSafety__Endpoint": "https://ifdev-cs.cognitiveservices.azure.com/",
+    "FoundryAgent__ProjectEndpoint": "https://testfoundryhkt.services.ai.azure.com/api/projects/proj-hkt-oml",
+    "FoundryAgent__TenantId": "96973449-0a60-448a-b1ad-3c7237cd6563",
+    "FoundryAgent__SqlPlannerAgentRef": "insightforgesql:5",
+    "FoundryAgent__ResultInterpreterAgentRef": "insightforgechart:3",
+    "FoundryAgent__ConciergeAgentRef": "insightforgeAnalityc:3",
+    "FoundryAgent__SqlPlannerAgentId": "asst_DBjzYbaP67n7alc4LyxModPB",
+    "FoundryAgent__ResultInterpreterAgentId": "asst_mljMwAFnKjyUhO39MVGOvzPZ",
+    "FoundryAgent__ConciergeAgentId": "asst_pKuzPcWwJcYT6CXLvC3IGXp5",
+    "Auth__AuthorityHost": "https://login.microsoftonline.com",
+    "Auth__ClientId": "2df25c84-f536-4ec5-8baf-81464e7d7a33",
+    "Auth__AllowedAudiences": "2df25c84-f536-4ec5-8baf-81464e7d7a33",
+    "SemanticKernel__EnableDemoEndpoint": "false"
+  }
+}

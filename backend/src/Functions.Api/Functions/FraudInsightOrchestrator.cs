@@ -4,7 +4,9 @@ using Infrastructure.AzureOpenAI;
 using Infrastructure.Sql;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.DurableTask;
+using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace Functions.Api.Functions;
 
@@ -237,7 +239,7 @@ public class FraudInsightOrchestrator
         {
             var statusMessage = plannerResponse.Status switch
             {
-                "needs_clarification" => plannerResponse.Clarification?.QuestionForUser ?? "Necesito más información para responder tu consulta.",
+                "needs_clarification" => BuildClarificationQuestionnaire(plannerResponse.Clarification?.QuestionForUser),
                 "unsupported" => "La consulta no puede resolverse con el esquema de datos disponible.",
                 "blocked" => "La solicitud fue bloqueada por políticas de seguridad del agente.",
                 _ => "No fue posible generar una consulta para esta solicitud."
@@ -551,5 +553,66 @@ public class FraudInsightOrchestrator
         }
 
         return null;
+    }
+
+    private static string BuildClarificationQuestionnaire(string? questionForUser)
+    {
+        var questions = ExtractClarificationQuestions(questionForUser);
+
+        if (questions.Count == 0)
+        {
+            questions.Add("¿Qué métrica o resultado exacto quieres analizar?");
+            questions.Add("¿Qué periodo de tiempo debo considerar?");
+            questions.Add("¿Debo aplicar algún filtro específico (cliente, país, producto, estado, etc.)?");
+        }
+
+        var sb = new StringBuilder();
+        sb.AppendLine("Para darte una respuesta precisa, ayúdame con este mini cuestionario:");
+
+        for (var i = 0; i < questions.Count; i++)
+        {
+            sb.AppendLine($"{i + 1}) {questions[i]}");
+        }
+
+        sb.Append("Responde en un solo mensaje y con eso continúo el análisis.");
+        return sb.ToString();
+    }
+
+    private static List<string> ExtractClarificationQuestions(string? raw)
+    {
+        var results = new List<string>();
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return results;
+        }
+
+        var lines = raw
+            .Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(line => line.Trim())
+            .Where(line => !string.IsNullOrWhiteSpace(line));
+
+        foreach (var line in lines)
+        {
+            var cleaned = Regex.Replace(line, @"^(?:\d+[\)\.\-:]|[-*•])\s*", string.Empty).Trim();
+            if (!string.IsNullOrWhiteSpace(cleaned) && line != cleaned)
+            {
+                results.Add(cleaned.TrimEnd('.', ';'));
+            }
+        }
+
+        if (results.Count > 0)
+        {
+            return results.Distinct(StringComparer.OrdinalIgnoreCase).Take(3).ToList();
+        }
+
+        var fallback = raw
+            .Split(new[] { '?', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(part => part.Trim())
+            .Where(part => part.Length > 0)
+            .Select(part => part.EndsWith("?") ? part : $"{part}?")
+            .Take(3)
+            .ToList();
+
+        return fallback;
     }
 }

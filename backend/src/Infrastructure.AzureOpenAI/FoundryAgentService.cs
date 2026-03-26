@@ -151,6 +151,39 @@ public sealed class ResultInterpretation
 
     [JsonPropertyName("subtitle")]
     public string? Subtitle { get; set; }
+
+    [JsonPropertyName("suggested_chart")]
+    public SuggestedChart? SuggestedChart { get; set; }
+}
+
+public sealed class SuggestedChart
+{
+    [JsonPropertyName("type")]
+    public string Type { get; set; } = "line"; // line, bar, pie, area
+
+    [JsonPropertyName("title")]
+    public string Title { get; set; } = string.Empty;
+
+    [JsonPropertyName("description")]
+    public string? Description { get; set; }
+
+    [JsonPropertyName("x_axis_label")]
+    public string? XAxisLabel { get; set; }
+
+    [JsonPropertyName("y_axis_label")]
+    public string? YAxisLabel { get; set; }
+
+    [JsonPropertyName("x_field")]
+    public string? XField { get; set; }
+
+    [JsonPropertyName("y_field")]
+    public string? YField { get; set; }
+
+    [JsonPropertyName("group_by")]
+    public string? GroupBy { get; set; }
+
+    [JsonPropertyName("filtered_rows")]
+    public int? FilteredRowsCount { get; set; }
 }
 
 public sealed class KeyFinding
@@ -419,11 +452,19 @@ public sealed class FoundryAgentClient : IFoundryAgentClient
             sb.AppendLine();
         }
 
+        sb.AppendLine("=== REGLAS DE ACLARACIÓN Y REFINAMIENTO ===");
+        sb.AppendLine("- Si la solicitud es ambigua, incompleta o tiene múltiples interpretaciones razonables, NO inventes supuestos críticos.");
+        sb.AppendLine("- En ese caso responde con status: \"needs_clarification\" y formula de 1 a 3 preguntas concretas para resolver la ambigüedad.");
+        sb.AppendLine("- Prioriza preguntas sobre: métrica exacta, rango temporal, filtros, entidad objetivo y nivel de agregación.");
+        sb.AppendLine("- Solo usa status: \"unsupported\" cuando, incluso con aclaraciones razonables, la solicitud no pueda resolverse con el esquema disponible.");
+        sb.AppendLine("- Si existe suficiente contexto para ejecutar, responde con status: \"ready\" y SQL ejecutable.");
+        sb.AppendLine();
+
         sb.AppendLine("=== PREGUNTA DEL USUARIO ===");
         sb.AppendLine(question);
         sb.AppendLine();
         sb.AppendLine("=== INSTRUCCIÓN CRÍTICA DE RESPUESTA ===");
-        sb.AppendLine("TU RESPUESTA DEBE SER ÚNICA Y EXCLUSIVAMENTE UN OBJETO JSON VÁLIDO QUE CUMPLA CON TU ESQUEMA DE SALIDA (status, sql, etc). NO DEBES ENVIAR NINGÚN TEXTO CONVERSACIONAL, SALUDOS, NI MARKTOWN FUEL DEL JSON. SOLO EL JSON PURO.");
+        sb.AppendLine("TU RESPUESTA DEBE SER ÚNICA Y EXCLUSIVAMENTE UN OBJETO JSON VÁLIDO QUE CUMPLA CON TU ESQUEMA DE SALIDA (status, sql, etc). NO DEBES ENVIAR NINGÚN TEXTO CONVERSACIONAL, SALUDOS, NI MARKDOWN FUERA DEL JSON. SOLO EL JSON PURO.");
         sb.AppendLine("FORMATO ESPERADO:");
         sb.AppendLine("{");
         sb.AppendLine("  \"status\": \"ready\",");
@@ -431,6 +472,13 @@ public sealed class FoundryAgentClient : IFoundryAgentClient
         sb.AppendLine("    \"dialect\": \"tsql\",");
         sb.AppendLine("    \"query\": \"TU CONSULTA SQL AQUÍ\",");
         sb.AppendLine("    \"explanation\": \"breve explicación opcional\"");
+        sb.AppendLine("  }");
+        sb.AppendLine("}");
+        sb.AppendLine("O, si falta contexto:");
+        sb.AppendLine("{");
+        sb.AppendLine("  \"status\": \"needs_clarification\",");
+        sb.AppendLine("  \"clarification\": {");
+        sb.AppendLine("    \"question_for_user\": \"Necesito precisar algunos puntos: 1) ... 2) ...\"");
         sb.AppendLine("  }");
         sb.AppendLine("}");
 
@@ -467,15 +515,25 @@ public sealed class FoundryAgentClient : IFoundryAgentClient
         sb.AppendLine();
         sb.AppendLine("=== INSTRUCCIÓN CRÍTICA DE RESPUESTA ===");
         sb.AppendLine("TU RESPUESTA DEBE SER ÚNICA Y EXCLUSIVAMENTE UN OBJETO JSON VÁLIDO. NO ENVÍES TEXTO CONVERSACIONAL FUERA DEL JSON.");
-        sb.AppendLine("NO menciones gráficas, charts, visualizaciones ni recomendaciones visuales en 'response_for_user' o 'executive_summary' salvo que el usuario lo haya pedido explícitamente.");
-        sb.AppendLine("Si consideras una visualización útil pero no fue solicitada, omítela del texto visible al usuario.");
+        sb.AppendLine();
+        sb.AppendLine("=== REGLAS SOBRE GRÁFICAS ===");
+        sb.AppendLine("Puedes sugerir gráficas CUANDO el contexto lo justifique:");
+        sb.AppendLine("  • Series temporales o tendencias (datos por mes/año/período)");
+        sb.AppendLine("  • Comparativas entre categorías (múltiples valores en una dimensión)");
+        sb.AppendLine("  • Distribuciones o proporciones (porcentajes de un total)");
+        sb.AppendLine("Si el conjunto de datos es muy grande (muchas categorías, muchos períodos), RESUME/FILTRA de forma inteligente:");
+        sb.AppendLine("  • Si hay 50+ meses, muestra solo los últimos 12 o agrupa por trimestre/año");
+        sb.AppendLine("  • Si hay muchas categorías, agrupa las menores o muestra top-N");
+        sb.AppendLine("  • Siempre documenta QUÉ datos incluiste en la visualización y POR QUÉ");
+        sb.AppendLine("En 'recommendations', incluye sugerencia de gráfica solo si aporta valor real al usuario.");
+        sb.AppendLine();
         sb.AppendLine("FORMATO ESPERADO:");
         sb.AppendLine("{");
         sb.AppendLine("  \"status\": \"success\",");
         sb.AppendLine("  \"executive_summary\": \"Resumen ejecutivo claro y profesional de los resultados\",");
-        sb.AppendLine("  \"response_for_user\": \"Explicación completa en lenguaje natural para el usuario, con datos concretos de los resultados\",");
+        sb.AppendLine("  \"response_for_user\": \"Explicación completa con datos concretos. Si sugeriste una gráfica, explica qué datos incluye y por qué es útil\",");
         sb.AppendLine("  \"observations\": [\"observación 1\", \"observación 2\"],");
-        sb.AppendLine("  \"recommendations\": [\"recomendación 1\"],");
+        sb.AppendLine("  \"recommendations\": [\"recomendación 1\", \"Gráfica sugerida: <tipo> mostrando <qué datos> filtrados/según <criterio> para mayor claridad\"],");
         sb.AppendLine("  \"confidence\": 0.95");
         sb.AppendLine("}");
 
