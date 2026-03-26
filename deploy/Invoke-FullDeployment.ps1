@@ -38,6 +38,32 @@ function Write-WarnLine {
     Write-Host "[warn] $Message" -ForegroundColor Yellow
 }
 
+function Show-DeploymentProgress {
+    param(
+        [int]$PhaseIndex,
+        [int]$PhaseTotal,
+        [string]$PhaseName,
+        [string]$Message,
+        [switch]$Completed
+    )
+
+    $safeTotal = if ($PhaseTotal -lt 1) { 1 } else { $PhaseTotal }
+    $effectiveIndex = if ($Completed) { $PhaseIndex + 1 } else { $PhaseIndex }
+    $percent = [Math]::Min(100, [Math]::Max(0, [int](($effectiveIndex * 100) / $safeTotal)))
+    $currentStep = [Math]::Min($safeTotal, $PhaseIndex + 1)
+
+    $status = "Paso $currentStep/$safeTotal - $PhaseName"
+    if (-not [string]::IsNullOrWhiteSpace($Message)) {
+        $status = "$status | $Message"
+    }
+
+    Write-Progress -Id 1 -Activity 'Despliegue InsightForge' -Status $status -PercentComplete $percent
+}
+
+function Complete-DeploymentProgress {
+    Write-Progress -Id 1 -Activity 'Despliegue InsightForge' -Completed
+}
+
 function Save-State {
     param(
         [string]$CurrentPhase,
@@ -1034,6 +1060,9 @@ try {
     for ($phaseIndex = $resumeIndex; $phaseIndex -lt $phaseOrder.Count; $phaseIndex++) {
         $phase = $phaseOrder[$phaseIndex]
         $currentPhase = $phase
+        Show-DeploymentProgress -PhaseIndex $phaseIndex -PhaseTotal $phaseOrder.Count -PhaseName $phase -Message 'Iniciando fase'
+        Write-Host ('=' * 88) -ForegroundColor DarkCyan
+        Write-Host ("[avance] Paso {0}/{1} ({2}%) -> {3}" -f ($phaseIndex + 1), $phaseOrder.Count, ([int](($phaseIndex * 100) / $phaseOrder.Count)), $phase) -ForegroundColor Cyan
         Save-State -CurrentPhase $phase -CompletedPhases $completedPhases.ToArray() -Status 'running' -Message 'Phase started.'
 
         switch ($phase) {
@@ -1462,9 +1491,15 @@ try {
         }
 
         Save-State -CurrentPhase $phase -CompletedPhases $completedPhases.ToArray() -Status 'completed' -Message 'Phase completed.'
+        Show-DeploymentProgress -PhaseIndex $phaseIndex -PhaseTotal $phaseOrder.Count -PhaseName $phase -Message 'Fase completada' -Completed
     }
+
+    Complete-DeploymentProgress
+    Write-Host ('=' * 88) -ForegroundColor Green
+    Write-Host '[avance] Despliegue completado (100%)' -ForegroundColor Green
 }
 catch {
+    Complete-DeploymentProgress
     $message = $_.Exception.Message
     Save-State -CurrentPhase $currentPhase -CompletedPhases $completedPhases.ToArray() -Status 'failed' -Message $message
     Write-Host "[error] $message" -ForegroundColor Red
