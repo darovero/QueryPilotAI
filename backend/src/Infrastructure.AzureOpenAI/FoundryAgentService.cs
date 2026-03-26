@@ -154,6 +154,25 @@ public sealed class ResultInterpretation
 
     [JsonPropertyName("suggested_chart")]
     public SuggestedChart? SuggestedChart { get; set; }
+
+    // Legacy chart response format compatibility
+    [JsonPropertyName("should_render_chart")]
+    public bool? ShouldRenderChart { get; set; }
+
+    [JsonPropertyName("chart_type")]
+    public string? ChartType { get; set; }
+
+    [JsonPropertyName("x_axis")]
+    public string? XAxis { get; set; }
+
+    [JsonPropertyName("y_axis")]
+    public string? YAxis { get; set; }
+
+    [JsonPropertyName("category_field")]
+    public string? CategoryField { get; set; }
+
+    [JsonPropertyName("top_n")]
+    public int? TopN { get; set; }
 }
 
 public sealed class SuggestedChart
@@ -442,13 +461,16 @@ public sealed class FoundryAgentClient : IFoundryAgentClient
 
         if (!string.IsNullOrWhiteSpace(conversationContext))
         {
-            sb.AppendLine("=== CONTEXTO DE CONVERSACIÓN ===");
+            sb.AppendLine("=== CONTEXTO DE CONVERSACIÓN PREVIO ===");
             sb.AppendLine(conversationContext);
             sb.AppendLine();
-            sb.AppendLine("=== REGLAS DE MEMORIA CONVERSACIONAL ===");
-            sb.AppendLine("- Si la pregunta actual hace referencia al contexto previo (por ejemplo: 'esa', 'dicha', 'la misma', 'genera una gráfica de eso'), debes resolverla usando el último turno analítico disponible.");
-            sb.AppendLine("- Si el usuario pide visualización o continuación de un análisis previo, reutiliza la misma lógica analítica y produce SQL listo para ejecutarse.");
-            sb.AppendLine("- No marques 'unsupported' cuando exista contexto suficiente en los turnos previos para responder la intención actual.");
+            sb.AppendLine("=== REGLAS CRÍTICAS DE MEMORIA CONVERSACIONAL ===");
+            sb.AppendLine("1. REUTILIZA DECISIONES PREVIAS: Si la pregunta actual referencia análisis previo ('esa', 'dicha', 'la misma', 'eso', 'continúa', 'gráfica de eso'), reutiliza el SQL y la lógica del turno anterior sin pedir nuevas aclaraciones.");
+            sb.AppendLine("2. NO REPITAS PREGUNTAS: Si el usuario ya respondió una aclaración en turnos previos (por ejemplo: 'usa el campo reason'), NO vuelvas a preguntar lo mismo. Aplica esa decisión directamente.");
+            sb.AppendLine("3. MANTÉN COHERENCIA: Si el turno previo determinó tabla, vista, agregación o filtro, mantén esa coherencia a menos que el usuario lo contradiga explícitamente.");
+            sb.AppendLine("4. INFERENCIA CONTEXTUAL: Si la pregunta actual es breve o vaga pero el contexto previo es claro, infiere la intención desde el contexto y procede.");
+            sb.AppendLine("5. SOLO ACLARAR LO NUEVO: Usa 'needs_clarification' solo para ambigüedades nuevas. Nunca repitas el mismo mini cuestionario ya resuelto.");
+            sb.AppendLine("6. EVITA 'UNSUPPORTED' POR FALTA DE MEMORIA: Si hay contexto suficiente en turnos previos, responde 'ready' con SQL ejecutable.");
             sb.AppendLine();
         }
 

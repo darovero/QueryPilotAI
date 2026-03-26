@@ -397,6 +397,7 @@ public class FraudInsightOrchestrator
         // =====================================================
         var summary = BuildUserNarrativeSummary(interpretation, rows.Count);
         var warnings = BuildWarnings(interpretation);
+        var suggestedChart = BuildSuggestedChart(interpretation, rows.Count);
 
         await PersistConversationExchangeAsync(
             context,
@@ -415,7 +416,7 @@ public class FraudInsightOrchestrator
             context.InstanceId, "Completed", summary,
             interpretation.KeyFindings?.Select(f => f.Title ?? "").ToArray() ?? Array.Empty<string>(),
             validation.NormalizedSql, warnings,
-            rows, new AuditMetadata(interpretation.Risk?.Level ?? "low", null));
+            rows, new AuditMetadata(interpretation.Risk?.Level ?? "low", null), suggestedChart);
     }
 
     private static string BuildUserNarrativeSummary(ResultInterpretation interpretation, int rowCount)
@@ -451,6 +452,81 @@ public class FraudInsightOrchestrator
         return interpretation.Warnings
             ?? interpretation.Limitations
             ?? Array.Empty<string>();
+    }
+
+    private static SuggestedChartOutput? BuildSuggestedChart(ResultInterpretation interpretation, int rowCount)
+    {
+        if (interpretation.SuggestedChart is not null)
+        {
+            var normalizedType = NormalizeChartType(interpretation.SuggestedChart.Type);
+            if (normalizedType is null)
+            {
+                return null;
+            }
+
+            return new SuggestedChartOutput(
+                normalizedType,
+                string.IsNullOrWhiteSpace(interpretation.SuggestedChart.Title) ? "Visualización sugerida" : interpretation.SuggestedChart.Title,
+                interpretation.SuggestedChart.Description,
+                interpretation.SuggestedChart.XAxisLabel,
+                interpretation.SuggestedChart.YAxisLabel,
+                interpretation.SuggestedChart.XField,
+                interpretation.SuggestedChart.YField,
+                interpretation.SuggestedChart.GroupBy,
+                interpretation.SuggestedChart.FilteredRowsCount ?? rowCount);
+        }
+
+        // Legacy format fallback: should_render_chart + chart_type + x_axis/y_axis/category_field
+        if (interpretation.ShouldRenderChart != true)
+        {
+            return null;
+        }
+
+        var fallbackType = NormalizeChartType(interpretation.ChartType);
+        if (fallbackType is null)
+        {
+            return null;
+        }
+
+        var title = FirstNonEmpty(interpretation.Title, "Visualización sugerida")!;
+        var xField = interpretation.XAxis;
+        var yField = interpretation.YAxis;
+        var groupBy = interpretation.CategoryField;
+
+        if (string.IsNullOrWhiteSpace(xField) || string.IsNullOrWhiteSpace(yField))
+        {
+            return null;
+        }
+
+        return new SuggestedChartOutput(
+            fallbackType,
+            title,
+            interpretation.Subtitle,
+            interpretation.XAxis,
+            interpretation.YAxis,
+            xField,
+            yField,
+            groupBy,
+            interpretation.TopN ?? rowCount);
+    }
+
+    private static string? NormalizeChartType(string? chartType)
+    {
+        if (string.IsNullOrWhiteSpace(chartType))
+        {
+            return null;
+        }
+
+        return chartType.Trim().ToLowerInvariant() switch
+        {
+            "line" => "line",
+            "bar" => "bar",
+            "pie" => "pie",
+            "area" => "area",
+            "stacked_bar" => "bar",
+            "stackedbar" => "bar",
+            _ => null
+        };
     }
 
     private static async Task PersistConversationExchangeAsync(

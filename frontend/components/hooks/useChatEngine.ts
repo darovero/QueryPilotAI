@@ -84,6 +84,38 @@ export function useChatEngine() {
     ]);
   }, []);
 
+  const normalizeSuggestedChart = (raw: any) => {
+    if (!raw) return undefined;
+
+    const normalizedTypeRaw = String(raw.type ?? raw.Type ?? raw.chart_type ?? raw.chartType ?? "").toLowerCase();
+    let type: "line" | "bar" | "pie" | "area" | null = null;
+    if (normalizedTypeRaw === "stacked_bar" || normalizedTypeRaw === "stackedbar" || normalizedTypeRaw === "bar") {
+      type = "bar";
+    } else if (normalizedTypeRaw === "line") {
+      type = "line";
+    } else if (normalizedTypeRaw === "pie") {
+      type = "pie";
+    } else if (normalizedTypeRaw === "area") {
+      type = "area";
+    }
+
+    if (!type) {
+      return undefined;
+    }
+
+    return {
+      type,
+      title: raw.title ?? raw.Title ?? "Visualización sugerida",
+      description: raw.description ?? raw.Description ?? raw.subtitle ?? raw.Subtitle,
+      x_axis_label: raw.x_axis_label ?? raw.xAxisLabel ?? raw.XAxisLabel ?? raw.formatting?.x_label ?? raw.formatting?.xLabel,
+      y_axis_label: raw.y_axis_label ?? raw.yAxisLabel ?? raw.YAxisLabel ?? raw.formatting?.y_label ?? raw.formatting?.yLabel,
+      x_field: raw.x_field ?? raw.xField ?? raw.XField ?? raw.x_axis ?? raw.xAxis ?? raw.XAxis,
+      y_field: raw.y_field ?? raw.yField ?? raw.YField ?? raw.y_axis ?? raw.yAxis ?? raw.YAxis,
+      group_by: raw.group_by ?? raw.groupBy ?? raw.GroupBy ?? raw.category_field ?? raw.categoryField ?? raw.CategoryField,
+      filtered_rows_count: raw.filtered_rows_count ?? raw.filteredRowsCount ?? raw.FilteredRowsCount ?? raw.filtered_rows ?? raw.filteredRows ?? raw.top_n ?? raw.topN ?? raw.TopN,
+    };
+  };
+
   // --- Hydration: localStorage ---
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -230,6 +262,14 @@ export function useChatEngine() {
                   newMsgs[aiIdx].sql = data.output.Sql;
                   if (data.output.ResultPreview && data.output.ResultPreview.length > 0) {
                     newMsgs[aiIdx].results = data.output.ResultPreview;
+                  }
+                  const suggestedChart = normalizeSuggestedChart(
+                    data.output.SuggestedChart
+                    ?? data.output.suggestedChart
+                    ?? data.output
+                  );
+                  if (suggestedChart) {
+                    newMsgs[aiIdx].suggestedChart = suggestedChart;
                   }
                 }
                 return newMsgs;

@@ -59,6 +59,17 @@ public sealed record SummaryInput(string Question, string Sql, List<Dictionary<s
 
 public sealed record AuditMetadata(string RiskLevel, string? ApprovedBy);
 
+public sealed record SuggestedChartOutput(
+    string Type,
+    string Title,
+    string? Description,
+    string? XAxisLabel,
+    string? YAxisLabel,
+    string? XField,
+    string? YField,
+    string? GroupBy,
+    int? FilteredRowsCount);
+
 public sealed record InsightResponse(
     string RequestId,
     string Status,
@@ -67,7 +78,8 @@ public sealed record InsightResponse(
     string Sql,
     string[] Warnings,
     List<Dictionary<string, object?>> ResultPreview,
-    AuditMetadata Audit);
+    AuditMetadata Audit,
+    SuggestedChartOutput? SuggestedChart = null);
 
 // --- Approval Flow ---
 public sealed record ApprovalDecision(string Decision, string ApproverUserId, string? Comments);

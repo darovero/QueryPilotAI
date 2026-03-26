@@ -12,6 +12,31 @@ export function useChatSessions(
   addLog: (level: any, msg: string) => void,
   currentView: string
 ) {
+  const normalizeSuggestedChart = (raw: any) => {
+    if (!raw) return undefined;
+
+    const normalizedTypeRaw = String(raw.type ?? raw.Type ?? raw.chart_type ?? raw.chartType ?? "").toLowerCase();
+    const type = normalizedTypeRaw === "stacked_bar" || normalizedTypeRaw === "stackedbar"
+      ? "bar"
+      : normalizedTypeRaw;
+
+    if (!["line", "bar", "pie", "area"].includes(type)) {
+      return undefined;
+    }
+
+    return {
+      type,
+      title: raw.title ?? raw.Title ?? "Visualización sugerida",
+      description: raw.description ?? raw.Description ?? raw.subtitle ?? raw.Subtitle,
+      x_axis_label: raw.x_axis_label ?? raw.xAxisLabel ?? raw.XAxisLabel ?? raw.formatting?.x_label ?? raw.formatting?.xLabel,
+      y_axis_label: raw.y_axis_label ?? raw.yAxisLabel ?? raw.YAxisLabel ?? raw.formatting?.y_label ?? raw.formatting?.yLabel,
+      x_field: raw.x_field ?? raw.xField ?? raw.XField ?? raw.x_axis ?? raw.xAxis ?? raw.XAxis,
+      y_field: raw.y_field ?? raw.yField ?? raw.YField ?? raw.y_axis ?? raw.yAxis ?? raw.YAxis,
+      group_by: raw.group_by ?? raw.groupBy ?? raw.GroupBy ?? raw.category_field ?? raw.categoryField ?? raw.CategoryField,
+      filtered_rows_count: raw.filtered_rows_count ?? raw.filteredRowsCount ?? raw.FilteredRowsCount ?? raw.filtered_rows ?? raw.filteredRows ?? raw.top_n ?? raw.topN ?? raw.TopN,
+    };
+  };
+
   const traceChat = (message: string) => {
     addLog("DEBUG", `[TRACE_CHAT] ${message}`);
   };
@@ -252,6 +277,9 @@ export function useChatSessions(
         const outputSummary = output?.ExecutiveSummary ?? output?.executiveSummary;
         const outputSql = output?.Sql ?? output?.sql;
         const outputResultPreview = output?.ResultPreview ?? output?.resultPreview;
+        const outputSuggestedChart = normalizeSuggestedChart(
+          output?.SuggestedChart ?? output?.suggestedChart ?? output
+        );
         const customStatus = data?.customStatus;
         const customStatusLabel = customStatus?.Label ?? customStatus?.label;
         const customStatusState = customStatus?.Status ?? customStatus?.status;
@@ -339,6 +367,9 @@ export function useChatSessions(
                        if (Array.isArray(outputResultPreview) && outputResultPreview.length > 0) {
                            newMsgs[aiIdx].results = outputResultPreview;
                        }
+                       if (outputSuggestedChart) {
+                           newMsgs[aiIdx].suggestedChart = outputSuggestedChart;
+                       }
                    } else {
                        const fallbackMsg: Message = {
                          id: Math.random().toString(),
@@ -354,6 +385,9 @@ export function useChatSessions(
 
                        if (Array.isArray(outputResultPreview) && outputResultPreview.length > 0) {
                          fallbackMsg.results = outputResultPreview;
+                       }
+                       if (outputSuggestedChart) {
+                         fallbackMsg.suggestedChart = outputSuggestedChart;
                        }
 
                        newMsgs.push(fallbackMsg);
