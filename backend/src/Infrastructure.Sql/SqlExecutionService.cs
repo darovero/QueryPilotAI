@@ -15,8 +15,8 @@ public interface ISqlExecutionService
 public sealed class SqlExecutionService(IConfiguration configuration) : ISqlExecutionService
 {
     private readonly string _connectionString =
-        configuration["SqlConnectionString"]
-        ?? throw new InvalidOperationException("SqlConnectionString configuration is required.");
+        configuration["DatabaseConnectionString"]
+        ?? throw new InvalidOperationException("DatabaseConnectionString configuration is required.");
 
     public async Task<List<Dictionary<string, object?>>> ExecuteQueryAsync(string sql, DatabaseConfig? config = null)
     {

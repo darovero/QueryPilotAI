@@ -3,8 +3,7 @@
   "Values": {
     "AzureWebJobsStorage": "UseDevelopmentStorage=true",
     "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
-    "SqlConnectionString": "Server=tcp:<server>.database.windows.net,1433;Initial Catalog=<db>;Encrypt=True;TrustServerCertificate=False;Authentication=Active Directory Default;",
-    "AppDbConnectionString": "Server=tcp:<server>.database.windows.net,1433;Initial Catalog=<app-db>;Encrypt=True;TrustServerCertificate=False;Authentication=Active Directory Default;",
+    "DatabaseConnectionString": "Server=tcp:<server>.database.windows.net,1433;Initial Catalog=<db>;Encrypt=True;TrustServerCertificate=False;Authentication=Active Directory Default;",
     "AzureOpenAI__Endpoint": "https://<resource>.openai.azure.com/",
     "AzureOpenAI__Deployment": "<deployment-name>",
     "AzureOpenAI__ApiKey": "<api-key>",

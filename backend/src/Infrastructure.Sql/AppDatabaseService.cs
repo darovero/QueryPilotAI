@@ -132,8 +132,8 @@ END;";
 
     public AppDatabaseService(IConfiguration configuration, IConnectionSecretProtector secretProtector)
     {
-        _connectionString = configuration["AppDbConnectionString"]
-            ?? throw new InvalidOperationException("AppDbConnectionString is required.");
+        _connectionString = configuration["DatabaseConnectionString"]
+            ?? throw new InvalidOperationException("DatabaseConnectionString is required.");
         _secretProtector = secretProtector;
     }
 
