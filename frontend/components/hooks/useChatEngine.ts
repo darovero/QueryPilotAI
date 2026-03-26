@@ -309,11 +309,82 @@ export function useChatEngine() {
     return () => clearInterval(interval);
   }, [activePoll]);
 
+  // --- Chart change shortcircuit helpers ---
+
+  const detectChartTypeFromText = (text: string): "bar" | "line" | "pie" | "area" | null => {
+    const lower = text.toLowerCase();
+    if (/\b(pie|torta|donut|dona|pastel|circular)\b/.test(lower)) return "pie";
+    if (/\b(barra?s?|bar|histograma|columnas?)\b/.test(lower)) return "bar";
+    if (/\b(l[ií]nea|lineal|line|tendencia)\b/.test(lower)) return "line";
+    if (/\b([áa]rea|area)\b/.test(lower)) return "area";
+    return null;
+  };
+
+  const isChartOnlyRequest = (text: string): boolean => {
+    const lower = text.toLowerCase();
+    const hasChartIntent = /\b(gr[áa]fi(?:ca|co|ca)|chart|visual(?:iza(?:ci[oó]n)?)?|muestra(?:lo|me)?|cambia(?:lo)?|genera(?:r)?|pon(?:lo)?|conv(?:ierte|ierto))\b/.test(lower);
+    return hasChartIntent && detectChartTypeFromText(text) !== null;
+  };
+
+  const inferChartFromResults = (
+    results: Record<string, unknown>[],
+    chartType: "bar" | "line" | "pie" | "area"
+  ): import("../types").SuggestedChart | undefined => {
+    if (!results || results.length === 0) return undefined;
+    const sample = results[0];
+    const cols = Object.keys(sample);
+    const xField = cols.find((k) => typeof sample[k] === "string") ?? cols[0];
+    const yField = cols.find((k) => typeof sample[k] === "number" && k !== xField) ?? cols[1];
+    if (!xField || !yField) return undefined;
+    return { type: chartType, title: "Visualización", x_field: xField, y_field: yField };
+  };
+
   // --- Handlers ---
 
   const handleSubmit = async () => {
     if (!input.trim() || !activeChatSession) return;
     const userMsg: Message = { id: Math.random().toString(), role: "user", content: input };
+
+    // --- Shortcircuit: si es solo un cambio de tipo de gráfico, reusar datos existentes ---
+    const requestedType = detectChartTypeFromText(input);
+    if (requestedType && isChartOnlyRequest(input)) {
+      const lastAiWithData = [...messages].reverse().find(
+        (m) => m.role === "ai" && m.results && m.results.length > 0
+      );
+      if (lastAiWithData) {
+        const baseChart =
+          lastAiWithData.suggestedChart ??
+          inferChartFromResults(lastAiWithData.results!, requestedType);
+        if (baseChart) {
+          const newChart: import("../types").SuggestedChart = {
+            ...baseChart,
+            type: requestedType,
+            title: baseChart.title,
+          };
+          const typeLabel: Record<typeof requestedType, string> = {
+            pie: "pie", bar: "barras", line: "líneas", area: "área",
+          };
+          setMessages((prev) => [
+            ...prev,
+            userMsg,
+            {
+              id: Math.random().toString(),
+              role: "ai",
+              status: "Completed",
+              results: lastAiWithData.results,
+              insight: lastAiWithData.insight,
+              sql: lastAiWithData.sql,
+              content: `Aquí tienes la misma visualización como gráfico de ${typeLabel[requestedType]}.`,
+              suggestedChart: newChart,
+            },
+          ]);
+          setInput("");
+          addLog("INFO", `[Shortcircuit] Chart change to ${requestedType} — no backend call.`);
+          return;
+        }
+      }
+    }
+
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
     setIsTyping(true);

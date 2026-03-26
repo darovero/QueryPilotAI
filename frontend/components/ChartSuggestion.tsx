@@ -62,6 +62,11 @@ export function ChartSuggestion({ chart, data }: ChartSuggestionProps) {
       return <BarChartSVG data={chartData} xLabel={chart.x_axis_label} yLabel={chart.y_axis_label} />;
     }
 
+    // Renderizado SVG para gráfica de pie
+    if (chart.type === "pie") {
+      return <PieChartSVG data={chartData} yLabel={chart.y_axis_label} />;
+    }
+
     return (
       <div className="text-center py-8 text-zinc-400">
         Tipo de gráfica "{chart.type}" no soportado aún
@@ -479,6 +484,113 @@ function BarChartSVG({
           {yLabel}
         </text>
       )}
+    </svg>
+  );
+}
+
+function PieChartSVG({
+  data,
+  yLabel,
+}: {
+  data: Array<{ name: string; values: Array<{ x: string; y: number }> }>;
+  yLabel?: string;
+}) {
+  const width = 640;
+  const height = 300;
+  const cx = 200;
+  const cy = 148;
+  const r = 120;
+
+  const colors = [
+    "#38bdf8", "#818cf8", "#34d399", "#fb923c", "#f472b6",
+    "#a78bfa", "#facc15", "#4ade80", "#60a5fa", "#f87171",
+  ];
+
+  // Flatten into slices: each {x, y} pair is one slice
+  const allSlices = data.flatMap((s) =>
+    s.values.map((v) => ({ label: v.x, value: v.y }))
+  );
+  const total = allSlices.reduce((s, v) => s + Math.abs(v.value), 0) || 1;
+
+  // Pre-compute slice angles
+  let currentAngle = -Math.PI / 2;
+  const slices = allSlices.map((slice, idx) => {
+    const startAngle = currentAngle;
+    const sweep = (Math.abs(slice.value) / total) * 2 * Math.PI;
+    currentAngle += sweep;
+    const endAngle = currentAngle;
+    const midAngle = startAngle + sweep / 2;
+    const pct = (Math.abs(slice.value) / total) * 100;
+    const labelR = r * 0.62;
+    return {
+      ...slice,
+      startAngle,
+      endAngle,
+      midAngle,
+      pct,
+      labelX: cx + labelR * Math.cos(midAngle),
+      labelY: cy + labelR * Math.sin(midAngle),
+      idx,
+    };
+  });
+
+  const polarToCartesian = (angle: number, radius: number) => ({
+    x: cx + radius * Math.cos(angle),
+    y: cy + radius * Math.sin(angle),
+  });
+
+  const describeArc = (slice: (typeof slices)[0]) => {
+    const start = polarToCartesian(slice.startAngle, r);
+    const end = polarToCartesian(slice.endAngle, r);
+    const largeArc = slice.endAngle - slice.startAngle > Math.PI ? 1 : 0;
+    return `M ${cx} ${cy} L ${start.x.toFixed(2)} ${start.y.toFixed(2)} A ${r} ${r} 0 ${largeArc} 1 ${end.x.toFixed(2)} ${end.y.toFixed(2)} Z`;
+  };
+
+  const legendX = cx + r + 30;
+
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} width="100%" height={height} overflow="visible">
+      {/* Slices */}
+      {slices.map((s, i) => (
+        <path
+          key={i}
+          d={describeArc(s)}
+          fill={colors[i % colors.length]}
+          stroke="#18181b"
+          strokeWidth={1.5}
+          opacity={0.9}
+        />
+      ))}
+
+      {/* Percentage labels inside slice (only if slice ≥ 5%) */}
+      {slices.map((s, i) =>
+        s.pct >= 5 ? (
+          <text
+            key={i}
+            x={s.labelX}
+            y={s.labelY}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            fontSize={11}
+            fill="#fff"
+            fontWeight="600"
+          >
+            {s.pct.toFixed(1)}%
+          </text>
+        ) : null
+      )}
+
+      {/* Legend */}
+      {slices.map((s, i) => (
+        <g key={i} transform={`translate(${legendX}, ${20 + i * 20})`}>
+          <rect width={11} height={11} rx={2} fill={colors[i % colors.length]} />
+          <text x={16} y={9} fontSize={11} fill="#d4d4d8" dominantBaseline="middle">
+            {truncateLabel(s.label, 22)}
+            {" — "}{formatDataValue(s.value, yLabel)}
+            {" ("}{s.pct.toFixed(1)}{"%}"}
+          </text>
+        </g>
+      ))}
     </svg>
   );
 }
