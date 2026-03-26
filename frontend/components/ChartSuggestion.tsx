@@ -171,7 +171,7 @@ function LineChartSVG({
           fill="#9ca3af"
           textAnchor="end"
         >
-          {(minY + ratio * yRange).toFixed(0)}
+          {formatAxisValue(minY + ratio * yRange, yLabel)}
         </text>
       ))}
 
@@ -241,7 +241,7 @@ function LineChartSVG({
                     fill="#d4d4d8"
                     textAnchor="middle"
                   >
-                    {v.y.toFixed(1)}
+                    {formatDataValue(v.y, yLabel)}
                   </text>
                 )}
               </g>
@@ -370,7 +370,7 @@ function BarChartSVG({
           fill="#9ca3af"
           textAnchor="end"
         >
-          {(ratio * maxY).toFixed(0)}
+          {formatAxisValue(ratio * maxY, yLabel)}
         </text>
       ))}
 
@@ -430,7 +430,7 @@ function BarChartSVG({
                   fill="#d4d4d8"
                   textAnchor="middle"
                 >
-                  {v.y.toFixed(1)}
+                  {formatDataValue(v.y, yLabel)}
                 </text>
               )}
             </g>
@@ -505,4 +505,46 @@ function getTickIndices(total: number, maxTicks: number) {
   }
 
   return indices;
+}
+
+function formatAxisValue(value: number, yLabel?: string) {
+  return formatSmartValue(value, yLabel, true);
+}
+
+function formatDataValue(value: number, yLabel?: string) {
+  return formatSmartValue(value, yLabel, false);
+}
+
+function formatSmartValue(value: number, yLabel?: string, compact: boolean = true) {
+  if (!Number.isFinite(value)) return "0";
+
+  const isPercentage = /%|porcent|percent/i.test(yLabel ?? "");
+  const abs = Math.abs(value);
+
+  if (isPercentage) {
+    const decimals = abs >= 100 ? 0 : abs >= 10 ? 1 : 2;
+    return `${trimTrailingZeros(value.toFixed(decimals))}%`;
+  }
+
+  if (abs >= 1_000_000_000) {
+    const scaled = value / 1_000_000_000;
+    return `${trimTrailingZeros(scaled.toFixed(compact ? 1 : 2))}B`;
+  }
+
+  if (abs >= 1_000_000) {
+    const scaled = value / 1_000_000;
+    return `${trimTrailingZeros(scaled.toFixed(compact ? 1 : 2))}M`;
+  }
+
+  if (abs >= 1_000) {
+    const scaled = value / 1_000;
+    return `${trimTrailingZeros(scaled.toFixed(compact ? 1 : 2))}K`;
+  }
+
+  const decimals = abs >= 100 ? 0 : abs >= 10 ? 1 : 2;
+  return trimTrailingZeros(value.toFixed(decimals));
+}
+
+function trimTrailingZeros(value: string) {
+  return value.replace(/\.0+$/, "").replace(/(\.\d*?)0+$/, "$1");
 }
