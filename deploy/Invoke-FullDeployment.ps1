@@ -206,6 +206,7 @@ function New-DeploymentConfigSkeleton {
             TenantId = ''
             AllowedAudiences = @()
             AuthorityHost = 'https://login.microsoftonline.com'
+            AutoConfigureSpaRedirectUris = $true
         }
         Foundry = @{
             EnvironmentName = 'dev'
@@ -368,6 +369,43 @@ function Build-AuthorityUrl {
     }
 
     return "$normalizedHost/$normalizedTenantId"
+}
+
+function Ensure-SpaRedirectUris {
+    param(
+        [string]$ClientId,
+        [string[]]$RequiredUris
+    )
+
+    if ([string]::IsNullOrWhiteSpace($ClientId)) {
+        return
+    }
+
+    $normalizedRequired = @($RequiredUris | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | ForEach-Object { $_.Trim() } | Select-Object -Unique)
+    if ($normalizedRequired.Count -eq 0) {
+        return
+    }
+
+    $existingSpaUris = Try-Invoke-AzCli -ExpectJson -Arguments @(
+        'ad', 'app', 'show',
+        '--id', $ClientId,
+        '--query', 'spa.redirectUris',
+        '-o', 'json'
+    )
+
+    $existing = @()
+    if ($null -ne $existingSpaUris) {
+        $existing = @($existingSpaUris | ForEach-Object { [string]$_ } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+    }
+
+    $merged = @($existing + $normalizedRequired | Select-Object -Unique)
+    if ($merged.Count -eq $existing.Count -and @($merged | Where-Object { $existing -notcontains $_ }).Count -eq 0) {
+        Write-Info 'SPA redirect URIs already up to date in Entra app registration.'
+        return
+    }
+
+    Write-Info 'Updating SPA redirect URIs in Entra app registration.'
+    Invoke-AzCli -Arguments (@('ad', 'app', 'update', '--id', $ClientId, '--spa-redirect-uris') + $merged + @('-o', 'none')) | Out-Null
 }
 
 function Resolve-TemplateValue {
@@ -1146,6 +1184,7 @@ $sqlAdminPassword = Resolve-ConfigValue -Value $config.Sql.AdminPassword -Prompt
 $authClientId = Resolve-ConfigValue -Value $config.Auth.ClientId -Prompt 'Existing app registration client id' -PropertyName 'Auth.ClientId' -DefaultValue ''
 $authTenantId = Resolve-ConfigValue -Value $config.Auth.TenantId -Prompt 'Microsoft Entra tenant id' -PropertyName 'Auth.TenantId' -DefaultValue $tenantSuggestion
 $authAuthorityHost = Resolve-ConfigValue -Value $config.Auth.AuthorityHost -Prompt 'Microsoft Entra authority host' -PropertyName 'Auth.AuthorityHost' -DefaultValue 'https://login.microsoftonline.com'
+$authAutoConfigureSpaRedirectUris = if ($null -eq $config.Auth.AutoConfigureSpaRedirectUris) { $true } else { [bool]$config.Auth.AutoConfigureSpaRedirectUris }
 $frontendAuthorityDefault = Build-AuthorityUrl -AuthorityHost $authAuthorityHost -TenantId $authTenantId
 $frontendAuthority = Resolve-ConfigValue -Value $config.Frontend.Authority -Prompt 'Frontend authority URL' -PropertyName 'Frontend.Authority' -DefaultValue $frontendAuthorityDefault
 
@@ -1454,6 +1493,18 @@ try {
                 }
                 else {
                     Resolve-TemplateValue -Value $config.Frontend.PostLogoutRedirectUri -Tokens $frontendTemplateTokens
+                }
+
+                if ($authAutoConfigureSpaRedirectUris) {
+                    try {
+                        Ensure-SpaRedirectUris -ClientId $authClientId -RequiredUris @($redirectUri, $postLogoutRedirectUri)
+                    }
+                    catch {
+                        Write-WarnLine "Could not update SPA redirect URIs in Entra app registration. Continue after validating manually. Error: $($_.Exception.Message)"
+                    }
+                }
+                else {
+                    Write-WarnLine 'Automatic SPA redirect URI sync is disabled (Auth.AutoConfigureSpaRedirectUris=false).'
                 }
 
                 if (Test-Path $foundryOutputsPath) {

@@ -30,6 +30,8 @@
         # Debe incluir la audiencia aceptada por el backend. Normalmente coincide con ClientId.
         AllowedAudiences = @()
         AuthorityHost = 'https://login.microsoftonline.com'
+        # Si esta en true, la fase Configure sincroniza RedirectUri/PostLogoutRedirectUri en la seccion SPA del App Registration.
+        AutoConfigureSpaRedirectUris = $true
     }
 
     Foundry = @{
