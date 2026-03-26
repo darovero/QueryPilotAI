@@ -202,7 +202,9 @@ function New-DeploymentConfigSkeleton {
             ResultInterpreterAgentId = ''
             ConciergeAgentId = ''
             ProjectResourceId = ''
-            RoleDefinitionName = ''
+            RoleDefinitionName = 'Azure AI User'
+            AutoConfigureFunctionIdentity = $true
+            AutoAssignFunctionRole = $true
         }
         AzureOpenAI = @{
             DeploymentName = 'gpt-4o-mini'
@@ -448,6 +450,128 @@ function Get-FoundryEndpoint {
     )
 
     return "https://$CustomSubDomain.services.ai.azure.com/api/projects/$ProjectName"
+}
+
+function Ensure-FunctionManagedIdentity {
+    param(
+        [string]$ResourceGroupName,
+        [string]$FunctionAppName,
+        [int]$MaxAttempts = 12,
+        [int]$DelaySeconds = 5
+    )
+
+    $identityType = Try-Invoke-AzCli -Arguments @(
+        'functionapp', 'identity', 'show',
+        '--resource-group', $ResourceGroupName,
+        '--name', $FunctionAppName,
+        '--query', 'type',
+        '-o', 'tsv'
+    )
+
+    if ([string]::IsNullOrWhiteSpace($identityType) -or $identityType -eq 'None') {
+        Write-Info "Enabling system-assigned managed identity for Function App '$FunctionAppName'"
+        Invoke-AzCli -Arguments @(
+            'functionapp', 'identity', 'assign',
+            '--resource-group', $ResourceGroupName,
+            '--name', $FunctionAppName,
+            '-o', 'none'
+        ) | Out-Null
+    }
+
+    for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
+        $principalId = Try-Invoke-AzCli -Arguments @(
+            'functionapp', 'identity', 'show',
+            '--resource-group', $ResourceGroupName,
+            '--name', $FunctionAppName,
+            '--query', 'principalId',
+            '-o', 'tsv'
+        )
+
+        if (-not [string]::IsNullOrWhiteSpace($principalId)) {
+            return $principalId
+        }
+
+        Start-Sleep -Seconds $DelaySeconds
+    }
+
+    throw "Function App managed identity principalId could not be resolved for '$FunctionAppName'."
+}
+
+function Resolve-FoundryRoleScope {
+    param(
+        [string]$FoundryProjectResourceId,
+        [string]$FoundryProjectEndpoint,
+        [string]$ResourceGroupName
+    )
+
+    if (-not [string]::IsNullOrWhiteSpace($FoundryProjectResourceId)) {
+        return $FoundryProjectResourceId
+    }
+
+    if ([string]::IsNullOrWhiteSpace($FoundryProjectEndpoint)) {
+        return $null
+    }
+
+    try {
+        $endpointUri = [Uri]$FoundryProjectEndpoint
+        $hostParts = $endpointUri.Host.Split('.')
+        if ($hostParts.Length -lt 1 -or [string]::IsNullOrWhiteSpace($hostParts[0])) {
+            return $null
+        }
+
+        $foundryResourceName = $hostParts[0]
+        $foundryResourceId = Try-Invoke-AzCli -Arguments @(
+            'cognitiveservices', 'account', 'show',
+            '--resource-group', $ResourceGroupName,
+            '--name', $foundryResourceName,
+            '--query', 'id',
+            '-o', 'tsv'
+        )
+
+        if (-not [string]::IsNullOrWhiteSpace($foundryResourceId)) {
+            return $foundryResourceId
+        }
+    }
+    catch {
+        return $null
+    }
+
+    return $null
+}
+
+function Ensure-RoleAssignment {
+    param(
+        [string]$PrincipalId,
+        [string]$RoleDefinitionName,
+        [string]$Scope
+    )
+
+    $assignments = Try-Invoke-AzCli -ExpectJson -Arguments @(
+        'role', 'assignment', 'list',
+        '--assignee-object-id', $PrincipalId,
+        '--scope', $Scope,
+        '-o', 'json'
+    )
+
+    if ($null -ne $assignments) {
+        $existing = @($assignments | Where-Object {
+            $_.roleDefinitionName -eq $RoleDefinitionName -and $_.scope -eq $Scope
+        })
+
+        if ($existing.Count -gt 0) {
+            Write-Info "Role '$RoleDefinitionName' is already assigned on scope '$Scope'."
+            return
+        }
+    }
+
+    Invoke-AzCli -Arguments @(
+        'role', 'assignment', 'create',
+        '--assignee-object-id', $PrincipalId,
+        '--assignee-principal-type', 'ServicePrincipal',
+        '--role', $RoleDefinitionName,
+        '--scope', $Scope,
+        '-o', 'none'
+    ) | Out-Null
 }
 
 function Get-PublicIpAddress {
@@ -864,6 +988,9 @@ $foundryTenantId = $config.Foundry.TenantId
 $foundrySqlPlannerAgentId = $config.Foundry.SqlPlannerAgentId
 $foundryResultInterpreterAgentId = $config.Foundry.ResultInterpreterAgentId
 $foundryConciergeAgentId = $config.Foundry.ConciergeAgentId
+$foundryRoleDefinitionName = if ([string]::IsNullOrWhiteSpace($config.Foundry.RoleDefinitionName)) { 'Azure AI User' } else { $config.Foundry.RoleDefinitionName }
+$foundryAutoConfigureFunctionIdentity = if ($null -eq $config.Foundry.AutoConfigureFunctionIdentity) { $true } else { [bool]$config.Foundry.AutoConfigureFunctionIdentity }
+$foundryAutoAssignFunctionRole = if ($null -eq $config.Foundry.AutoAssignFunctionRole) { $true } else { [bool]$config.Foundry.AutoAssignFunctionRole }
 
 $azureOpenAiModelName = if ([string]::IsNullOrWhiteSpace($azureOpenAiModelNameConfig)) { 'gpt-4o-mini' } else { $azureOpenAiModelNameConfig }
 $azureOpenAiModelVersion = if ([string]::IsNullOrWhiteSpace($azureOpenAiModelVersionConfig)) { '2024-07-18' } else { $azureOpenAiModelVersionConfig }
@@ -1115,6 +1242,10 @@ try {
                 $contentSafetyEndpoint = $context.contentSafetyEndpoint
                 $appInsightsConnectionString = $context.appInsightsConnectionString
 
+                if ($foundryAutoConfigureFunctionIdentity) {
+                    $functionAppPrincipalId = Ensure-FunctionManagedIdentity -ResourceGroupName $resourceGroupName -FunctionAppName $functionAppName
+                }
+
                 $openAiApiKey = Invoke-AzCli -Arguments @('cognitiveservices', 'account', 'keys', 'list', '--resource-group', $resourceGroupName, '--name', $openAiName, '--query', 'key1', '-o', 'tsv')
                 $analyticsConnectionString = "Server=tcp:$sqlServerFqdn,1433;Initial Catalog=$analyticsDbName;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;User ID=$sqlAdminLogin;Password=$sqlAdminPassword;"
                 $appDbConnectionString = "Server=tcp:$sqlServerFqdn,1433;Initial Catalog=$appDbName;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;User ID=$sqlAdminLogin;Password=$sqlAdminPassword;"
@@ -1185,24 +1316,27 @@ try {
                 Invoke-AzCli -Arguments (@('webapp', 'config', 'appsettings', 'set', '--resource-group', $resourceGroupName, '--name', $webAppName, '--settings') + $webSettings + @('-o', 'none')) | Out-Null
                 Invoke-AzCli -Arguments @('webapp', 'config', 'set', '--resource-group', $resourceGroupName, '--name', $webAppName, '--startup-file', 'node server.js', '-o', 'none') | Out-Null
 
-                if (-not [string]::IsNullOrWhiteSpace($foundryProjectResourceId) -and -not [string]::IsNullOrWhiteSpace($config.Foundry.RoleDefinitionName)) {
-                    Write-Info 'Assigning configured Foundry RBAC role to Function App managed identity'
-                    try {
-                        Invoke-AzCli -Arguments @(
-                            'role', 'assignment', 'create',
-                            '--assignee-object-id', $functionAppPrincipalId,
-                            '--assignee-principal-type', 'ServicePrincipal',
-                            '--role', $config.Foundry.RoleDefinitionName,
-                            '--scope', $foundryProjectResourceId,
-                            '-o', 'none'
-                        ) | Out-Null
+                if ($foundryAutoAssignFunctionRole) {
+                    $foundryRoleScope = Resolve-FoundryRoleScope -FoundryProjectResourceId $foundryProjectResourceId -FoundryProjectEndpoint $foundryProjectEndpoint -ResourceGroupName $resourceGroupName
+
+                    if ([string]::IsNullOrWhiteSpace($foundryRoleScope)) {
+                        Write-WarnLine 'Could not resolve Foundry RBAC scope from Foundry.ProjectResourceId or Foundry project endpoint. Skipping automatic role assignment.'
                     }
-                    catch {
-                        Write-WarnLine "Foundry RBAC assignment failed. Continue after validating permissions manually. Error: $($_.Exception.Message)"
+                    elseif ([string]::IsNullOrWhiteSpace($functionAppPrincipalId)) {
+                        Write-WarnLine 'Function App managed identity principalId is empty. Skipping automatic role assignment.'
+                    }
+                    else {
+                        Write-Info "Assigning Foundry RBAC role '$foundryRoleDefinitionName' to Function App managed identity"
+                        try {
+                            Ensure-RoleAssignment -PrincipalId $functionAppPrincipalId -RoleDefinitionName $foundryRoleDefinitionName -Scope $foundryRoleScope
+                        }
+                        catch {
+                            Write-WarnLine "Foundry RBAC assignment failed. Continue after validating permissions manually. Error: $($_.Exception.Message)"
+                        }
                     }
                 }
                 else {
-                    Write-WarnLine 'Foundry RBAC assignment skipped. If the Function App managed identity lacks access to the AI Project, the end-to-end test will fail until permissions are granted.'
+                    Write-WarnLine 'Automatic Foundry RBAC assignment is disabled (Foundry.AutoAssignFunctionRole=false).'
                 }
 
                 $completedPhases.Add($phase)

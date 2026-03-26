@@ -52,7 +52,12 @@
         ResultInterpreterAgentId = ''
         ConciergeAgentId = ''
         ProjectResourceId = ''
-        RoleDefinitionName = ''
+        # Rol a asignar a la identidad administrada de la Function para consumir Foundry.
+        RoleDefinitionName = 'Azure AI User'
+        # Habilita automaticamente la identidad administrada (system-assigned) de la Function.
+        AutoConfigureFunctionIdentity = $true
+        # Asigna automaticamente el rol indicado sobre Foundry (scope: ProjectResourceId o recurso deducido por endpoint).
+        AutoAssignFunctionRole = $true
     }
 
     AzureOpenAI = @{
