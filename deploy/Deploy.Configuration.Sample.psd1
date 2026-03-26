@@ -16,11 +16,12 @@
         AppServiceSkuTier = 'Basic'
         # Si se deja vacio, el script compone la authority con Auth.AuthorityHost + Auth.TenantId.
         Authority = ''
+        # Admite plantillas como https://{WebAppHostname} o https://{Prefix}-web.azurewebsites.net.
         # Si se deja vacio, el script usa https://<web-app-hostname>.
         # Esa misma URL debe existir como Redirect URI en el App Registration configurado en Auth.ClientId.
-        RedirectUri = ''
-        # Si se deja vacio, el script reutiliza RedirectUri.
-        PostLogoutRedirectUri = ''
+        RedirectUri = 'https://{WebAppHostname}'
+        # Si se deja vacio, el script reutiliza RedirectUri. Tambien admite {WebAppHostname} y {Prefix}.
+        PostLogoutRedirectUri = 'https://{WebAppHostname}'
     }
 
     Auth = @{

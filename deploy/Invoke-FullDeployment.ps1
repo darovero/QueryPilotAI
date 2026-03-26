@@ -370,6 +370,24 @@ function Build-AuthorityUrl {
     return "$normalizedHost/$normalizedTenantId"
 }
 
+function Resolve-TemplateValue {
+    param(
+        [string]$Value,
+        [hashtable]$Tokens
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return $Value
+    }
+
+    $resolved = $Value
+    foreach ($entry in $Tokens.GetEnumerator()) {
+        $resolved = $resolved.Replace("{$($entry.Key)}", [string]$entry.Value)
+    }
+
+    return $resolved
+}
+
 function Get-DeletedCognitiveAccountResourceId {
     param(
         [string]$SubscriptionId,
@@ -433,6 +451,49 @@ function Try-Invoke-AzCli {
     }
 
     return ($output | Out-String).Trim()
+}
+
+function Get-OptionalPropertyValue {
+    param(
+        [object]$Object,
+        [string]$PropertyName
+    )
+
+    if ($null -eq $Object -or [string]::IsNullOrWhiteSpace($PropertyName)) {
+        return $null
+    }
+
+    if (-not ($Object.PSObject.Properties.Name -contains $PropertyName)) {
+        return $null
+    }
+
+    return $Object.$PropertyName
+}
+
+function Get-NestedOptionalPropertyValue {
+    param(
+        [object]$Object,
+        [string]$Path
+    )
+
+    if ($null -eq $Object -or [string]::IsNullOrWhiteSpace($Path)) {
+        return $null
+    }
+
+    $current = $Object
+    foreach ($segment in $Path.Split('.')) {
+        if ($null -eq $current) {
+            return $null
+        }
+
+        if (-not ($current.PSObject.Properties.Name -contains $segment)) {
+            return $null
+        }
+
+        $current = $current.$segment
+    }
+
+    return $current
 }
 
 function Resolve-PythonCommand {
@@ -676,14 +737,14 @@ function Wait-BacpacImportCompletion {
             '-o', 'json'
         )
 
-        $status = $statusPayload.status
-        if ([string]::IsNullOrWhiteSpace($status) -and $statusPayload.PSObject.Properties.Name -contains 'properties') {
-            $status = $statusPayload.properties.status
+        $status = [string](Get-NestedOptionalPropertyValue -Object $statusPayload -Path 'status')
+        if ([string]::IsNullOrWhiteSpace($status)) {
+            $status = [string](Get-NestedOptionalPropertyValue -Object $statusPayload -Path 'properties.status')
         }
 
-        $statusMessage = $statusPayload.statusMessage
-        if ([string]::IsNullOrWhiteSpace($statusMessage) -and $statusPayload.PSObject.Properties.Name -contains 'properties') {
-            $statusMessage = $statusPayload.properties.statusMessage
+        $statusMessage = [string](Get-NestedOptionalPropertyValue -Object $statusPayload -Path 'statusMessage')
+        if ([string]::IsNullOrWhiteSpace($statusMessage)) {
+            $statusMessage = [string](Get-NestedOptionalPropertyValue -Object $statusPayload -Path 'properties.statusMessage')
         }
 
         if ([string]::IsNullOrWhiteSpace($status)) {
@@ -699,9 +760,9 @@ function Wait-BacpacImportCompletion {
         }
 
         if ($status -in @('Failed', 'Canceled', 'Cancelled')) {
-            $errorMessage = $statusPayload.errorMessage
-            if ([string]::IsNullOrWhiteSpace($errorMessage) -and $statusPayload.PSObject.Properties.Name -contains 'properties') {
-                $errorMessage = $statusPayload.properties.errorMessage
+            $errorMessage = [string](Get-NestedOptionalPropertyValue -Object $statusPayload -Path 'errorMessage')
+            if ([string]::IsNullOrWhiteSpace($errorMessage)) {
+                $errorMessage = [string](Get-NestedOptionalPropertyValue -Object $statusPayload -Path 'properties.errorMessage')
             }
 
             if ([string]::IsNullOrWhiteSpace($errorMessage)) {
@@ -715,6 +776,92 @@ function Wait-BacpacImportCompletion {
     }
 
     throw "Timed out waiting for BACPAC import completion after $TimeoutMinutes minutes."
+}
+
+function Wait-BacpacImportCompletionByDatabaseOperation {
+    param(
+        [string]$ResourceGroupName,
+        [string]$SqlServerName,
+        [string]$DatabaseName,
+        [int]$PollIntervalSeconds,
+        [int]$TimeoutMinutes
+    )
+
+    if ($PollIntervalSeconds -lt 5) {
+        $PollIntervalSeconds = 5
+    }
+
+    if ($TimeoutMinutes -lt 1) {
+        $TimeoutMinutes = 1
+    }
+
+    $deadlineUtc = [DateTime]::UtcNow.AddMinutes($TimeoutMinutes)
+    $attempt = 0
+
+    while ([DateTime]::UtcNow -lt $deadlineUtc) {
+        $attempt++
+        $operations = Try-Invoke-AzCli -ExpectJson -Arguments @(
+            'sql', 'db', 'op', 'list',
+            '--resource-group', $ResourceGroupName,
+            '--server', $SqlServerName,
+            '--database', $DatabaseName,
+            '-o', 'json'
+        )
+
+        if ($null -eq $operations) {
+            Write-WarnLine "Could not query SQL operations for '$DatabaseName' (attempt $attempt)."
+            Start-Sleep -Seconds $PollIntervalSeconds
+            continue
+        }
+
+        $opsArray = @($operations)
+        if ($opsArray.Count -eq 0) {
+            Write-Info "No SQL operations found yet for '$DatabaseName' (attempt $attempt)."
+            Start-Sleep -Seconds $PollIntervalSeconds
+            continue
+        }
+
+        $latest = $opsArray | Sort-Object {
+            Get-NestedOptionalPropertyValue -Object $_ -Path 'startTime'
+        } -Descending | Select-Object -First 1
+
+        $state = [string](Get-NestedOptionalPropertyValue -Object $latest -Path 'state')
+        $operation = [string](Get-NestedOptionalPropertyValue -Object $latest -Path 'operation')
+        $error = [string](Get-NestedOptionalPropertyValue -Object $latest -Path 'errorDescription')
+
+        if ([string]::IsNullOrWhiteSpace($operation)) {
+            $operation = 'sql-db-operation'
+        }
+
+        if ([string]::IsNullOrWhiteSpace($state)) {
+            Write-Info "SQL operation status is not available yet (attempt $attempt)."
+            Start-Sleep -Seconds $PollIntervalSeconds
+            continue
+        }
+
+        Write-Info "SQL operation '$operation' status (attempt $attempt): $state"
+
+        if ($state -in @('InProgress', 'Pending')) {
+            Start-Sleep -Seconds $PollIntervalSeconds
+            continue
+        }
+
+        if ($state -in @('Succeeded', 'Success', 'Completed')) {
+            return
+        }
+
+        if ($state -in @('Failed', 'Canceled', 'Cancelled')) {
+            if ([string]::IsNullOrWhiteSpace($error)) {
+                throw "BACPAC import failed. SQL operation state: '$state'."
+            }
+
+            throw "BACPAC import failed. SQL operation state: '$state'. Error: $error"
+        }
+
+        Start-Sleep -Seconds $PollIntervalSeconds
+    }
+
+    throw "Timed out waiting for SQL import operation completion after $TimeoutMinutes minutes."
 }
 
 function Invoke-BacpacImport {
@@ -820,17 +967,30 @@ function Invoke-BacpacImport {
         '-o', 'json'
     )
 
-    $operationStatusLink = $importResponse.operationStatusLink
-    if ([string]::IsNullOrWhiteSpace($operationStatusLink) -and $importResponse.PSObject.Properties.Name -contains 'properties') {
-        $operationStatusLink = $importResponse.properties.operationStatusLink
-    }
+    $operationStatusLink = $null
+    $operationStatusLinkCandidates = @(
+        'operationStatusLink',
+        'properties.operationStatusLink',
+        'azureAsyncOperation',
+        'properties.azureAsyncOperation'
+    )
 
-    if ([string]::IsNullOrWhiteSpace($operationStatusLink)) {
-        throw 'BACPAC import started but operationStatusLink was not returned by Azure CLI response.'
+    foreach ($path in $operationStatusLinkCandidates) {
+        $candidate = Get-NestedOptionalPropertyValue -Object $importResponse -Path $path
+        if (-not [string]::IsNullOrWhiteSpace([string]$candidate)) {
+            $operationStatusLink = [string]$candidate
+            break
+        }
     }
 
     Write-Info "BACPAC import request submitted. Polling status until completion."
-    Wait-BacpacImportCompletion -OperationStatusLink $operationStatusLink -PollIntervalSeconds $PollIntervalSeconds -TimeoutMinutes $TimeoutMinutes
+    if ([string]::IsNullOrWhiteSpace($operationStatusLink)) {
+        Write-WarnLine 'operationStatusLink was not returned by Azure CLI. Falling back to SQL operation polling.'
+        Wait-BacpacImportCompletionByDatabaseOperation -ResourceGroupName $ResourceGroupName -SqlServerName $SqlServerName -DatabaseName $DatabaseName -PollIntervalSeconds $PollIntervalSeconds -TimeoutMinutes $TimeoutMinutes
+    }
+    else {
+        Wait-BacpacImportCompletion -OperationStatusLink $operationStatusLink -PollIntervalSeconds $PollIntervalSeconds -TimeoutMinutes $TimeoutMinutes
+    }
     Write-Info "BACPAC import completed successfully. Database: '$DatabaseName'. Source: '$storageUri'"
 }
 
@@ -1278,8 +1438,23 @@ try {
                 $openAiApiKey = Invoke-AzCli -Arguments @('cognitiveservices', 'account', 'keys', 'list', '--resource-group', $resourceGroupName, '--name', $openAiName, '--query', 'key1', '-o', 'tsv')
                 $analyticsConnectionString = "Server=tcp:$sqlServerFqdn,1433;Initial Catalog=$analyticsDbName;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;User ID=$sqlAdminLogin;Password=$sqlAdminPassword;"
                 $appDbConnectionString = "Server=tcp:$sqlServerFqdn,1433;Initial Catalog=$appDbName;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;User ID=$sqlAdminLogin;Password=$sqlAdminPassword;"
-                $redirectUri = if ([string]::IsNullOrWhiteSpace($config.Frontend.RedirectUri)) { "https://$webAppHostname" } else { $config.Frontend.RedirectUri }
-                $postLogoutRedirectUri = if ([string]::IsNullOrWhiteSpace($config.Frontend.PostLogoutRedirectUri)) { $redirectUri } else { $config.Frontend.PostLogoutRedirectUri }
+                $frontendTemplateTokens = @{
+                    Prefix = $prefix
+                    WebAppHostname = $webAppHostname
+                    FunctionAppHostname = $functionAppHostname
+                }
+                $redirectUri = if ([string]::IsNullOrWhiteSpace($config.Frontend.RedirectUri)) {
+                    "https://$webAppHostname"
+                }
+                else {
+                    Resolve-TemplateValue -Value $config.Frontend.RedirectUri -Tokens $frontendTemplateTokens
+                }
+                $postLogoutRedirectUri = if ([string]::IsNullOrWhiteSpace($config.Frontend.PostLogoutRedirectUri)) {
+                    $redirectUri
+                }
+                else {
+                    Resolve-TemplateValue -Value $config.Frontend.PostLogoutRedirectUri -Tokens $frontendTemplateTokens
+                }
 
                 if (Test-Path $foundryOutputsPath) {
                     $resolvedFoundry = Get-Content $foundryOutputsPath | ConvertFrom-Json
@@ -1446,8 +1621,23 @@ try {
                 $functionAppHostname = $context.functionAppHostname
                 $frontendPackageDir = Join-Path $artifactsDir 'frontend-package'
                 $zipPath = Join-Path $artifactsDir 'frontend-package.zip'
-                $redirectUri = if ([string]::IsNullOrWhiteSpace($config.Frontend.RedirectUri)) { "https://$webAppHostname" } else { $config.Frontend.RedirectUri }
-                $postLogoutRedirectUri = if ([string]::IsNullOrWhiteSpace($config.Frontend.PostLogoutRedirectUri)) { $redirectUri } else { $config.Frontend.PostLogoutRedirectUri }
+                $frontendTemplateTokens = @{
+                    Prefix = $prefix
+                    WebAppHostname = $webAppHostname
+                    FunctionAppHostname = $functionAppHostname
+                }
+                $redirectUri = if ([string]::IsNullOrWhiteSpace($config.Frontend.RedirectUri)) {
+                    "https://$webAppHostname"
+                }
+                else {
+                    Resolve-TemplateValue -Value $config.Frontend.RedirectUri -Tokens $frontendTemplateTokens
+                }
+                $postLogoutRedirectUri = if ([string]::IsNullOrWhiteSpace($config.Frontend.PostLogoutRedirectUri)) {
+                    $redirectUri
+                }
+                else {
+                    Resolve-TemplateValue -Value $config.Frontend.PostLogoutRedirectUri -Tokens $frontendTemplateTokens
+                }
                 $frontendBuildEnvironment = @{
                     API_BASE_URL = "https://$functionAppHostname"
                     NEXT_PUBLIC_AZURE_AD_CLIENT_ID = $authClientId
@@ -1458,7 +1648,7 @@ try {
 
                 Build-FrontendPackage -SourceRoot (Join-Path $repoRoot 'frontend') -DestinationRoot $frontendPackageDir -BuildEnvironment $frontendBuildEnvironment
                 New-ZipFromDirectory -SourceDirectory $frontendPackageDir -ZipPath $zipPath
-                Invoke-AzCli -Arguments @('webapp', 'deploy', '--resource-group', $resourceGroupName, '--name', $webAppName, '--src-path', $zipPath, '--type', 'zip', '--clean', 'true', '--restart', 'true', '-o', 'none') | Out-Null
+                Invoke-AzCli -Arguments @('webapp', 'deploy', '--resource-group', $resourceGroupName, '--name', $webAppName, '--src-path', $zipPath, '--type', 'zip', '--clean', 'true', '--restart', 'true', '--track-status', 'false', '-o', 'none') | Out-Null
 
                 $completedPhases.Add($phase)
             }
