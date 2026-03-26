@@ -113,7 +113,8 @@ public class OrchestrationStatusFunction
         {
             try
             {
-                output = JsonSerializer.Deserialize<InsightResponse>(outputRaw);
+                output = JsonSerializer.Deserialize<InsightResponse>(outputRaw,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             }
             catch
             {

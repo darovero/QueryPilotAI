@@ -467,6 +467,8 @@ public sealed class FoundryAgentClient : IFoundryAgentClient
         sb.AppendLine();
         sb.AppendLine("=== INSTRUCCIÓN CRÍTICA DE RESPUESTA ===");
         sb.AppendLine("TU RESPUESTA DEBE SER ÚNICA Y EXCLUSIVAMENTE UN OBJETO JSON VÁLIDO. NO ENVÍES TEXTO CONVERSACIONAL FUERA DEL JSON.");
+        sb.AppendLine("NO menciones gráficas, charts, visualizaciones ni recomendaciones visuales en 'response_for_user' o 'executive_summary' salvo que el usuario lo haya pedido explícitamente.");
+        sb.AppendLine("Si consideras una visualización útil pero no fue solicitada, omítela del texto visible al usuario.");
         sb.AppendLine("FORMATO ESPERADO:");
         sb.AppendLine("{");
         sb.AppendLine("  \"status\": \"success\",");

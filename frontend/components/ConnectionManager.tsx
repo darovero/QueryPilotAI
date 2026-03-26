@@ -1,6 +1,7 @@
 import { Connection, ChatSession, DashboardTab } from "./types";
 import { toast } from "sonner";
 import { TypewriterTitle } from "./TypewriterTitle";
+import { AppIcon } from "./AppIcon";
 
 interface ConnectionManagerProps {
   currentView: string;
@@ -118,7 +119,7 @@ export function ConnectionManager({
             onClick={() => setCurrentView('welcome')}
             className="mb-6 flex items-center gap-2 text-[13px] font-medium text-zinc-400 hover:text-zinc-100 transition-colors"
           >
-            <span className="material-symbols-outlined text-[16px]">arrow_back</span> Back to Home
+            <AppIcon name="arrow_back" className="h-[16px] w-[16px]" /> Back to Home
           </button>
           <div className="space-y-2 mb-10 text-center md:text-left">
             <h1 className="text-3xl font-semibold text-zinc-100 tracking-tight">
@@ -178,7 +179,7 @@ export function ConnectionManager({
                    {item.icon.includes('.svg') ? (
                       <img src={item.icon} className="w-6 h-6 object-contain" alt={item.name} />
                    ) : (
-                      <span className={`material-symbols-outlined text-[20px] ${enabledIntegrations.has(item.name) ? 'text-zinc-100' : 'text-zinc-400'}`}>database</span>
+                     <AppIcon name="database" className={`h-[20px] w-[20px] ${enabledIntegrations.has(item.name) ? 'text-zinc-100' : 'text-zinc-400'}`} />
                    )}
                 </div>
                 <div className="flex flex-col items-start gap-1">
@@ -198,7 +199,7 @@ export function ConnectionManager({
               <div className="w-full max-w-[480px]">
                  
                   <button onClick={() => setCurrentView('integrations')} className="flex items-center gap-2 text-[13px] text-zinc-400 hover:text-zinc-100 font-medium mb-8 transition-colors">
-                    <span className="material-symbols-outlined text-[16px]">arrow_back</span> Back to Integrations
+                    <AppIcon name="arrow_back" className="h-[16px] w-[16px]" /> Back to Integrations
                  </button>
 
                   <div className="flex items-center gap-4 mb-8">
@@ -223,14 +224,14 @@ export function ConnectionManager({
                     <div className="space-y-6 bg-zinc-900 border border-zinc-800 p-8 rounded-3xl">
                      {connError && (
                         <div className="p-3 bg-red-900/10 text-red-500 rounded-xl text-[13px] font-medium border border-red-100 flex items-center gap-2">
-                           <span className="material-symbols-outlined text-[16px]">error</span>
+                        <AppIcon name="error" className="h-[16px] w-[16px]" />
                            {connError}
                         </div>
                      )}
                      {testSuccess && (
                         <div className="p-4 bg-emerald-50 text-emerald-700 rounded-2xl text-[14px] font-medium border border-emerald-200 flex items-center justify-center gap-3 animate-in fade-in slide-in-from-top-4 duration-300">
                            <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
-                              <span className="material-symbols-outlined text-[20px]">check</span>
+                            <AppIcon name="check" className="h-[20px] w-[20px]" />
                            </div>
                            Connection verified! Redirecting...
                         </div>
@@ -287,7 +288,7 @@ export function ConnectionManager({
                          <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 p-4 rounded-xl flex items-center justify-between">
                            <div className="flex items-center gap-3">
                              <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
-                               <span className="material-symbols-outlined text-[18px]">lock_open</span>
+                               <AppIcon name="lock_open" className="h-[18px] w-[18px]" />
                              </div>
                              <div>
                                <div className="text-[13px] font-bold">Successfully authenticated</div>
@@ -346,12 +347,12 @@ export function ConnectionManager({
                             </>
                           ) : testSuccess ? (
                             <>
-                              <span className="material-symbols-outlined text-[18px]">verified</span>
+                              <AppIcon name="verified" className="h-[18px] w-[18px]" />
                               Success!
                             </>
                           ) : (
                             <>
-                              {editingConnId ? 'Save Changes' : 'Test and Save Connection'} <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+                              {editingConnId ? 'Save Changes' : 'Test and Save Connection'} <AppIcon name="arrow_forward" className="h-[18px] w-[18px]" />
                             </>
                           )}
                       </button>
@@ -377,7 +378,7 @@ export function ConnectionManager({
                      {docs.guides.map((plat) => (
                        <a key={plat.name} className="flex items-center gap-3 text-[13px] font-medium text-zinc-300 hover:text-zinc-100 transition-colors p-2 rounded-lg hover:bg-zinc-800/60 -ml-2" href={plat.url} target="_blank" rel="noopener noreferrer">
                          <div className="w-7 h-7 flex items-center justify-center shrink-0">
-                           {plat.iconPath ? <img src={plat.iconPath} className="w-6 h-6 object-contain" alt={plat.name} /> : <span className="material-symbols-outlined text-[18px] text-zinc-300">{plat.symbol || 'database'}</span>}
+                           {plat.iconPath ? <img src={plat.iconPath} className="w-6 h-6 object-contain" alt={plat.name} /> : <AppIcon name={plat.symbol || 'database'} className="h-[18px] w-[18px] text-zinc-300" />}
                          </div>
                          {plat.name}
                        </a>
@@ -396,7 +397,7 @@ export function ConnectionManager({
             onClick={() => setCurrentView('welcome')}
             className="mb-6 flex items-center gap-2 text-[13px] font-medium text-zinc-400 hover:text-zinc-100 transition-colors"
           >
-            <span className="material-symbols-outlined text-[16px]">arrow_back</span> Back to Home
+            <AppIcon name="arrow_back" className="h-[16px] w-[16px]" /> Back to Home
           </button>
           <div className="flex justify-between items-center mb-10">
             <div className="space-y-2">
@@ -409,7 +410,7 @@ export function ConnectionManager({
               onClick={() => { setEditingConnId(null); setConnForm({ name: "", host: "", port: "", database: "", username: "", password: "", type: "Azure SQL" }); setCurrentView('connect_azuresql'); }}
               className="bg-zinc-900 text-white hover:bg-zinc-800 px-5 py-2.5 rounded-xl text-[13px] font-medium flex items-center gap-2 transition-colors shadow-sm"
             >
-              <span className="material-symbols-outlined text-[16px]">add</span> Add Connection
+              <AppIcon name="add" className="h-[16px] w-[16px]" /> Add Connection
             </button>
           </div>
 
@@ -437,7 +438,7 @@ export function ConnectionManager({
                                {conn.type === 'SQLite' && <img src="/assets/iconos sql/LogosSqlite.svg" className="w-6 h-6 object-contain" alt="SQLite" />}
                                {conn.type === 'Oracle' && <img src="/assets/iconos sql/DeviconOracle.svg" className="w-6 h-6 object-contain" alt="Oracle" />}
                                {conn.type && !['Azure SQL', 'PostgreSQL', 'MySQL', 'MariaDB', 'SQLite', 'Oracle'].includes(conn.type) && (
-                                  <span className="material-symbols-outlined text-[22px] text-zinc-100">database</span>
+                                 <AppIcon name="database" className="h-[22px] w-[22px] text-zinc-100" />
                                )}
                             </div>   {conn.name}
                       </div>
@@ -470,7 +471,7 @@ export function ConnectionManager({
                         className="w-8 h-8 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-100 flex items-center justify-center transition-colors"
                         title="Connect & Chat"
                       >
-                        <span className="material-symbols-outlined text-[16px]">link</span>
+                        <AppIcon name="link" className="h-[16px] w-[16px]" />
                       </button>
                       <button 
                         onClick={() => { 
@@ -481,7 +482,7 @@ export function ConnectionManager({
                         className="w-8 h-8 rounded-lg border border-zinc-700 bg-zinc-900 text-zinc-300 hover:text-zinc-100 hover:bg-zinc-800 flex items-center justify-center transition-colors"
                         title="Edit"
                       >
-                        <span className="material-symbols-outlined text-[16px]">edit</span>
+                        <AppIcon name="edit" className="h-[16px] w-[16px]" />
                       </button>
                       <button 
                         onClick={() => {
@@ -509,7 +510,7 @@ export function ConnectionManager({
                         className="w-8 h-8 rounded-lg border border-red-100 bg-red-900/10 text-red-500 hover:text-red-400 hover:bg-red-900/20 flex items-center justify-center transition-colors"
                         title="Delete"
                       >
-                        <span className="material-symbols-outlined text-[16px]">delete</span>
+                        <AppIcon name="delete" className="h-[16px] w-[16px]" />
                       </button>
                     </div>
                   </div>

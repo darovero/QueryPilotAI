@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { AppIcon } from "./AppIcon";
 
 type LegalDocumentKey = 'privacy' | 'terms';
 
@@ -93,7 +94,7 @@ export function WorkspaceOnboarding({ handleOnboardingComplete, isAddingWorkspac
              <div className="space-y-8 animate-in fade-in duration-300">
                  <div className="space-y-3">
                     <div className="w-14 h-14 bg-[#111111] border border-[#333333] rounded-none flex items-center justify-center mb-6">
-                       <span className="material-symbols-outlined text-[28px] text-[#f4f0e6]">waving_hand</span>
+                              <AppIcon name="waving_hand" className="h-[28px] w-[28px] text-[#f4f0e6]" />
                     </div>
                     <h1 className="text-3xl font-bold tracking-tight text-[#f4f0e6]">Welcome to InsightForge AI</h1>
                     <p className="text-[15px] font-medium text-[#a3a3a3]">Let's set up your account in less than a minute.</p>
@@ -197,7 +198,7 @@ export function WorkspaceOnboarding({ handleOnboardingComplete, isAddingWorkspac
                              className={`w-full text-left p-4 rounded-none border transition-all flex items-center gap-4 ${useCases.includes(useCase) ? 'border-zinc-900 bg-[#111111] text-[#f4f0e6]' : 'border-[#333333] bg-[#0a0a0a] text-[#b5b5b5] hover:border-zinc-300'}`}
                            >
                                <div className={`w-5 h-5 rounded-none flex items-center justify-center shrink-0 border ${useCases.includes(useCase) ? 'border-zinc-900 bg-[#a78bfa] text-black' : 'border-zinc-300 bg-[#0a0a0a]'}`}>
-                                   {useCases.includes(useCase) && <span className="material-symbols-outlined text-[14px] font-bold">check</span>}
+                                   {useCases.includes(useCase) && <AppIcon name="check" className="h-[14px] w-[14px]" />}
                                </div>
                                <span className="text-[14px] font-medium">{useCase}</span>
                            </button>
@@ -225,7 +226,7 @@ export function WorkspaceOnboarding({ handleOnboardingComplete, isAddingWorkspac
                     <label className="flex items-start gap-4 cursor-pointer group">
                         <div className="pt-1">
                             <div className={`w-5 h-5 rounded-none flex items-center justify-center border transition-colors ${acceptedTerms ? 'border-zinc-900 bg-[#a78bfa] text-black' : 'border-zinc-300 bg-[#0a0a0a] group-hover:border-zinc-400'}`}>
-                                {acceptedTerms && <span className="material-symbols-outlined text-[14px] font-bold">check</span>}
+                                {acceptedTerms && <AppIcon name="check" className="h-[14px] w-[14px]" />}
                             </div>
                         </div>
                         <input type="checkbox" className="hidden" checked={acceptedTerms} onChange={(e) => setAcceptedTerms(e.target.checked)} />
@@ -246,7 +247,7 @@ export function WorkspaceOnboarding({ handleOnboardingComplete, isAddingWorkspac
                         {/* SQL Validation */}
                         <div className="flex items-center gap-4">
                             <div className="w-12 h-12 bg-black border border-slate-100 rounded-none flex items-center justify-center shrink-0">
-                                <span className="material-symbols-outlined text-[#d1cdbd]">verified_user</span>
+                                <AppIcon name="verified_user" className="h-5 w-5 text-[#d1cdbd]" />
                             </div>
                             <div className="flex-1">
                                 <div className="text-[14px] font-bold text-[#f4f0e6]">SQL Validation</div>
@@ -263,7 +264,7 @@ export function WorkspaceOnboarding({ handleOnboardingComplete, isAddingWorkspac
                         {/* Data Masking */}
                         <div className="flex items-center gap-4">
                             <div className="w-12 h-12 bg-black border border-slate-100 rounded-none flex items-center justify-center shrink-0">
-                                <span className="material-symbols-outlined text-[#d1cdbd]">masks</span>
+                                <AppIcon name="masks" className="h-5 w-5 text-[#d1cdbd]" />
                             </div>
                             <div className="flex-1">
                                 <div className="text-[14px] font-bold text-[#f4f0e6]">Data Masking</div>
@@ -280,7 +281,7 @@ export function WorkspaceOnboarding({ handleOnboardingComplete, isAddingWorkspac
                         {/* Audit Logging */}
                         <div className="flex items-center gap-4">
                             <div className="w-12 h-12 bg-black border border-slate-100 rounded-none flex items-center justify-center shrink-0">
-                                <span className="material-symbols-outlined text-[#d1cdbd]">receipt_long</span>
+                                <AppIcon name="receipt_long" className="h-5 w-5 text-[#d1cdbd]" />
                             </div>
                             <div className="flex-1">
                                 <div className="text-[14px] font-bold text-[#f4f0e6]">Audit Logging</div>
@@ -337,7 +338,7 @@ export function WorkspaceOnboarding({ handleOnboardingComplete, isAddingWorkspac
              <div className="space-y-8 animate-in fade-in duration-300">
                  <div className="space-y-3">
                     <div className="w-14 h-14 bg-emerald-50 border border-emerald-200 rounded-none mx-auto flex items-center justify-center mb-6">
-                       <span className="material-symbols-outlined text-[28px] text-emerald-600">database</span>
+                              <AppIcon name="database" className="h-[28px] w-[28px] text-emerald-600" />
                     </div>
                     <h1 className="text-3xl font-bold tracking-tight text-[#f4f0e6] text-center">Connect your database</h1>
                     <p className="text-[15px] font-medium text-[#a3a3a3] text-center">You're all set! Add a data source now or skip for later.</p>

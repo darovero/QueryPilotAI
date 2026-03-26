@@ -140,6 +140,9 @@ function New-DeploymentConfigDefaults {
     return @{
         Location = 'eastus2'
         Prefix = 'ifdev2'
+        WorkloadName = 'insightforge'
+        EnvironmentName = 'dev'
+        Instance = ''
         ResourceGroupName = 'rg-insightforge-dev'
         SqlAdminLogin = 'sqladminif'
         SqlAdminPassword = 'IfDev_2026!Deploy#01'
@@ -153,14 +156,21 @@ function New-DeploymentConfigSkeleton {
         Location = ''
         CreateResourceGroupIfMissing = $true
         Prefix = ''
+        WorkloadName = 'insightforge'
+        EnvironmentName = 'dev'
+        Instance = ''
         Sql = @{
             AdminLogin = ''
             AdminPassword = ''
             SkuName = 'Basic'
+            SkuTier = 'Basic'
+            PublicNetworkAccess = $true
+            AllowAzureServices = $true
         }
         Frontend = @{
             AppServiceSkuName = 'B1'
             AppServiceSkuTier = 'Basic'
+            LinuxFxVersion = 'NODE|20-lts'
             Authority = ''
             RedirectUri = ''
             PostLogoutRedirectUri = ''
@@ -196,7 +206,123 @@ function New-DeploymentConfigSkeleton {
         }
         AzureOpenAI = @{
             DeploymentName = 'gpt-4o-mini'
+            ModelName = 'gpt-4o-mini'
+            ModelVersion = '2024-07-18'
+            Capacity = 10
         }
+        Functions = @{
+            ExtensionVersion = '~4'
+        }
+        Database = @{
+            ImportBacpac = $false
+            BacpacFile = 'infra/dbs/Clinic.bacpac'
+            ContainerName = 'bacpac'
+            BacpacDatabaseName = 'ClinicDB'
+            ServiceObjective = 'S0'
+            ImportPollIntervalSeconds = 15
+            ImportTimeoutMinutes = 90
+        }
+    }
+}
+
+function Get-OutputValue {
+    param(
+        [object]$Outputs,
+        [string]$Name,
+        [switch]$Required
+    )
+
+    if ($null -eq $Outputs -or -not ($Outputs.PSObject.Properties.Name -contains $Name)) {
+        if ($Required) {
+            throw "Deployment output '$Name' was not found."
+        }
+
+        return $null
+    }
+
+    $entry = $Outputs.$Name
+    if ($null -eq $entry) {
+        if ($Required) {
+            throw "Deployment output '$Name' is null."
+        }
+
+        return $null
+    }
+
+    if ($entry -is [string]) {
+        return $entry
+    }
+
+    if ($entry.PSObject.Properties.Name -contains 'value') {
+        return $entry.value
+    }
+
+    return $entry
+}
+
+function Resolve-InfrastructureContext {
+    param(
+        [object]$Outputs,
+        [string]$ResourceGroupName
+    )
+
+    $functionAppName = Get-OutputValue -Outputs $Outputs -Name 'functionAppName' -Required
+    $webAppName = Get-OutputValue -Outputs $Outputs -Name 'webAppName' -Required
+    $sqlServerName = Get-OutputValue -Outputs $Outputs -Name 'sqlServerName' -Required
+    $sqlDatabaseName = Get-OutputValue -Outputs $Outputs -Name 'sqlDatabaseName' -Required
+    $storageAccountName = Get-OutputValue -Outputs $Outputs -Name 'storageAccountName'
+    $openAiName = Get-OutputValue -Outputs $Outputs -Name 'openAiName' -Required
+    $contentSafetyName = Get-OutputValue -Outputs $Outputs -Name 'contentSafetyName' -Required
+
+    $functionAppHostname = Invoke-AzCli -Arguments @('functionapp', 'show', '--resource-group', $ResourceGroupName, '--name', $functionAppName, '--query', 'defaultHostName', '-o', 'tsv')
+    $functionAppPrincipalId = Invoke-AzCli -Arguments @('functionapp', 'show', '--resource-group', $ResourceGroupName, '--name', $functionAppName, '--query', 'identity.principalId', '-o', 'tsv')
+    $webAppHostname = Invoke-AzCli -Arguments @('webapp', 'show', '--resource-group', $ResourceGroupName, '--name', $webAppName, '--query', 'defaultHostName', '-o', 'tsv')
+
+    $sqlServerFqdn = Invoke-AzCli -Arguments @('sql', 'server', 'show', '--resource-group', $ResourceGroupName, '--name', $sqlServerName, '--query', 'fullyQualifiedDomainName', '-o', 'tsv')
+    if ([string]::IsNullOrWhiteSpace($sqlServerFqdn)) {
+        $sqlServerFqdn = "$sqlServerName.database.windows.net"
+    }
+
+    $openAiEndpoint = Invoke-AzCli -Arguments @('cognitiveservices', 'account', 'show', '--resource-group', $ResourceGroupName, '--name', $openAiName, '--query', 'properties.endpoint', '-o', 'tsv')
+    $contentSafetyEndpoint = Invoke-AzCli -Arguments @('cognitiveservices', 'account', 'show', '--resource-group', $ResourceGroupName, '--name', $contentSafetyName, '--query', 'properties.endpoint', '-o', 'tsv')
+
+    $appInsightsConnectionString = Get-OutputValue -Outputs $Outputs -Name 'appInsightsConnectionString'
+    if ([string]::IsNullOrWhiteSpace($appInsightsConnectionString)) {
+        $appInsightsName = Get-OutputValue -Outputs $Outputs -Name 'appInsightsName'
+        if (-not [string]::IsNullOrWhiteSpace($appInsightsName)) {
+            $appInsightsConnectionString = Try-Invoke-AzCli -Arguments @('monitor', 'app-insights', 'component', 'show', '--resource-group', $ResourceGroupName, '--app', $appInsightsName, '--query', 'connectionString', '-o', 'tsv')
+        }
+    }
+
+    if ([string]::IsNullOrWhiteSpace($appInsightsConnectionString)) {
+        $appInsightsConnectionString = Try-Invoke-AzCli -Arguments @('monitor', 'app-insights', 'component', 'list', '--resource-group', $ResourceGroupName, '--query', '[0].connectionString', '-o', 'tsv')
+    }
+
+    $analyticsDbName = Get-OutputValue -Outputs $Outputs -Name 'analyticsDatabaseName'
+    if ([string]::IsNullOrWhiteSpace($analyticsDbName)) {
+        $analyticsDbName = $sqlDatabaseName
+    }
+
+    $appDbName = Get-OutputValue -Outputs $Outputs -Name 'appDatabaseName'
+    if ([string]::IsNullOrWhiteSpace($appDbName)) {
+        $appDbName = $sqlDatabaseName
+    }
+
+    return [PSCustomObject]@{
+        functionAppName = $functionAppName
+        functionAppHostname = $functionAppHostname
+        functionAppPrincipalId = $functionAppPrincipalId
+        webAppName = $webAppName
+        webAppHostname = $webAppHostname
+        sqlServerName = $sqlServerName
+        sqlServerFqdn = $sqlServerFqdn
+        storageAccountName = $storageAccountName
+        analyticsDbName = $analyticsDbName
+        appDbName = $appDbName
+        openAiName = $openAiName
+        openAiEndpoint = $openAiEndpoint
+        contentSafetyEndpoint = $contentSafetyEndpoint
+        appInsightsConnectionString = $appInsightsConnectionString
     }
 }
 
@@ -369,6 +495,195 @@ function Invoke-SqlFile {
     throw "Neither sqlcmd nor Invoke-Sqlcmd is available. Install sqlcmd or the SqlServer PowerShell module."
 }
 
+function Wait-BacpacImportCompletion {
+    param(
+        [string]$OperationStatusLink,
+        [int]$PollIntervalSeconds,
+        [int]$TimeoutMinutes
+    )
+
+    if ([string]::IsNullOrWhiteSpace($OperationStatusLink)) {
+        throw 'OperationStatusLink is required to poll BACPAC import status.'
+    }
+
+    if ($PollIntervalSeconds -lt 5) {
+        $PollIntervalSeconds = 5
+    }
+
+    if ($TimeoutMinutes -lt 1) {
+        $TimeoutMinutes = 1
+    }
+
+    $deadlineUtc = [DateTime]::UtcNow.AddMinutes($TimeoutMinutes)
+    $attempt = 0
+
+    while ([DateTime]::UtcNow -lt $deadlineUtc) {
+        $attempt++
+        $statusPayload = Invoke-AzCli -ExpectJson -Arguments @(
+            'rest',
+            '--method', 'get',
+            '--url', $OperationStatusLink,
+            '-o', 'json'
+        )
+
+        $status = $statusPayload.status
+        if ([string]::IsNullOrWhiteSpace($status) -and $statusPayload.PSObject.Properties.Name -contains 'properties') {
+            $status = $statusPayload.properties.status
+        }
+
+        $statusMessage = $statusPayload.statusMessage
+        if ([string]::IsNullOrWhiteSpace($statusMessage) -and $statusPayload.PSObject.Properties.Name -contains 'properties') {
+            $statusMessage = $statusPayload.properties.statusMessage
+        }
+
+        if ([string]::IsNullOrWhiteSpace($status)) {
+            Write-WarnLine "BACPAC import polling attempt $attempt returned no status."
+        }
+        else {
+            $statusLine = if ([string]::IsNullOrWhiteSpace($statusMessage)) { $status } else { "$status - $statusMessage" }
+            Write-Info "BACPAC import status (attempt $attempt): $statusLine"
+        }
+
+        if ($status -in @('Succeeded', 'Success', 'Completed')) {
+            return
+        }
+
+        if ($status -in @('Failed', 'Canceled', 'Cancelled')) {
+            $errorMessage = $statusPayload.errorMessage
+            if ([string]::IsNullOrWhiteSpace($errorMessage) -and $statusPayload.PSObject.Properties.Name -contains 'properties') {
+                $errorMessage = $statusPayload.properties.errorMessage
+            }
+
+            if ([string]::IsNullOrWhiteSpace($errorMessage)) {
+                throw "BACPAC import failed with status '$status'."
+            }
+
+            throw "BACPAC import failed with status '$status'. Error: $errorMessage"
+        }
+
+        Start-Sleep -Seconds $PollIntervalSeconds
+    }
+
+    throw "Timed out waiting for BACPAC import completion after $TimeoutMinutes minutes."
+}
+
+function Invoke-BacpacImport {
+    param(
+        [string]$ResourceGroupName,
+        [string]$StorageAccountName,
+        [string]$SqlServerName,
+        [string]$SqlAdminLogin,
+        [string]$SqlAdminPassword,
+        [string]$BacpacFilePath,
+        [string]$ContainerName,
+        [string]$DatabaseName,
+        [string]$ServiceObjective,
+        [int]$PollIntervalSeconds = 15,
+        [int]$TimeoutMinutes = 90
+    )
+
+    if (-not (Test-Path $BacpacFilePath)) {
+        throw "BACPAC file not found at '$BacpacFilePath'."
+    }
+
+    if ([string]::IsNullOrWhiteSpace($StorageAccountName)) {
+        throw 'storageAccountName output is required to import a BACPAC file.'
+    }
+
+    $resolvedBacpac = (Resolve-Path $BacpacFilePath).Path
+    $bacpacBlobName = [System.IO.Path]::GetFileName($resolvedBacpac)
+
+    Write-Info "Resolving storage key for account '$StorageAccountName'"
+    $storageKey = Invoke-AzCli -Arguments @(
+        'storage', 'account', 'keys', 'list',
+        '--resource-group', $ResourceGroupName,
+        '--account-name', $StorageAccountName,
+        '--query', '[0].value',
+        '-o', 'tsv'
+    )
+
+    if ([string]::IsNullOrWhiteSpace($storageKey)) {
+        throw "Could not resolve storage key for account '$StorageAccountName'."
+    }
+
+    Write-Info "Ensuring storage container '$ContainerName'"
+    Invoke-AzCli -Arguments @(
+        'storage', 'container', 'create',
+        '--name', $ContainerName,
+        '--account-name', $StorageAccountName,
+        '--account-key', $storageKey,
+        '--only-show-errors',
+        '-o', 'none'
+    ) | Out-Null
+
+    Write-Info "Uploading BACPAC '$resolvedBacpac'"
+    Invoke-AzCli -Arguments @(
+        'storage', 'blob', 'upload',
+        '--account-name', $StorageAccountName,
+        '--account-key', $storageKey,
+        '--container-name', $ContainerName,
+        '--file', $resolvedBacpac,
+        '--name', $bacpacBlobName,
+        '--overwrite', 'true',
+        '--only-show-errors',
+        '-o', 'none'
+    ) | Out-Null
+
+    $dbExists = Try-Invoke-AzCli -Arguments @(
+        'sql', 'db', 'show',
+        '--resource-group', $ResourceGroupName,
+        '--server', $SqlServerName,
+        '--name', $DatabaseName,
+        '--query', 'name',
+        '-o', 'tsv'
+    )
+
+    if ([string]::IsNullOrWhiteSpace($dbExists)) {
+        Write-Info "Creating database '$DatabaseName' with service objective '$ServiceObjective'"
+        Invoke-AzCli -Arguments @(
+            'sql', 'db', 'create',
+            '--resource-group', $ResourceGroupName,
+            '--server', $SqlServerName,
+            '--name', $DatabaseName,
+            '--service-objective', $ServiceObjective,
+            '--only-show-errors',
+            '-o', 'none'
+        ) | Out-Null
+    }
+    else {
+        Write-WarnLine "Database '$DatabaseName' already exists. Import will be attempted on the existing database."
+    }
+
+    $storageUri = "https://$StorageAccountName.blob.core.windows.net/$ContainerName/$bacpacBlobName"
+    Write-Info "Starting BACPAC import into '$DatabaseName'"
+    $importResponse = Invoke-AzCli -ExpectJson -Arguments @(
+        'sql', 'db', 'import',
+        '--resource-group', $ResourceGroupName,
+        '--server', $SqlServerName,
+        '--name', $DatabaseName,
+        '--admin-user', $SqlAdminLogin,
+        '--admin-password', $SqlAdminPassword,
+        '--storage-key-type', 'StorageAccessKey',
+        '--storage-key', $storageKey,
+        '--storage-uri', $storageUri,
+        '--only-show-errors',
+        '-o', 'json'
+    )
+
+    $operationStatusLink = $importResponse.operationStatusLink
+    if ([string]::IsNullOrWhiteSpace($operationStatusLink) -and $importResponse.PSObject.Properties.Name -contains 'properties') {
+        $operationStatusLink = $importResponse.properties.operationStatusLink
+    }
+
+    if ([string]::IsNullOrWhiteSpace($operationStatusLink)) {
+        throw 'BACPAC import started but operationStatusLink was not returned by Azure CLI response.'
+    }
+
+    Write-Info "BACPAC import request submitted. Polling status until completion."
+    Wait-BacpacImportCompletion -OperationStatusLink $operationStatusLink -PollIntervalSeconds $PollIntervalSeconds -TimeoutMinutes $TimeoutMinutes
+    Write-Info "BACPAC import completed successfully. Database: '$DatabaseName'. Source: '$storageUri'"
+}
+
 function New-ZipFromDirectory {
     param(
         [string]$SourceDirectory,
@@ -488,10 +803,34 @@ $currentSubscription = Try-Invoke-AzCli -ExpectJson -Arguments @('account', 'sho
 $subscriptionSuggestion = if ($null -ne $currentSubscription -and -not [string]::IsNullOrWhiteSpace($currentSubscription.id)) { $currentSubscription.id } else { '' }
 $tenantSuggestion = if (-not [string]::IsNullOrWhiteSpace($config.Auth.TenantId)) { $config.Auth.TenantId } elseif (-not [string]::IsNullOrWhiteSpace($config.Foundry.TenantId)) { $config.Foundry.TenantId } elseif ($null -ne $currentSubscription -and -not [string]::IsNullOrWhiteSpace($currentSubscription.tenantId)) { $currentSubscription.tenantId } else { '' }
 
+$workloadNameConfig = if ($config.ContainsKey('WorkloadName')) { [string]$config['WorkloadName'] } else { '' }
+$environmentNameConfig = if ($config.ContainsKey('EnvironmentName')) { [string]$config['EnvironmentName'] } else { '' }
+$instanceConfig = if ($config.ContainsKey('Instance')) { [string]$config['Instance'] } else { '' }
+$sqlSkuTierConfig = if ($config.Sql.ContainsKey('SkuTier')) { [string]$config.Sql['SkuTier'] } else { '' }
+$sqlPublicNetworkAccessConfig = if ($config.Sql.ContainsKey('PublicNetworkAccess')) { [bool]$config.Sql['PublicNetworkAccess'] } else { $true }
+$sqlAllowAzureServicesConfig = if ($config.Sql.ContainsKey('AllowAzureServices')) { [bool]$config.Sql['AllowAzureServices'] } else { $true }
+$frontendLinuxFxVersionConfig = if ($config.Frontend.ContainsKey('LinuxFxVersion')) { [string]$config.Frontend['LinuxFxVersion'] } else { '' }
+$azureOpenAiModelNameConfig = if ($config.AzureOpenAI.ContainsKey('ModelName')) { [string]$config.AzureOpenAI['ModelName'] } else { '' }
+$azureOpenAiModelVersionConfig = if ($config.AzureOpenAI.ContainsKey('ModelVersion')) { [string]$config.AzureOpenAI['ModelVersion'] } else { '' }
+$azureOpenAiCapacityConfig = if ($config.AzureOpenAI.ContainsKey('Capacity')) { [int]$config.AzureOpenAI['Capacity'] } else { 10 }
+$functionsConfig = if ($config.ContainsKey('Functions')) { $config['Functions'] } else { @{} }
+$functionsExtensionVersionConfig = if ($functionsConfig.ContainsKey('ExtensionVersion')) { [string]$functionsConfig['ExtensionVersion'] } else { '' }
+$databaseConfig = if ($config.ContainsKey('Database')) { $config['Database'] } else { @{} }
+$databaseImportBacpac = if ($databaseConfig.ContainsKey('ImportBacpac')) { [bool]$databaseConfig['ImportBacpac'] } else { $false }
+$databaseBacpacFile = if ($databaseConfig.ContainsKey('BacpacFile')) { [string]$databaseConfig['BacpacFile'] } else { 'infra/dbs/Clinic.bacpac' }
+$databaseContainerName = if ($databaseConfig.ContainsKey('ContainerName')) { [string]$databaseConfig['ContainerName'] } else { 'bacpac' }
+$databaseBacpacDatabaseName = if ($databaseConfig.ContainsKey('BacpacDatabaseName')) { [string]$databaseConfig['BacpacDatabaseName'] } else { 'ClinicDB' }
+$databaseServiceObjective = if ($databaseConfig.ContainsKey('ServiceObjective')) { [string]$databaseConfig['ServiceObjective'] } else { 'S0' }
+$databaseImportPollIntervalSeconds = if ($databaseConfig.ContainsKey('ImportPollIntervalSeconds')) { [int]$databaseConfig['ImportPollIntervalSeconds'] } else { 15 }
+$databaseImportTimeoutMinutes = if ($databaseConfig.ContainsKey('ImportTimeoutMinutes')) { [int]$databaseConfig['ImportTimeoutMinutes'] } else { 90 }
+
 $subscriptionId = Resolve-ConfigValue -Value $config.SubscriptionId -Prompt 'Azure subscription id' -PropertyName 'SubscriptionId' -DefaultValue $subscriptionSuggestion
 $resourceGroupName = Resolve-ConfigValue -Value $config.ResourceGroupName -Prompt 'Resource group name to use' -PropertyName 'ResourceGroupName' -DefaultValue $defaults.ResourceGroupName
 $location = Resolve-ConfigValue -Value $config.Location -Prompt 'Azure location' -PropertyName 'Location' -DefaultValue $defaults.Location
 $prefix = Resolve-ConfigValue -Value $config.Prefix -Prompt 'Deployment prefix' -PropertyName 'Prefix' -DefaultValue $defaults.Prefix
+$workloadName = if (-not [string]::IsNullOrWhiteSpace($workloadNameConfig)) { $workloadNameConfig } elseif (-not [string]::IsNullOrWhiteSpace($prefix)) { $prefix } else { $defaults.WorkloadName }
+$environmentName = if (-not [string]::IsNullOrWhiteSpace($environmentNameConfig)) { $environmentNameConfig } else { $defaults.EnvironmentName }
+$instance = if ([string]::IsNullOrWhiteSpace($instanceConfig)) { $defaults.Instance } else { $instanceConfig }
 $sqlAdminLogin = Resolve-ConfigValue -Value $config.Sql.AdminLogin -Prompt 'SQL admin login' -PropertyName 'Sql.AdminLogin' -DefaultValue $defaults.SqlAdminLogin
 $sqlAdminPassword = Resolve-ConfigValue -Value $config.Sql.AdminPassword -Prompt 'SQL admin password' -PropertyName 'Sql.AdminPassword' -DefaultValue $defaults.SqlAdminPassword -Secret
 $authClientId = Resolve-ConfigValue -Value $config.Auth.ClientId -Prompt 'Existing app registration client id' -PropertyName 'Auth.ClientId' -DefaultValue ''
@@ -504,6 +843,9 @@ $config.SubscriptionId = $subscriptionId
 $config.ResourceGroupName = $resourceGroupName
 $config.Location = $location
 $config.Prefix = $prefix
+$config['WorkloadName'] = $workloadName
+$config['EnvironmentName'] = $environmentName
+$config['Instance'] = $instance
 $config.Sql.AdminLogin = $sqlAdminLogin
 $config.Sql.AdminPassword = $sqlAdminPassword
 $config.Auth.ClientId = $authClientId
@@ -523,14 +865,27 @@ $foundrySqlPlannerAgentId = $config.Foundry.SqlPlannerAgentId
 $foundryResultInterpreterAgentId = $config.Foundry.ResultInterpreterAgentId
 $foundryConciergeAgentId = $config.Foundry.ConciergeAgentId
 
+$azureOpenAiModelName = if ([string]::IsNullOrWhiteSpace($azureOpenAiModelNameConfig)) { 'gpt-4o-mini' } else { $azureOpenAiModelNameConfig }
+$azureOpenAiModelVersion = if ([string]::IsNullOrWhiteSpace($azureOpenAiModelVersionConfig)) { '2024-07-18' } else { $azureOpenAiModelVersionConfig }
+$azureOpenAiCapacity = $azureOpenAiCapacityConfig
+$sqlSkuTier = if ([string]::IsNullOrWhiteSpace($sqlSkuTierConfig)) { $config.Sql.SkuName } else { $sqlSkuTierConfig }
+$sqlPublicNetworkAccess = $sqlPublicNetworkAccessConfig
+$sqlAllowAzureServices = $sqlAllowAzureServicesConfig
+$webLinuxFxVersion = if ([string]::IsNullOrWhiteSpace($frontendLinuxFxVersionConfig)) { 'NODE|20-lts' } else { $frontendLinuxFxVersionConfig }
+$functionsExtensionVersion = if ([string]::IsNullOrWhiteSpace($functionsExtensionVersionConfig)) { '~4' } else { $functionsExtensionVersionConfig }
+$databaseImportBacpac = [bool]$databaseImportBacpac
+$databaseBacpacFile = if ([string]::IsNullOrWhiteSpace($databaseBacpacFile)) { 'infra/dbs/Clinic.bacpac' } else { $databaseBacpacFile }
+$databaseContainerName = if ([string]::IsNullOrWhiteSpace($databaseContainerName)) { 'bacpac' } else { $databaseContainerName }
+$databaseBacpacDatabaseName = if ([string]::IsNullOrWhiteSpace($databaseBacpacDatabaseName)) { 'ClinicDB' } else { $databaseBacpacDatabaseName }
+$databaseServiceObjective = if ([string]::IsNullOrWhiteSpace($databaseServiceObjective)) { 'S0' } else { $databaseServiceObjective }
+$databaseImportPollIntervalSeconds = if ($databaseImportPollIntervalSeconds -lt 5) { 5 } else { $databaseImportPollIntervalSeconds }
+$databaseImportTimeoutMinutes = if ($databaseImportTimeoutMinutes -lt 1) { 1 } else { $databaseImportTimeoutMinutes }
+
 $allowedAudiences = @($config.Auth.AllowedAudiences | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
 $allowedAudiencesPromptValue = if ($allowedAudiences.Count -gt 0) { $allowedAudiences -join ',' } else { '' }
 $allowedAudiencesInput = Resolve-ConfigValue -Value $allowedAudiencesPromptValue -Prompt 'Allowed audiences (comma-separated)' -PropertyName 'Auth.AllowedAudiences' -DefaultValue $authClientId
 $allowedAudiences = @($allowedAudiencesInput.Split(',') | ForEach-Object { $_.Trim() } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
 $config.Auth.AllowedAudiences = $allowedAudiences
-
-$openAiAccountName = "${prefix}-aoai"
-$contentSafetyAccountName = "${prefix}-cs"
 
 $completedPhases = [System.Collections.Generic.List[string]]::new()
 $resumeIndex = $phaseOrder.IndexOf($ResumeFrom)
@@ -594,31 +949,31 @@ try {
             'Provision' {
                 Write-Phase $phase 'Provisioning Azure infrastructure for backend, frontend, SQL, OpenAI, Content Safety and Key Vault'
 
-                $restoreOpenAiAccount = Test-SoftDeletedCognitiveAccount -SubscriptionId $subscriptionId -ResourceGroupName $resourceGroupName -Location $location -AccountName $openAiAccountName
-                $restoreContentSafetyAccount = Test-SoftDeletedCognitiveAccount -SubscriptionId $subscriptionId -ResourceGroupName $resourceGroupName -Location $location -AccountName $contentSafetyAccountName
-                if ($restoreOpenAiAccount) {
-                    Write-Info "Detected soft-deleted Cognitive Services account '$openAiAccountName'. The infrastructure deployment will restore it automatically."
-                }
-                if ($restoreContentSafetyAccount) {
-                    Write-Info "Detected soft-deleted Cognitive Services account '$contentSafetyAccountName'. The infrastructure deployment will restore it automatically."
-                }
-
-                $deployment = Invoke-AzCli -ExpectJson -Arguments @(
+                $provisionArguments = @(
                     'deployment', 'group', 'create',
                     '--resource-group', $resourceGroupName,
                     '--template-file', (Join-Path $repoRoot 'infra/bicep/main.bicep'),
-                    '--parameters', "prefix=$prefix",
+                    '--parameters', "workloadName=$workloadName",
+                    '--parameters', "environmentName=$environmentName",
                     '--parameters', "location=$location",
                     '--parameters', "sqlAdminLogin=$sqlAdminLogin",
                     '--parameters', "sqlAdminPassword=$sqlAdminPassword",
                     '--parameters', "openAiDeploymentName=$($config.AzureOpenAI.DeploymentName)",
-                    '--parameters', "restoreOpenAiAccount=$restoreOpenAiAccount",
-                    '--parameters', "restoreContentSafetyAccount=$restoreContentSafetyAccount",
+                    '--parameters', "openAiModelName=$azureOpenAiModelName",
+                    '--parameters', "openAiModelVersion=$azureOpenAiModelVersion",
+                    '--parameters', "openAiCapacity=$azureOpenAiCapacity",
                     '--parameters', "sqlDbSkuName=$($config.Sql.SkuName)",
-                    '--parameters', "webAppSkuName=$($config.Frontend.AppServiceSkuName)",
-                    '--parameters', "webAppSkuTier=$($config.Frontend.AppServiceSkuTier)",
+                    '--parameters', "sqlDbSkuTier=$sqlSkuTier",
+                    '--parameters', "sqlPublicNetworkAccess=$sqlPublicNetworkAccess",
+                    '--parameters', "allowAzureServicesToSql=$sqlAllowAzureServices",
                     '-o', 'json'
                 )
+
+                if (-not [string]::IsNullOrWhiteSpace($instance)) {
+                    $provisionArguments += @('--parameters', "instance=$instance")
+                }
+
+                $deployment = Invoke-AzCli -ExpectJson -Arguments $provisionArguments
 
                 $deployment.properties.outputs | ConvertTo-Json -Depth 10 | Set-Content -Path $outputsPath
                 $completedPhases.Add($phase)
@@ -746,18 +1101,19 @@ try {
                 Write-Phase $phase 'Configuring app settings, connection strings and optional Foundry RBAC'
 
                 $outputs = Get-Content $outputsPath | ConvertFrom-Json
-                $functionAppName = $outputs.functionAppName.value
-                $functionAppHostname = $outputs.functionAppHostname.value
-                $functionAppPrincipalId = $outputs.functionAppPrincipalId.value
-                $webAppName = $outputs.webAppName.value
-                $webAppHostname = $outputs.webAppHostname.value
-                $sqlServerFqdn = $outputs.sqlServerFullyQualifiedName.value -replace '\.\.', '.'
-                $analyticsDbName = $outputs.analyticsDatabaseName.value
-                $appDbName = $outputs.appDatabaseName.value
-                $openAiName = $outputs.openAiName.value
-                $openAiEndpoint = $outputs.openAiEndpoint.value
-                $contentSafetyEndpoint = $outputs.contentSafetyEndpoint.value
-                $appInsightsConnectionString = $outputs.appInsightsConnectionString.value
+                $context = Resolve-InfrastructureContext -Outputs $outputs -ResourceGroupName $resourceGroupName
+                $functionAppName = $context.functionAppName
+                $functionAppHostname = $context.functionAppHostname
+                $functionAppPrincipalId = $context.functionAppPrincipalId
+                $webAppName = $context.webAppName
+                $webAppHostname = $context.webAppHostname
+                $sqlServerFqdn = $context.sqlServerFqdn
+                $analyticsDbName = $context.analyticsDbName
+                $appDbName = $context.appDbName
+                $openAiName = $context.openAiName
+                $openAiEndpoint = $context.openAiEndpoint
+                $contentSafetyEndpoint = $context.contentSafetyEndpoint
+                $appInsightsConnectionString = $context.appInsightsConnectionString
 
                 $openAiApiKey = Invoke-AzCli -Arguments @('cognitiveservices', 'account', 'keys', 'list', '--resource-group', $resourceGroupName, '--name', $openAiName, '--query', 'key1', '-o', 'tsv')
                 $analyticsConnectionString = "Server=tcp:$sqlServerFqdn,1433;Initial Catalog=$analyticsDbName;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;User ID=$sqlAdminLogin;Password=$sqlAdminPassword;"
@@ -855,10 +1211,12 @@ try {
                 Write-Phase $phase 'Bootstrapping application and analytics databases'
 
                 $outputs = Get-Content $outputsPath | ConvertFrom-Json
-                $sqlServerFqdn = $outputs.sqlServerFullyQualifiedName.value -replace '\.\.', '.'
-                $sqlServerName = $outputs.sqlServerName.value
-                $analyticsDbName = $outputs.analyticsDatabaseName.value
-                $appDbName = $outputs.appDatabaseName.value
+                $context = Resolve-InfrastructureContext -Outputs $outputs -ResourceGroupName $resourceGroupName
+                $sqlServerFqdn = $context.sqlServerFqdn
+                $sqlServerName = $context.sqlServerName
+                $storageAccountName = $context.storageAccountName
+                $analyticsDbName = $context.analyticsDbName
+                $appDbName = $context.appDbName
 
                 $clientIpAddress = Get-PublicIpAddress
                 if (-not [string]::IsNullOrWhiteSpace($clientIpAddress)) {
@@ -878,6 +1236,12 @@ try {
                     Write-WarnLine 'Could not determine the current public IP address. Database bootstrap may fail if the SQL server does not already allow this client IP.'
                 }
 
+                if ($databaseImportBacpac) {
+                    $resolvedBacpacPath = Join-Path $repoRoot $databaseBacpacFile
+                    Write-Info "Database.Bacpac import is enabled. Path: '$resolvedBacpacPath'."
+                    Invoke-BacpacImport -ResourceGroupName $resourceGroupName -StorageAccountName $storageAccountName -SqlServerName $sqlServerName -SqlAdminLogin $sqlAdminLogin -SqlAdminPassword $sqlAdminPassword -BacpacFilePath $resolvedBacpacPath -ContainerName $databaseContainerName -DatabaseName $databaseBacpacDatabaseName -ServiceObjective $databaseServiceObjective -PollIntervalSeconds $databaseImportPollIntervalSeconds -TimeoutMinutes $databaseImportTimeoutMinutes
+                }
+
                 Invoke-SqlFile -Server $sqlServerFqdn -Database $appDbName -User $sqlAdminLogin -Password $sqlAdminPassword -FilePath (Join-Path $repoRoot 'database/create_app_tables.sql')
 
                 $analyticsScripts = @(
@@ -895,7 +1259,7 @@ try {
                 Write-Phase $phase 'Publishing Azure Functions backend and deploying package'
 
                 $outputs = Get-Content $outputsPath | ConvertFrom-Json
-                $functionAppName = $outputs.functionAppName.value
+                $functionAppName = Get-OutputValue -Outputs $outputs -Name 'functionAppName' -Required
                 $publishDir = Join-Path $artifactsDir 'backend-publish'
                 $zipPath = Join-Path $artifactsDir 'backend-package.zip'
 
@@ -913,9 +1277,10 @@ try {
                 Write-Phase $phase 'Building Next.js standalone bundle and deploying it to Azure App Service'
 
                 $outputs = Get-Content $outputsPath | ConvertFrom-Json
-                $webAppName = $outputs.webAppName.value
-                $webAppHostname = $outputs.webAppHostname.value
-                $functionAppHostname = $outputs.functionAppHostname.value
+                $context = Resolve-InfrastructureContext -Outputs $outputs -ResourceGroupName $resourceGroupName
+                $webAppName = $context.webAppName
+                $webAppHostname = $context.webAppHostname
+                $functionAppHostname = $context.functionAppHostname
                 $frontendPackageDir = Join-Path $artifactsDir 'frontend-package'
                 $zipPath = Join-Path $artifactsDir 'frontend-package.zip'
                 $redirectUri = if ([string]::IsNullOrWhiteSpace($config.Frontend.RedirectUri)) { "https://$webAppHostname" } else { $config.Frontend.RedirectUri }
@@ -938,8 +1303,9 @@ try {
                 Write-Phase $phase 'Running smoke checks against frontend and backend endpoints'
 
                 $outputs = Get-Content $outputsPath | ConvertFrom-Json
-                $functionAppHostname = $outputs.functionAppHostname.value
-                $webAppHostname = $outputs.webAppHostname.value
+                $context = Resolve-InfrastructureContext -Outputs $outputs -ResourceGroupName $resourceGroupName
+                $functionAppHostname = $context.functionAppHostname
+                $webAppHostname = $context.webAppHostname
                 $frontendUrl = "https://$webAppHostname"
                 $backendUrl = "https://$functionAppHostname"
 

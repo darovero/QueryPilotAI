@@ -69,8 +69,44 @@ function Set-EnvIfValue {
     }
 }
 
+    function Get-LocalSettingsValues {
+        param([string]$FunctionsPath)
+
+        $localSettingsPath = Join-Path $FunctionsPath "local.settings.json"
+        if (-not (Test-Path $localSettingsPath)) {
+            return @{}
+        }
+
+        $raw = Get-Content -Path $localSettingsPath -Raw
+        if ([string]::IsNullOrWhiteSpace($raw)) {
+            return @{}
+        }
+
+        try {
+            $parsed = $raw | ConvertFrom-Json -AsHashtable
+            if ($null -eq $parsed -or -not $parsed.ContainsKey("Values") -or $null -eq $parsed.Values) {
+                return @{}
+            }
+            return $parsed.Values
+        }
+        catch {
+            Write-Step "Warning: local.settings.json could not be parsed. Ignoring file values."
+            return @{}
+        }
+    }
+
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 $functionsPath = Resolve-Path (Join-Path $repoRoot $FunctionProjectPath)
+$localSettingsValues = Get-LocalSettingsValues -FunctionsPath $functionsPath
+
+foreach ($setting in $localSettingsValues.GetEnumerator()) {
+    $name = [string]$setting.Key
+    $value = [string]$setting.Value
+    if (-not [string]::IsNullOrWhiteSpace($name) -and -not [string]::IsNullOrWhiteSpace($value)) {
+        # Prefer local.settings.json values to avoid stale env vars from previous runs.
+        Set-EnvIfValue -Name $name -Value $value
+    }
+}
 
 Require-Command "func"
 Require-Command "dotnet"
@@ -113,6 +149,71 @@ Set-EnvIfValue -Name "AzureOpenAI__Endpoint" -Value $AzureOpenAiEndpoint
 Set-EnvIfValue -Name "AzureOpenAI__Deployment" -Value $AzureOpenAiDeployment
 Set-EnvIfValue -Name "ContentSafety__Endpoint" -Value $ContentSafetyEndpoint
 
+$localAzureWebJobsStorage = ""
+$localStorage = ""
+if ($localSettingsValues.ContainsKey("AzureWebJobsStorage") -and -not [string]::IsNullOrWhiteSpace([string]$localSettingsValues["AzureWebJobsStorage"])) {
+    $localAzureWebJobsStorage = [string]$localSettingsValues["AzureWebJobsStorage"]
+}
+if ($localSettingsValues.ContainsKey("Storage") -and -not [string]::IsNullOrWhiteSpace([string]$localSettingsValues["Storage"])) {
+    $localStorage = [string]$localSettingsValues["Storage"]
+}
+
+if (-not [string]::IsNullOrWhiteSpace($localAzureWebJobsStorage)) {
+    Set-EnvIfValue -Name "AzureWebJobsStorage" -Value $localAzureWebJobsStorage
+}
+
+if (-not [string]::IsNullOrWhiteSpace($localStorage)) {
+    Set-EnvIfValue -Name "Storage" -Value $localStorage
+}
+
+$effectiveAzureWebJobsStorage = [Environment]::GetEnvironmentVariable("AzureWebJobsStorage", "Process")
+if ([string]::IsNullOrWhiteSpace($effectiveAzureWebJobsStorage)) {
+    $effectiveAzureWebJobsStorage = $localAzureWebJobsStorage
+}
+
+$effectiveStorage = [Environment]::GetEnvironmentVariable("Storage", "Process")
+if ([string]::IsNullOrWhiteSpace($effectiveStorage)) {
+    $effectiveStorage = $localStorage
+}
+
+if ([string]::IsNullOrWhiteSpace($effectiveStorage) -and -not [string]::IsNullOrWhiteSpace($effectiveAzureWebJobsStorage)) {
+    Set-EnvIfValue -Name "Storage" -Value $effectiveAzureWebJobsStorage
+    $effectiveStorage = $effectiveAzureWebJobsStorage
+}
+
+
+function Test-TcpPort {
+    param(
+        [string]$HostName,
+        [int]$Port,
+        [int]$TimeoutMs = 1000
+    )
+
+    try {
+        $client = [System.Net.Sockets.TcpClient]::new()
+        $connectTask = $client.ConnectAsync($HostName, $Port)
+        $isConnected = $connectTask.Wait($TimeoutMs) -and $client.Connected
+        $client.Dispose()
+        return $isConnected
+    }
+    catch {
+        return $false
+    }
+}
+
+if ([string]::IsNullOrWhiteSpace($effectiveStorage)) {
+    throw "Missing Azure Storage configuration. Define 'Storage' or 'AzureWebJobsStorage' in backend/src/Functions.Api/local.settings.json or pass SubscriptionId/ResourceGroup/StorageAccountName."
+}
+
+$usesLocalStorageEmulator = (
+    ($effectiveAzureWebJobsStorage -match "(?i)^\s*UseDevelopmentStorage\s*=\s*true\s*$") -or
+    ($effectiveStorage -match "(?i)^\s*UseDevelopmentStorage\s*=\s*true\s*$")
+)
+
+if ($usesLocalStorageEmulator -and -not (Test-TcpPort -HostName "127.0.0.1" -Port 10000 -TimeoutMs 1200)) {
+    throw "Azurite is required for 'UseDevelopmentStorage=true' but port 10000 is not listening. Start Azurite (e.g. 'azurite --location .azurite --debug .logs/azurite.debug.log') and retry."
+}
+
 if (-not $SkipBuild) {
     Write-Step "Building backend solution"
     Push-Location (Join-Path $repoRoot "backend/src")
@@ -126,7 +227,10 @@ if (-not $SkipBuild) {
 
 Push-Location $functionsPath
 try {
-    $args = @("start", "--script-root", "bin/Debug/net8.0", "--no-build")
+    $args = @("start", "--dotnet-isolated")
+    if ($SkipBuild) {
+        $args += "--no-build"
+    }
 
     if ($Foreground) {
         Write-Step "Starting Azure Functions host in foreground"
@@ -145,16 +249,19 @@ try {
     Write-Step "Starting Azure Functions host in background"
     $proc = Start-Process -FilePath "func" -ArgumentList $args -WorkingDirectory $functionsPath -PassThru -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog
 
-    Write-Step "Waiting for host health endpoint"
+    Write-Step "Waiting for host TCP port"
     $ready = $false
-    for ($i = 0; $i -lt 30; $i++) {
+    for ($i = 0; $i -lt 45; $i++) {
         Start-Sleep -Seconds 2
         try {
-            $status = Invoke-WebRequest -UseBasicParsing -Method Get -Uri "http://localhost:7071/admin/host/status" -TimeoutSec 5
-            if ($status.StatusCode -eq 200) {
+            $client = [System.Net.Sockets.TcpClient]::new()
+            $connectTask = $client.ConnectAsync("127.0.0.1", 7071)
+            if ($connectTask.Wait(1500) -and $client.Connected) {
                 $ready = $true
+                $client.Dispose()
                 break
             }
+            $client.Dispose()
         }
         catch {
             # Keep polling until timeout.

@@ -58,4 +58,15 @@
     AzureOpenAI = @{
         DeploymentName = 'gpt-4o-mini'
     }
+
+    Database = @{
+        # Importa un BACPAC para disponer de una BD de pruebas adicional.
+        ImportBacpac = $true
+        BacpacFile = 'infra/dbs/Clinic.bacpac'
+        ContainerName = 'bacpac'
+        BacpacDatabaseName = 'ClinicDB'
+        ServiceObjective = 'S0'
+        ImportPollIntervalSeconds = 15
+        ImportTimeoutMinutes = 90
+    }
 }

@@ -1,6 +1,45 @@
 import { LogEntry } from "./types";
 import { useEffect, useRef } from "react";
 
+type TerminalIconName = "dock_to_right" | "side_navigation" | "close" | "terminal";
+
+function TerminalIcon({ name, className = "" }: { name: TerminalIconName; className?: string }) {
+  const stroke = "currentColor";
+
+  switch (name) {
+    case "dock_to_right":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+          <rect x="3" y="4" width="18" height="16" rx="2" stroke={stroke} strokeWidth="2" />
+          <path d="M16 4V20" stroke={stroke} strokeWidth="2" />
+        </svg>
+      );
+    case "side_navigation":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+          <rect x="3" y="4" width="18" height="16" rx="2" stroke={stroke} strokeWidth="2" />
+          <path d="M8 4V20" stroke={stroke} strokeWidth="2" />
+        </svg>
+      );
+    case "close":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+          <path d="M6 6L18 18" stroke={stroke} strokeWidth="2" strokeLinecap="round" />
+          <path d="M18 6L6 18" stroke={stroke} strokeWidth="2" strokeLinecap="round" />
+        </svg>
+      );
+    case "terminal":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+          <path d="M4 6L10 12L4 18" stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M12 18H20" stroke={stroke} strokeWidth="2" strokeLinecap="round" />
+        </svg>
+      );
+    default:
+      return null;
+  }
+}
+
 interface TerminalLogsProps {
     terminalLogs: LogEntry[];
     isOpen: boolean;
@@ -24,9 +63,7 @@ export function TerminalLogs({ terminalLogs, isOpen, setIsOpen }: TerminalLogsPr
         onClick={() => setIsOpen(!isOpen)}
         className="w-[50px] h-full flex flex-col items-center py-8 cursor-pointer hover:bg-[#111111] transition-colors border-r border-[#222222] select-none"
       >
-        <span className="material-symbols-outlined text-[#a78bfa] mb-12 text-[22px]">
-           {isOpen ? 'dock_to_right' : 'side_navigation'}
-        </span>
+        <TerminalIcon name={isOpen ? "dock_to_right" : "side_navigation"} className="h-[22px] w-[22px] text-[#a78bfa] mb-12" />
         
         <div className="flex-1 flex items-center justify-center">
             <h3 className="whitespace-nowrap text-[11px] font-mono tracking-[0.3em] uppercase font-black text-[#a3a3a3] transform rotate-180" style={{ writingMode: 'vertical-rl' }}>
@@ -49,7 +86,7 @@ export function TerminalLogs({ terminalLogs, isOpen, setIsOpen }: TerminalLogsPr
                     <h3 className="text-[12px] font-black tracking-widest uppercase text-[#f4f0e6] font-mono ls-1">System Logs</h3>
                 </div>
                 <button onClick={() => setIsOpen(false)} className="text-[#a3a3a3] hover:text-white transition-colors">
-                    <span className="material-symbols-outlined text-[18px]">close</span>
+                  <TerminalIcon name="close" className="h-[18px] w-[18px]" />
                 </button>
            </div>
            
@@ -81,7 +118,7 @@ export function TerminalLogs({ terminalLogs, isOpen, setIsOpen }: TerminalLogsPr
                
                {/* Animated Cursor */}
                <div className="flex items-center gap-2 text-[#a78bfa] mt-6 opacity-80">
-                  <span className="material-symbols-outlined text-[14px]">terminal</span>
+                <TerminalIcon name="terminal" className="h-[14px] w-[14px]" />
                   <div className="w-2 h-4 bg-[#a78bfa] animate-pulse"></div>
                </div>
            </div>

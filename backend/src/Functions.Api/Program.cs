@@ -36,18 +36,21 @@ var host = new HostBuilder()
         // --- Foundry Agent Client ---
         var projectEndpoint = Environment.GetEnvironmentVariable("FoundryAgent__ProjectEndpoint")
             ?? throw new InvalidOperationException("FoundryAgent__ProjectEndpoint is required.");
-        var sqlPlannerAgentId = Environment.GetEnvironmentVariable("FoundryAgent__SqlPlannerAgentId")
-            ?? throw new InvalidOperationException("FoundryAgent__SqlPlannerAgentId is required.");
-        var resultInterpreterAgentId = Environment.GetEnvironmentVariable("FoundryAgent__ResultInterpreterAgentId")
-            ?? throw new InvalidOperationException("FoundryAgent__ResultInterpreterAgentId is required.");
-        var conciergeAgentId = Environment.GetEnvironmentVariable("FoundryAgent__ConciergeAgentId")
-            ?? throw new InvalidOperationException("FoundryAgent__ConciergeAgentId is required.");
+        var sqlPlannerAgentReference = Environment.GetEnvironmentVariable("FoundryAgent__SqlPlannerAgentRef")
+            ?? Environment.GetEnvironmentVariable("FoundryAgent__SqlPlannerAgentId")
+            ?? throw new InvalidOperationException("FoundryAgent__SqlPlannerAgentRef or FoundryAgent__SqlPlannerAgentId is required.");
+        var resultInterpreterAgentReference = Environment.GetEnvironmentVariable("FoundryAgent__ResultInterpreterAgentRef")
+            ?? Environment.GetEnvironmentVariable("FoundryAgent__ResultInterpreterAgentId")
+            ?? throw new InvalidOperationException("FoundryAgent__ResultInterpreterAgentRef or FoundryAgent__ResultInterpreterAgentId is required.");
+        var conciergeAgentReference = Environment.GetEnvironmentVariable("FoundryAgent__ConciergeAgentRef")
+            ?? Environment.GetEnvironmentVariable("FoundryAgent__ConciergeAgentId")
+            ?? throw new InvalidOperationException("FoundryAgent__ConciergeAgentRef or FoundryAgent__ConciergeAgentId is required.");
         var foundryApiKey = Environment.GetEnvironmentVariable("AzureOpenAI__ApiKey"); // optional: use key auth for local dev
         var foundryTenantId = Environment.GetEnvironmentVariable("FoundryAgent__TenantId");
 
         services.AddSingleton<Infrastructure.AzureOpenAI.IFoundryAgentClient>(
             _ => new Infrastructure.AzureOpenAI.FoundryAgentClient(
-                projectEndpoint, sqlPlannerAgentId, resultInterpreterAgentId, conciergeAgentId, foundryApiKey, foundryTenantId));
+                projectEndpoint, sqlPlannerAgentReference, resultInterpreterAgentReference, conciergeAgentReference, foundryApiKey, foundryTenantId));
 
         // --- Semantic Kernel Integration ---
         // Variables de entorno cargadas por el host de Azure Functions

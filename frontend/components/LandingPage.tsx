@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { TypewriterTitle } from './TypewriterTitle';
+import { AppIcon } from './AppIcon';
 
 interface LandingPageProps {
     onShowLegal: (doc: 'privacy' | 'terms') => void;
@@ -31,7 +32,7 @@ export function LandingPage({ onShowLegal }: LandingPageProps) {
                 </div>
 
                 <button className="md:hidden text-on-background p-2" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-                    <span className="material-symbols-outlined">{mobileMenuOpen ? 'close' : 'menu'}</span>
+                    <AppIcon name={mobileMenuOpen ? 'close' : 'menu'} className="h-6 w-6" />
                 </button>
 
                 {mobileMenuOpen && (
@@ -64,7 +65,7 @@ export function LandingPage({ onShowLegal }: LandingPageProps) {
                 {/* Hero Section */}
                 <section className="max-w-5xl mx-auto px-6 text-center pb-24 md:pb-32 pt-8 md:pt-16 relative z-10">
                     <div className="inline-flex items-center space-x-2 bg-surface border border-outline-variant px-4 py-2 rounded-none mb-8 shadow-sm">
-                        <span className="material-symbols-outlined text-primary text-[18px]">verified_user</span>
+                        <AppIcon name="verified_user" className="h-[18px] w-[18px] text-primary" />
                         <span className="text-sm font-medium text-on-surface-variant">Enterprise-grade Security First</span>
                     </div>
                     
@@ -91,10 +92,10 @@ export function LandingPage({ onShowLegal }: LandingPageProps) {
                     <div className="max-w-2xl mx-auto mb-12 relative flex flex-col sm:flex-row items-center justify-center gap-4">
                         <button onClick={handleLogin} className="w-full sm:w-auto bg-primary text-on-primary px-8 py-4 rounded-none font-bold text-lg hover:bg-primary-fixed transition-transform active:scale-95 shadow-md flex items-center justify-center group">
                             Start Free Trial
-                            <span className="material-symbols-outlined ml-2 transition-transform group-hover:translate-x-1">arrow_forward</span>
+                            <AppIcon name="arrow_forward" className="h-5 w-5 ml-2 transition-transform group-hover:translate-x-1" />
                         </button>
                         <button onClick={handleLogin} className="w-full sm:w-auto bg-surface-container-high text-on-background px-8 py-4 rounded-none font-bold text-lg hover:bg-surface-variant transition-colors flex items-center justify-center gap-2">
-                            <span className="material-symbols-outlined">play_circle</span>
+                            <AppIcon name="play_circle" className="h-5 w-5" />
                             View Demo
                         </button>
                     </div>
@@ -153,7 +154,7 @@ export function LandingPage({ onShowLegal }: LandingPageProps) {
                             {/* Feature 1 */}
                             <div className="group">
                                 <div className="w-24 h-24 rounded-3xl bg-surface-variant flex items-center justify-center mb-8 border border-outline-variant group-hover:border-primary group-hover:shadow-[0_0_35px_rgba(0,225,171,0.18)] transition-all duration-300">
-                                    <span className="material-symbols-outlined text-primary text-5xl md:text-6xl transition-transform duration-300 group-hover:scale-110">terminal</span>
+                                    <AppIcon name="terminal" className="h-12 w-12 md:h-14 md:w-14 text-primary transition-transform duration-300 group-hover:scale-110" />
                                 </div>
                                 <h3 className="text-2xl font-bold mb-4 text-on-background font-display">Natural Language to SQL</h3>
                                 <p className="text-on-surface-variant leading-relaxed">
@@ -163,7 +164,7 @@ export function LandingPage({ onShowLegal }: LandingPageProps) {
                             {/* Feature 2 */}
                             <div className="group">
                                 <div className="w-24 h-24 rounded-3xl bg-surface-variant flex items-center justify-center mb-8 border border-outline-variant group-hover:border-primary group-hover:shadow-[0_0_35px_rgba(0,225,171,0.18)] transition-all duration-300">
-                                    <span className="material-symbols-outlined text-primary text-5xl md:text-6xl transition-transform duration-300 group-hover:scale-110">layers</span>
+                                    <AppIcon name="layers" className="h-12 w-12 md:h-14 md:w-14 text-primary transition-transform duration-300 group-hover:scale-110" />
                                 </div>
                                 <h3 className="text-2xl font-bold mb-4 text-on-background font-display">Semantic Layer</h3>
                                 <p className="text-on-surface-variant leading-relaxed">
@@ -173,7 +174,7 @@ export function LandingPage({ onShowLegal }: LandingPageProps) {
                             {/* Feature 3 */}
                             <div className="group">
                                 <div className="w-24 h-24 rounded-3xl bg-surface-variant flex items-center justify-center mb-8 border border-outline-variant group-hover:border-primary group-hover:shadow-[0_0_35px_rgba(0,225,171,0.18)] transition-all duration-300">
-                                    <span className="material-symbols-outlined text-primary text-5xl md:text-6xl transition-transform duration-300 group-hover:scale-110">psychology</span>
+                                    <AppIcon name="psychology" className="h-12 w-12 md:h-14 md:w-14 text-primary transition-transform duration-300 group-hover:scale-110" />
                                 </div>
                                 <h3 className="text-2xl font-bold mb-4 text-on-background font-display">Ontology-aware Insights</h3>
                                 <p className="text-on-surface-variant leading-relaxed">
@@ -221,7 +222,7 @@ export function LandingPage({ onShowLegal }: LandingPageProps) {
                             {/* Step 1 */}
                             <div className="flex flex-col items-center text-center z-10 group cursor-default">
                                 <div className="w-20 h-20 rounded-none bg-surface border border-outline flex items-center justify-center mb-4 transition-all duration-300 relative" style={{ animation: 'pulse-s1 3.5s linear infinite' }}>
-                                    <span className="material-symbols-outlined text-on-surface-variant text-3xl">chat_bubble</span>
+                                    <AppIcon name="chat_bubble" className="h-8 w-8 text-on-surface-variant" />
                                 </div>
                                 <span className="text-sm font-bold text-on-surface-variant">Question</span>
                             </div>
@@ -231,7 +232,7 @@ export function LandingPage({ onShowLegal }: LandingPageProps) {
                             {/* Step 2 */}
                             <div className="flex flex-col items-center text-center z-10 group cursor-default">
                                 <div className="w-20 h-20 rounded-none bg-primary flex items-center justify-center mb-4 transition-all duration-300 relative" style={{ animation: 'pulse-s2 3.5s linear infinite' }}>
-                                    <span className="material-symbols-outlined text-on-primary text-3xl relative z-10">schema</span>
+                                    <AppIcon name="schema" className="h-8 w-8 text-on-primary relative z-10" />
                                 </div>
                                 <span className="text-sm font-bold text-primary">Semantic</span>
                             </div>
@@ -241,7 +242,7 @@ export function LandingPage({ onShowLegal }: LandingPageProps) {
                             {/* Step 3 */}
                             <div className="flex flex-col items-center text-center z-10 group cursor-default">
                                 <div className="w-20 h-20 rounded-none bg-surface border border-outline flex items-center justify-center mb-4 transition-all duration-300 relative" style={{ animation: 'pulse-s3 3.5s linear infinite' }}>
-                                    <span className="material-symbols-outlined text-on-surface-variant text-3xl">database</span>
+                                    <AppIcon name="database" className="h-8 w-8 text-on-surface-variant" />
                                 </div>
                                 <span className="text-sm font-bold text-on-surface-variant">SQL</span>
                             </div>
@@ -251,7 +252,7 @@ export function LandingPage({ onShowLegal }: LandingPageProps) {
                             {/* Step 4 */}
                             <div className="flex flex-col items-center text-center z-10 group cursor-default">
                                 <div className="w-20 h-20 rounded-none bg-tertiary flex items-center justify-center mb-4 transition-all duration-300 relative" style={{ animation: 'pulse-s4 3.5s linear infinite' }}>
-                                    <span className="material-symbols-outlined text-on-tertiary text-3xl relative z-10">lightbulb</span>
+                                    <AppIcon name="lightbulb" className="h-8 w-8 text-on-tertiary relative z-10" />
                                 </div>
                                 <span className="text-sm font-bold text-tertiary">Insight</span>
                             </div>

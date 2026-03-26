@@ -1,5 +1,6 @@
 import { Connection, Organization } from "./types";
 import { TypewriterTitle } from "./TypewriterTitle";
+import { AppIcon } from "./AppIcon";
 
 interface WelcomeAreaProps {
   userName: string;
@@ -32,14 +33,14 @@ export function WelcomeArea({ userName, setCurrentView }: WelcomeAreaProps) {
               className="mono-enter-delay-1 w-full bg-zinc-900 hover:bg-zinc-900/90 border border-zinc-800 hover:border-zinc-700 p-6 rounded-2xl flex items-center justify-between group transition-all text-left shadow-sm">
               <div className="flex items-center gap-6">
                  <div className="w-12 h-12 rounded-xl bg-zinc-800 flex items-center justify-center shrink-0 border border-zinc-700 group-hover:bg-zinc-700 transition-colors">
-                    <span className="material-symbols-outlined text-[24px] text-zinc-200 group-hover:text-white">database</span>
+                    <AppIcon name="database" className="h-[24px] w-[24px] text-zinc-200 group-hover:text-white" />
                  </div>
                  <div>
                     <h3 className="text-[15px] font-semibold text-zinc-100 mb-1 tracking-wide">Connect Your Data Source</h3>
                     <p className="text-[13px] text-zinc-400 font-medium">Start asking questions and create charts from your data</p>
                  </div>
               </div>
-              <span className="material-symbols-outlined text-zinc-500 group-hover:text-zinc-200 transition-colors group-hover:translate-x-1 duration-300">arrow_forward</span>
+              <AppIcon name="arrow_forward" className="h-[20px] w-[20px] text-zinc-500 group-hover:text-zinc-200 transition-colors group-hover:translate-x-1 duration-300" />
            </button>
 
            {/* Card 2: Read Docs */}
@@ -50,14 +51,14 @@ export function WelcomeArea({ userName, setCurrentView }: WelcomeAreaProps) {
               className="mono-enter-delay-2 mono-scanline w-full bg-zinc-900 hover:bg-zinc-900/90 border border-zinc-800 hover:border-zinc-700 p-6 rounded-2xl flex items-center justify-between group transition-all text-left shadow-sm">
               <div className="flex items-center gap-6">
                  <div className="w-12 h-12 rounded-xl bg-zinc-800 flex items-center justify-center shrink-0 border border-zinc-700 group-hover:bg-zinc-700 transition-colors">
-                    <span className="material-symbols-outlined text-[24px] text-zinc-200 group-hover:text-white">description</span>
+                    <AppIcon name="description" className="h-[24px] w-[24px] text-zinc-200 group-hover:text-white" />
                  </div>
                  <div>
                     <h3 className="text-[15px] font-semibold text-zinc-100 mb-1 tracking-wide">Read Our Integration Docs</h3>
                     <p className="text-[13px] text-zinc-400 font-medium">Learn how to connect your data source with QueryPilot</p>
                  </div>
               </div>
-              <span className="material-symbols-outlined text-zinc-500 group-hover:text-zinc-200 transition-colors group-hover:translate-x-1 duration-300">arrow_forward</span>
+              <AppIcon name="arrow_forward" className="h-[20px] w-[20px] text-zinc-500 group-hover:text-zinc-200 transition-colors group-hover:translate-x-1 duration-300" />
            </button>
         </div>
       </div>

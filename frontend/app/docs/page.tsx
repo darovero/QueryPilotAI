@@ -4,6 +4,7 @@ import { useMsal } from '@azure/msal-react';
 import { loginRequest } from '../../lib/authConfig';
 import Link from 'next/link';
 import { TypewriterTitle } from '../../components/TypewriterTitle';
+import { AppIcon } from '../../components/AppIcon';
 
 export default function DocsPage() {
     const { instance } = useMsal();
@@ -34,7 +35,7 @@ export default function DocsPage() {
                     {/* Introduction */}
                     <div>
                         <div className="flex items-center space-x-2 text-sm font-bold text-on-background mb-3 uppercase tracking-wider">
-                            <span className="material-symbols-outlined text-[18px]">auto_stories</span>
+                            <AppIcon name="auto_stories" className="h-[18px] w-[18px]" />
                             <span>Introduction</span>
                         </div>
                         <ul className="space-y-1">
@@ -48,7 +49,7 @@ export default function DocsPage() {
                     {/* Connectors */}
                     <div>
                         <div className="flex items-center space-x-2 text-sm font-bold text-on-background mb-3 uppercase tracking-wider">
-                            <span className="material-symbols-outlined text-[18px]">cable</span>
+                            <AppIcon name="cable" className="h-[18px] w-[18px]" />
                             <span>Connectors</span>
                         </div>
                         <ul className="space-y-1">
@@ -65,7 +66,7 @@ export default function DocsPage() {
                     {/* Providers */}
                     <div>
                         <div className="flex items-center space-x-2 text-sm font-bold text-on-background mb-3 uppercase tracking-wider">
-                            <span className="material-symbols-outlined text-[18px]">cloud</span>
+                            <AppIcon name="cloud" className="h-[18px] w-[18px]" />
                             <span>Providers</span>
                         </div>
                         <ul className="space-y-1">
@@ -84,7 +85,7 @@ export default function DocsPage() {
                     {/* Learn SQL */}
                     <div>
                         <div className="flex items-center space-x-2 text-sm font-bold text-on-background mb-3 uppercase tracking-wider">
-                            <span className="material-symbols-outlined text-[18px]">terminal</span>
+                            <AppIcon name="terminal" className="h-[18px] w-[18px]" />
                             <span>Learn SQL</span>
                         </div>
                         <ul className="space-y-1 pt-1 border-t border-outline">
@@ -126,7 +127,7 @@ export default function DocsPage() {
                                     <div className="w-3 h-3 rounded-none bg-green-500/80"></div>
                                     <div className="flex-1 flex justify-center">
                                         <div className="bg-surface-variant text-xs px-6 py-1 rounded-md text-on-surface-variant flex items-center shadow-inner">
-                                            <span className="material-symbols-outlined text-[14px] mr-2 text-purple-400">database</span>
+                                            <AppIcon name="database" className="h-[14px] w-[14px] mr-2 text-purple-400" />
                                             Production DB - Query 1
                                         </div>
                                     </div>
@@ -136,7 +137,7 @@ export default function DocsPage() {
                                     <div className="w-48 border-r border-outline bg-background p-3 hidden sm:block">
                                         <div className="text-xs font-mono text-primary mb-2">schemas</div>
                                         <div className="text-xs font-mono text-on-surface-variant mb-1 ml-2">▸ public</div>
-                                        <div className="text-xs font-mono text-on-surface-variant mb-1 ml-4 py-1 text-white bg-surface-variant rounded px-1">users</div>
+                                        <div className="text-xs font-mono mb-1 ml-4 py-1 text-white bg-surface-variant rounded px-1">users</div>
                                         <div className="text-xs font-mono text-on-surface-variant mb-1 ml-4">orders</div>
                                         <div className="text-xs font-mono text-on-surface-variant mb-1 ml-4">products</div>
                                     </div>
@@ -150,7 +151,7 @@ export default function DocsPage() {
                                         </div>
                                         <div className="h-1/2 border-t border-outline pt-2 mt-4">
                                             {/* Results table mock */}
-                                            <div className="w-full bg-surface-container-low rounded border border-outline h-full overflow-hidden flex flex-col hidden sm:flex">
+                                            <div className="w-full bg-surface-container-low rounded border border-outline h-full overflow-hidden hidden sm:flex sm:flex-col">
                                                 <div className="flex text-xs text-on-surface-variant border-b border-outline p-2 bg-surface-variant/50">
                                                     <div className="w-12">id</div>
                                                     <div className="w-32">name</div>
@@ -165,7 +166,7 @@ export default function DocsPage() {
                                             </div>
                                         </div>
                                         <button className="absolute right-4 bottom-4 bg-primary text-on-primary px-4 py-1.5 rounded text-sm font-bold shadow-lg shadow-[#00e1ab]/20 hover:bg-primary-fixed transition-colors flex items-center">
-                                            <span className="material-symbols-outlined text-[16px] mr-1">play_arrow</span> Run Query
+                                            <AppIcon name="play_arrow" className="h-[16px] w-[16px] mr-1" /> Run Query
                                         </button>
                                     </div>
                                 </div>
@@ -222,13 +223,13 @@ export default function DocsPage() {
                             <a href="#" className="flex flex-col mb-4 sm:mb-0 group">
                                 <span className="text-xs text-on-surface-variant mb-1 transition-colors group-hover:text-primary">Previous article</span>
                                 <span className="text-on-background font-medium flex items-center transition-colors group-hover:text-primary-fixed">
-                                    <span className="material-symbols-outlined text-[18px] mr-1">arrow_back</span> Chat with your Database
+                                    <AppIcon name="arrow_back" className="h-[18px] w-[18px] mr-1" /> Chat with your Database
                                 </span>
                             </a>
                             <a href="#" className="flex flex-col sm:items-end group">
                                 <span className="text-xs text-on-surface-variant mb-1 transition-colors group-hover:text-primary">Next article</span>
                                 <span className="text-on-background font-medium flex items-center transition-colors group-hover:text-primary-fixed">
-                                    Supported Connectors <span className="material-symbols-outlined text-[18px] ml-1">arrow_forward</span>
+                                    Supported Connectors <AppIcon name="arrow_forward" className="h-[18px] w-[18px] ml-1" />
                                 </span>
                             </a>
                         </div>

@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { flushSync } from "react-dom";
 import { ChatSession, Message, Connection, ServerSessionRecord, ServerConversationTurnRecord } from "../types";
 
 const getChatSessionsStorageKey = (userId?: string) =>
@@ -11,10 +12,18 @@ export function useChatSessions(
   addLog: (level: any, msg: string) => void,
   currentView: string
 ) {
+  const traceChat = (message: string) => {
+    addLog("DEBUG", `[TRACE_CHAT] ${message}`);
+  };
+
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
   const [activePoll, setActivePoll] = useState<string | null>(null);
+  const [activePollSessionId, setActivePollSessionId] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const pollErrorCountRef = useRef(0);
+  const hydratedSessionTurnsRef = useRef<Set<string>>(new Set());
+  const loadedSessionsForUserRef = useRef<string | null>(null);
 
   // Load from localStorage using a per-user cache when available.
   useEffect(() => {
@@ -38,6 +47,11 @@ export function useChatSessions(
   useEffect(() => {
     if (!userId) return;
 
+    hydratedSessionTurnsRef.current.clear();
+    if (loadedSessionsForUserRef.current === userId) {
+      return;
+    }
+
     let cancelled = false;
 
     const loadSessionsFromBackend = async () => {
@@ -58,12 +72,15 @@ export function useChatSessions(
               id: session.id,
               connectionId: session.connectionId || localById.get(session.id)?.connectionId || "",
               title: session.title || localById.get(session.id)?.title || "New Chat",
-              messages: [],
+              // Preserve in-memory messages to avoid wiping the active chat while polling.
+              messages: localById.get(session.id)?.messages || [],
             } satisfies ChatSession;
           });
 
           return hydrated;
         });
+
+        loadedSessionsForUserRef.current = userId;
 
         addLog("INFO", `Loaded ${serverSessions.length} chat session(s) from server.`);
       } catch {
@@ -83,11 +100,16 @@ export function useChatSessions(
       return;
     }
 
+    if (hydratedSessionTurnsRef.current.has(activeSession.id)) {
+      return;
+    }
+
     let cancelled = false;
+    const targetSessionId = activeSession.id;
 
     const hydrateSessionTurns = async () => {
       try {
-        const res = await fetchWithAuth(`/api/sessions/${activeSession.id}/turns`, {
+        const res = await fetchWithAuth(`/api/sessions/${targetSessionId}/turns`, {
           allowInteractiveAuth: true,
         });
 
@@ -120,10 +142,20 @@ export function useChatSessions(
           } satisfies Message);
         });
 
-        setChatSessions((prev) => prev.map((session) =>
-          session.id === activeSession.id
-            ? { ...session, messages: hydratedMessages }
-            : session));
+        setChatSessions((prev) => prev.map((session) => {
+          if (session.id !== targetSessionId) {
+            return session;
+          }
+
+          // Never wipe messages that may have arrived while hydration was in-flight.
+          if (session.messages.length > 0) {
+            return session;
+          }
+
+          return { ...session, messages: hydratedMessages };
+        }));
+
+        hydratedSessionTurnsRef.current.add(targetSessionId);
       } catch {
         // Leave the session as-is if turn hydration is unavailable.
       }
@@ -135,34 +167,100 @@ export function useChatSessions(
 
   const activeChatSession = chatSessions.find(c => c.id === currentView) || null;
 
-  const setMessages = (updater: Message[] | ((prev: Message[]) => Message[])) => {
-      setChatSessions(prevSessions => prevSessions.map(session => {
-          const isTargetSession = activePoll 
-             ? session.messages.some(m => m.instanceId === activePoll)
-             : session.id === currentView;
-             
-          if (isTargetSession) {
-              const newMsgs = typeof updater === 'function' ? updater(session.messages) : updater;
-              return { ...session, messages: newMsgs };
-          }
+  const updateMessagesForSession = (
+    sessionId: string | null,
+    updater: Message[] | ((prev: Message[]) => Message[])
+  ) => {
+    setChatSessions(prevSessions => {
+      const requestedId = sessionId;
+      const targetId = requestedId && prevSessions.some(s => s.id === requestedId)
+        ? requestedId
+        : (currentView && prevSessions.some(s => s.id === currentView) ? currentView : null);
+
+      if (!targetId) {
+        if (!requestedId) {
+          traceChat("updateMessagesForSession omitido: no hay sessionId ni fallback currentView.");
+          return prevSessions;
+        }
+
+        const newMsgs = typeof updater === 'function' ? updater([]) : updater;
+        traceChat(`Sesion ${requestedId} no encontrada. Creando sesion de contingencia con ${newMsgs.length} mensajes.`);
+
+        return [
+          ...prevSessions,
+          {
+            id: requestedId,
+            connectionId: activeChatSession?.connectionId || "",
+            title: activeChatSession?.title || "New Chat",
+            messages: newMsgs,
+          },
+        ];
+      }
+
+      return prevSessions.map(session => {
+        if (session.id !== targetId) {
           return session;
-      }));
+        }
+
+        const newMsgs = typeof updater === 'function' ? updater(session.messages) : updater;
+        traceChat(`Sesion ${targetId}: ${newMsgs.length} mensajes tras update.`);
+        return { ...session, messages: newMsgs };
+      });
+    });
+  };
+
+  const getOrchestrationErrorMessage = (data: any): string => {
+    const outputSummary = data?.output?.ExecutiveSummary ?? data?.output?.executiveSummary;
+    if (typeof outputSummary === "string" && outputSummary.trim()) {
+      return outputSummary.trim();
+    }
+
+    const outputRaw = typeof data?.outputRaw === "string" ? data.outputRaw : "";
+    if (outputRaw) {
+      const agentMatch = outputRaw.match(/Agent\s+[^\n]+not found/i);
+      if (agentMatch?.[0]) {
+        return `Error de Foundry: ${agentMatch[0]}. Revisa FoundryAgent__*Ref (nombre:version) o IDs vigentes.`;
+      }
+      return outputRaw.slice(0, 400);
+    }
+
+    return "Ocurrió un error al procesar tu solicitud.";
   };
 
   useEffect(() => {
     if (!activePoll) return;
+    const pollSessionId = activePollSessionId;
+    traceChat(`Inicio polling instanceId=${activePoll}, pollSessionId=${pollSessionId}, currentView=${currentView}`);
 
     const interval = setInterval(async () => {
       try {
         const res = await fetchWithAuth("/api/orchestrations/" + activePoll);
-        if (!res.ok) throw new Error("Fetch failed");
+        if (!res.ok) {
+          throw new Error(`No se pudo consultar el estado de la orquestación (HTTP ${res.status}).`);
+        }
+        pollErrorCountRef.current = 0;
         
         const data = await res.json();
+        const runtimeStatus = String(data?.runtimeStatus || "");
+        // Intentar parsear outputRaw como fallback si output tiene campos vacíos (caso de mismatch camelCase/PascalCase residual)
+        // Intentar parsear outputRaw como fallback si output es null o tiene campos vacíos (mismatch camelCase/PascalCase)
+        let output = data?.output;
+        if ((!output || (!output?.Status && !output?.status)) && data?.outputRaw) {
+          try { output = JSON.parse(data.outputRaw); } catch { /* usa el output original */ }
+        }
+        const outputStatus = String(output?.Status ?? output?.status ?? "");
+        const outputSummary = output?.ExecutiveSummary ?? output?.executiveSummary;
+        const outputSql = output?.Sql ?? output?.sql;
+        const outputResultPreview = output?.ResultPreview ?? output?.resultPreview;
+        const customStatus = data?.customStatus;
+        const customStatusLabel = customStatus?.Label ?? customStatus?.label;
+        const customStatusState = customStatus?.Status ?? customStatus?.status;
+        traceChat(`Tick polling instanceId=${activePoll}: runtimeStatus=${runtimeStatus}, outputStatus=${outputStatus || "n/a"}, customStatus=${customStatusState || "n/a"}`);
         
-        if (data.customStatus && data.customStatus.Label) {
-            addLog("DEBUG", "[Orchestrator] " + data.customStatus.Label + " - " + data.customStatus.Status);
+        if (customStatus && customStatusLabel) {
+            addLog("DEBUG", "[Orchestrator] " + customStatusLabel + " - " + customStatusState);
             
-            setMessages(prev => {
+          updateMessagesForSession(pollSessionId, (prev) => {
                 const newMsgs = [...prev];
                 const aiIdx = newMsgs.findIndex(m => m.instanceId === activePoll);
                 if (aiIdx !== -1) {
@@ -171,10 +269,10 @@ export function useChatSessions(
                     
                     const timeNow = new Date().toLocaleTimeString();
                     const lastEvent = msg.progressEvents[msg.progressEvents.length - 1];
-                    if (!lastEvent || lastEvent.label !== data.customStatus.Label || lastEvent.status !== data.customStatus.Status) {
+                    if (!lastEvent || lastEvent.label !== customStatusLabel || lastEvent.status !== customStatusState) {
                         msg.progressEvents.push({ 
-                            label: data.customStatus.Label, 
-                            status: data.customStatus.Status, 
+                            label: customStatusLabel, 
+                            status: customStatusState, 
                             time: timeNow 
                         });
                     }
@@ -183,78 +281,158 @@ export function useChatSessions(
             });
         }
 
-        if (data.runtimeStatus === "Completed" || data.runtimeStatus === "Failed" || data.runtimeStatus === "Terminated") {
+        if (runtimeStatus === "Completed" || runtimeStatus === "Failed" || runtimeStatus === "Terminated") {
           setIsTyping(false);
           setActivePoll(null);
+          setActivePollSessionId(null);
+          traceChat(`Fin polling instanceId=${activePoll} con runtimeStatus=${runtimeStatus}.`);
           
-          if (data.runtimeStatus === "Completed" && data.output) {
-             if (data.output.Status === "Conversational" || data.output.Status === "needs_clarification" || data.output.Status === "unsupported" || data.output.Status === "blocked" || data.output.Status === "Error") {
-               addLog("SUCCESS", "Early response: " + data.output.Status);
-               setMessages((prev) => {
+           if (runtimeStatus === "Completed" && !output) {
+             // output nulo: backend no pudo deserializar ni con outputRaw
+             addLog("WARN", "Orchestration completed but output is null.");
+             updateMessagesForSession(pollSessionId, (prev) => {
+              const newMsgs = [...prev];
+              const aiIdx = newMsgs.findIndex(m => m.instanceId === activePoll);
+              const msg = "La ejecución finalizó pero no se recibió respuesta del agente. Reintenta la consulta.";
+              if (aiIdx !== -1) { newMsgs[aiIdx].status = "Failed"; newMsgs[aiIdx].content = msg; }
+              else { newMsgs.push({ id: Math.random().toString(), role: "ai", instanceId: activePoll || undefined, status: "Failed", content: msg }); }
+              return newMsgs;
+             });
+           } else if (runtimeStatus === "Completed" && output) {
+             const normalizedStatus = outputStatus.toLowerCase();
+
+             if (normalizedStatus === "conversational" || normalizedStatus === "needs_clarification" || normalizedStatus === "unsupported" || normalizedStatus === "blocked" || normalizedStatus === "error") {
+               addLog("SUCCESS", "Early response: " + (outputStatus || "conversational"));
+                 updateMessagesForSession(pollSessionId, (prev) => {
                    const newMsgs = [...prev];
                    const aiIdx = newMsgs.findIndex(m => m.instanceId === activePoll);
                    if (aiIdx !== -1) {
                        newMsgs[aiIdx].status = "Completed";
-                       newMsgs[aiIdx].content = data.output.ExecutiveSummary;
+                       newMsgs[aiIdx].content = typeof outputSummary === "string" && outputSummary.trim()
+                         ? outputSummary
+                         : "No se recibió contenido de respuesta para esta ejecución.";
+                   } else {
+                       newMsgs.push({
+                         id: Math.random().toString(),
+                         role: "ai",
+                         instanceId: activePoll || undefined,
+                         status: "Completed",
+                         content: typeof outputSummary === "string" && outputSummary.trim()
+                           ? outputSummary
+                           : "No se recibió contenido de respuesta para esta ejecución."
+                       });
                    }
                    return newMsgs;
                });
              } else {
                addLog("SUCCESS", "Query completed successfully.");
-               setMessages((prev) => {
+               updateMessagesForSession(pollSessionId, (prev) => {
                    const newMsgs = [...prev];
                    const aiIdx = newMsgs.findIndex(m => m.instanceId === activePoll);
                    if (aiIdx !== -1) {
                        newMsgs[aiIdx].status = "Completed";
-                       newMsgs[aiIdx].insight = data.output.ExecutiveSummary;
-                       newMsgs[aiIdx].sql = data.output.Sql;
-                       if (data.output.ResultPreview && data.output.ResultPreview.length > 0) {
-                           newMsgs[aiIdx].results = data.output.ResultPreview;
+                       newMsgs[aiIdx].content = "";  // limpiar "Analizando solicitud..."
+                       newMsgs[aiIdx].insight = typeof outputSummary === "string" && outputSummary.trim()
+                         ? outputSummary
+                         : "La ejecución finalizó, pero no se recibió resumen de resultados.";
+                       newMsgs[aiIdx].sql = outputSql;
+                       if (Array.isArray(outputResultPreview) && outputResultPreview.length > 0) {
+                           newMsgs[aiIdx].results = outputResultPreview;
                        }
+                   } else {
+                       const fallbackMsg: Message = {
+                         id: Math.random().toString(),
+                         role: "ai",
+                         instanceId: activePoll || undefined,
+                         status: "Completed",
+                         content: "",
+                         insight: typeof outputSummary === "string" && outputSummary.trim()
+                           ? outputSummary
+                           : "La ejecución finalizó, pero no se recibió resumen de resultados.",
+                         sql: outputSql,
+                       };
+
+                       if (Array.isArray(outputResultPreview) && outputResultPreview.length > 0) {
+                         fallbackMsg.results = outputResultPreview;
+                       }
+
+                       newMsgs.push(fallbackMsg);
                    }
                    return newMsgs;
                });
              }
-          } else if (data.runtimeStatus === "Failed") {
-             addLog("ERROR", "Execution failed: " + (data.outputRaw || "Unknown error"));
-             setMessages((prev) => {
+          } else if (runtimeStatus === "Failed") {
+             const errorMessage = getOrchestrationErrorMessage(data);
+             addLog("ERROR", "Execution failed: " + errorMessage);
+             updateMessagesForSession(pollSessionId, (prev) => {
                  const newMsgs = [...prev];
                  const aiIdx = newMsgs.findIndex(m => m.instanceId === activePoll);
                  if (aiIdx !== -1) {
                      newMsgs[aiIdx].status = "Failed";
-                     newMsgs[aiIdx].content = "Ocurrió un error al procesar tu solicitud.";
+                 newMsgs[aiIdx].content = errorMessage;
+               } else {
+                 newMsgs.push({
+                   id: Math.random().toString(),
+                   role: "ai",
+                   instanceId: activePoll || undefined,
+                   status: "Failed",
+                   content: errorMessage,
+                 });
                  }
                  return newMsgs;
              });
           }
         } 
-        else if (data.customStatus?.Status === "PendingApproval") {
+        else if (customStatusState === "PendingApproval") {
              setIsTyping(false);
              setActivePoll(null);
+               setActivePollSessionId(null);
              addLog("WARN", "Query paused for manual approval (Risk: High)");
-             setMessages((prev) => {
+               updateMessagesForSession(pollSessionId, (prev) => {
                  const newMsgs = [...prev];
                  const aiIdx = newMsgs.findIndex(m => m.instanceId === activePoll);
                  if (aiIdx !== -1) {
                      newMsgs[aiIdx].status = "PendingApproval";
-                     newMsgs[aiIdx].sql = data.customStatus.Sql;
+               newMsgs[aiIdx].sql = customStatus?.Sql ?? customStatus?.sql;
                      newMsgs[aiIdx].content = "Tu consulta requiere aprobación de un supervisor debido a políticas de sensibilidad.";
                  }
                  return newMsgs;
              });
         }
-      } catch (err) {
+      } catch (err: any) {
+        pollErrorCountRef.current += 1;
+        addLog("ERROR", err?.message || "Error consultando estado de orquestación.");
+
+        if (pollErrorCountRef.current >= 3) {
+          setIsTyping(false);
+          setActivePoll(null);
+          setActivePollSessionId(null);
+          updateMessagesForSession(pollSessionId, (prev) => {
+            const newMsgs = [...prev];
+            const aiIdx = newMsgs.findIndex(m => m.instanceId === activePoll);
+            if (aiIdx !== -1) {
+              newMsgs[aiIdx].status = "Failed";
+              newMsgs[aiIdx].content = "No se pudo obtener el estado de ejecución después de varios intentos. Revisa backend/logs y vuelve a intentar.";
+            }
+            return newMsgs;
+          });
+        }
       }
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [activePoll, fetchWithAuth, addLog, currentView]);
+  }, [activePoll, activePollSessionId, fetchWithAuth, addLog, currentView]);
 
   const handleSubmit = async () => {
     if (!input.trim() || !activeChatSession) return;
+    const targetSessionId = activeChatSession.id;
+    const normalizedInput = input.trim();
+    traceChat(`Submit en sesion ${targetSessionId}, currentView=${currentView}, chars=${normalizedInput.length}`);
 
-    const userMsg: Message = { id: Math.random().toString(), role: "user", content: input };
-    setMessages((prev) => [...prev, userMsg]);
+    const userMsg: Message = { id: Math.random().toString(), role: "user", content: normalizedInput };
+    flushSync(() => {
+      updateMessagesForSession(targetSessionId, (prev) => [...prev, userMsg]);
+    });
     setInput("");
     setIsTyping(true);
     addLog("INFO", "Received user query: " + userMsg.content);
@@ -284,18 +462,33 @@ export function useChatSessions(
       });
 
       if (!response.ok) {
-          const errRes = await response.json();
+          let backendMessage = `Solicitud rechazada por el backend (HTTP ${response.status}).`;
+          try {
+            const raw = await response.text();
+            if (raw) {
+              try {
+                const parsed = JSON.parse(raw);
+                backendMessage = parsed.error || parsed.message || raw;
+              } catch {
+                backendMessage = raw;
+              }
+            }
+          } catch {
+          }
+
           setIsTyping(false);
-          addLog("ERROR", "API rejection: " + errRes.error);
-          setMessages((prev) => [...prev, { id: Math.random().toString(), role: "ai", status: "Blocked", content: "Lo siento, la consulta fue bloqueada por filtros de seguridad cognitivos."}]);
+          addLog("ERROR", "API rejection: " + backendMessage);
+            updateMessagesForSession(targetSessionId, (prev) => [...prev, { id: Math.random().toString(), role: "ai", status: "Failed", content: backendMessage }]);
           return;
       }
 
       const body = await response.json();
       addLog("DEBUG", "Orchestration started: " + body.instanceId);
+      traceChat(`Orquestacion creada instanceId=${body.instanceId}, targetSessionId=${targetSessionId}`);
       
       const aiMsg: Message = { id: Math.random().toString(), role: "ai", instanceId: body.instanceId, status: "Running", content: "Analizando solicitud..." };
-      setMessages((prev) => [...prev, aiMsg]);
+      updateMessagesForSession(targetSessionId, (prev) => [...prev, aiMsg]);
+      setActivePollSessionId(targetSessionId);
       setActivePoll(body.instanceId);
     } catch (e: any) {
       setIsTyping(false);
@@ -313,13 +506,14 @@ export function useChatSessions(
         body: JSON.stringify({ decision, comments: comments || "" }),
       });
       if (!res.ok) throw new Error("Approval failed");
-      setMessages((prev) => {
+      updateMessagesForSession(currentView, (prev) => {
         const newMsgs = [...prev];
         const aiIdx = newMsgs.findIndex(m => m.id === msg.id);
         if (aiIdx !== -1) {
           if (decision === 'Approved') {
             newMsgs[aiIdx].status = "Running";
             newMsgs[aiIdx].content = "Consulta aprobada. Ejecutando...";
+            setActivePollSessionId(currentView);
             setActivePoll(msg.instanceId!);
             setIsTyping(true);
           } else {
@@ -386,6 +580,8 @@ export function useChatSessions(
       const withoutRequested = prev.filter(session => session.id !== requestedId && session.id !== persistedId);
       return [...withoutRequested, nextSession];
     });
+
+    loadedSessionsForUserRef.current = userId;
 
     return nextSession;
   };

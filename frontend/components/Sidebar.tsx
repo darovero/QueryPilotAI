@@ -2,6 +2,107 @@ import { ChatSession } from "./types";
 import { toast } from "sonner";
 import { useMsal } from "@azure/msal-react";
 
+type SidebarIconName =
+  | "chevron_left"
+  | "unfold_more"
+  | "grid_view"
+  | "dns"
+  | "tune"
+  | "database"
+  | "add"
+  | "chevron_right"
+  | "delete"
+  | "logout";
+
+function SidebarIcon({ name, className = "" }: { name: SidebarIconName; className?: string }) {
+  const stroke = "currentColor";
+
+  switch (name) {
+    case "chevron_left":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+          <path d="M15 6L9 12L15 18" stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      );
+    case "unfold_more":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+          <path d="M8 9L12 5L16 9" stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M8 15L12 19L16 15" stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      );
+    case "grid_view":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+          <rect x="4" y="4" width="7" height="7" stroke={stroke} strokeWidth="2" />
+          <rect x="13" y="4" width="7" height="7" stroke={stroke} strokeWidth="2" />
+          <rect x="4" y="13" width="7" height="7" stroke={stroke} strokeWidth="2" />
+          <rect x="13" y="13" width="7" height="7" stroke={stroke} strokeWidth="2" />
+        </svg>
+      );
+    case "dns":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+          <ellipse cx="12" cy="6" rx="7" ry="3" stroke={stroke} strokeWidth="2" />
+          <path d="M5 6V12C5 13.7 8.1 15 12 15C15.9 15 19 13.7 19 12V6" stroke={stroke} strokeWidth="2" />
+          <path d="M5 12V18C5 19.7 8.1 21 12 21C15.9 21 19 19.7 19 18V12" stroke={stroke} strokeWidth="2" />
+        </svg>
+      );
+    case "tune":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+          <path d="M4 7H20" stroke={stroke} strokeWidth="2" strokeLinecap="round" />
+          <path d="M4 12H20" stroke={stroke} strokeWidth="2" strokeLinecap="round" />
+          <path d="M4 17H20" stroke={stroke} strokeWidth="2" strokeLinecap="round" />
+          <circle cx="9" cy="7" r="2" fill="currentColor" />
+          <circle cx="15" cy="12" r="2" fill="currentColor" />
+          <circle cx="11" cy="17" r="2" fill="currentColor" />
+        </svg>
+      );
+    case "database":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+          <ellipse cx="12" cy="6" rx="7" ry="3" stroke={stroke} strokeWidth="2" />
+          <path d="M5 6V18C5 19.7 8.1 21 12 21C15.9 21 19 19.7 19 18V6" stroke={stroke} strokeWidth="2" />
+          <path d="M5 12C5 13.7 8.1 15 12 15C15.9 15 19 13.7 19 12" stroke={stroke} strokeWidth="2" />
+        </svg>
+      );
+    case "add":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+          <path d="M12 5V19" stroke={stroke} strokeWidth="2" strokeLinecap="round" />
+          <path d="M5 12H19" stroke={stroke} strokeWidth="2" strokeLinecap="round" />
+        </svg>
+      );
+    case "chevron_right":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+          <path d="M9 6L15 12L9 18" stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      );
+    case "delete":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+          <path d="M4 7H20" stroke={stroke} strokeWidth="2" strokeLinecap="round" />
+          <path d="M10 11V17" stroke={stroke} strokeWidth="2" strokeLinecap="round" />
+          <path d="M14 11V17" stroke={stroke} strokeWidth="2" strokeLinecap="round" />
+          <path d="M6 7L7 19H17L18 7" stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M9 7L10 5H14L15 7" stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      );
+    case "logout":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+          <path d="M10 17L15 12L10 7" stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M15 12H4" stroke={stroke} strokeWidth="2" strokeLinecap="round" />
+          <path d="M12 4H18V20H12" stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      );
+    default:
+      return null;
+  }
+}
+
 interface SidebarProps {
   isSidebarOpen: boolean;
   setIsSidebarOpen: (val: boolean) => void;
@@ -45,7 +146,7 @@ export function Sidebar({
              onClick={() => setIsSidebarOpen(false)}
              className="absolute right-2 top-4 w-9 h-9 bg-[#0a0a0a] border border-[#333333] rounded-xl flex items-center justify-center text-[#8a8a8a] hover:text-[#f4f0e6] hover:bg-[#111111] transition-colors z-50 shadow-sm"
           >
-             <span className="material-symbols-outlined text-[20px]">chevron_left</span>
+             <SidebarIcon name="chevron_left" className="h-5 w-5" />
           </button>
 
           <div className="flex flex-col h-full">
@@ -59,7 +160,7 @@ export function Sidebar({
               {organization?.name || `${userName.split(' ')[0]}'s workspace`}
             </span>
           </div>
-          <span className="material-symbols-outlined text-sm text-[#8a8a8a] group-hover:text-[#f4f0e6] transition-colors">unfold_more</span>
+          <SidebarIcon name="unfold_more" className="h-4 w-4 text-[#8a8a8a] group-hover:text-[#f4f0e6] transition-colors" />
         </button>
         
         {/* Navigation Links & Connections */}
@@ -69,19 +170,19 @@ export function Sidebar({
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-none text-[11px] font-mono tracking-wide transition-all duration-200 group active:scale-[0.98] ${currentView === 'welcome' || currentView === 'integrations' || currentView === 'connect_postgres' ? 'bg-[#1a1a1a] text-[#f4f0e6] font-medium' : 'text-[#a3a3a3] hover:text-[#f4f0e6] hover:bg-[#1a1a1a]/50'}`}
               onClick={() => setCurrentView('welcome')}
             >
-              <span className="material-symbols-outlined text-[20px] transition-transform text-[#8a8a8a] group-hover:text-[#d1cdbd]">grid_view</span>
+              <SidebarIcon name="grid_view" className="h-5 w-5 transition-transform text-[#8a8a8a] group-hover:text-[#d1cdbd]" />
               <span className="group-hover:translate-x-1 transition-transform duration-200">Data Sources</span>
             </button>
             <button 
               onClick={() => setCurrentView('manage_connections')}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-none text-[11px] font-mono tracking-wide transition-all duration-200 group active:scale-[0.98] ${currentView === 'manage_connections' ? 'bg-[#1a1a1a] text-[#f4f0e6] font-medium' : 'text-[#a3a3a3] hover:text-[#f4f0e6] hover:bg-[#1a1a1a]/50'}`}>
-              <span className="material-symbols-outlined text-[20px] transition-transform text-[#8a8a8a] group-hover:text-[#d1cdbd]">dns</span>
+              <SidebarIcon name="dns" className="h-5 w-5 transition-transform text-[#8a8a8a] group-hover:text-[#d1cdbd]" />
               <span className="group-hover:translate-x-1 transition-transform duration-200">Manage Connections</span>
             </button>
             <button 
               onClick={() => setCurrentView('settings')}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-none text-[11px] font-mono tracking-wide transition-all duration-200 group active:scale-[0.98] ${currentView.startsWith('settings') ? 'bg-[#1a1a1a] text-[#f4f0e6] font-medium' : 'text-[#a3a3a3] hover:text-[#f4f0e6] hover:bg-[#1a1a1a]/50'}`}>
-              <span className="material-symbols-outlined text-[20px] transition-transform text-[#8a8a8a] group-hover:text-[#d1cdbd]">tune</span>
+              <SidebarIcon name="tune" className="h-5 w-5 transition-transform text-[#8a8a8a] group-hover:text-[#d1cdbd]" />
               <span className="group-hover:translate-x-1 transition-transform duration-200">Settings</span>
             </button>
           </div>
@@ -89,12 +190,12 @@ export function Sidebar({
           <div className="px-4 py-4">
              <div className="flex items-center justify-between px-3 text-[11px] uppercase tracking-widest text-[#a3a3a3] font-bold mb-3">
                 <span className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[24px] text-[#8a8a8a]">database</span>
+                  <SidebarIcon name="database" className="h-5 w-5 text-[#8a8a8a]" />
                   Connections
                 </span>
                 <div className="flex gap-1">
                   <button onClick={() => { setEditingConnId(null); setConnForm({ name: "New Connection", host: "", port: "5432", database: "", username: "", password: "", type: "PostgreSQL" }); setCurrentView('integrations'); }} className="hover:text-[#f4f0e6] transition-colors text-[#8a8a8a]" title="New Connection">
-                    <span className="material-symbols-outlined text-[16px]">add</span>
+                    <SidebarIcon name="add" className="h-4 w-4" />
                   </button>
                 </div>
              </div>
@@ -112,7 +213,7 @@ export function Sidebar({
                                 onClick={() => setExpandedConns(prev => ({ ...prev, [conn.id]: prev[conn.id] === false ? true : false }))}
                                 className="w-5 h-5 flex items-center justify-center text-[#8a8a8a] hover:text-[#f4f0e6] transition-colors shrink-0"
                              >
-                                <span className="material-symbols-outlined text-[16px] transition-transform" style={{ transform: isExpanded ? 'rotate(90deg)' : 'none' }}>chevron_right</span>
+                                <SidebarIcon name="chevron_right" className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
                              </button>
                              <button 
                                 onClick={() => {
@@ -146,7 +247,7 @@ export function Sidebar({
                                     {conn.type === 'PostgreSQL' && <img src="/assets/iconos sql/DeviconPostgresqlWordmark.svg" className="w-4 h-4 object-contain" alt="PostgreSQL" />}
                                     {conn.type === 'MySQL' && <img src="/assets/iconos sql/LogosMysql.svg" className="w-4 h-4 object-contain" alt="MySQL" />}
                                     {(!conn.type || !['Azure SQL', 'PostgreSQL', 'MySQL'].includes(conn.type)) && (
-                                       <span className="material-symbols-outlined text-[16px] text-[#8a8a8a]">database</span>
+                                      <SidebarIcon name="database" className="h-4 w-4 text-[#8a8a8a]" />
                                     )}
                                     <div className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-none border border-[#fafafa] transition-colors ${isConnActive ? 'bg-emerald-500' : 'bg-zinc-300'}`}></div>
                                  </div>
@@ -177,7 +278,7 @@ export function Sidebar({
                                 }}
                                 className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-[#222222] rounded-none text-[#a3a3a3] hover:text-[#f4f0e6] transition-all shrink-0 ml-1" 
                                 title="New Chat">
-                                 <span className="material-symbols-outlined text-[16px]">add</span>
+                                  <SidebarIcon name="add" className="h-4 w-4" />
                               </button>
                          </div>
                          {isExpanded && chats.length > 0 && (
@@ -213,7 +314,7 @@ export function Sidebar({
                                         className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-900/10 text-red-500 hover:text-red-500 rounded-none transition-all shrink-0 ml-1"
                                         title="Delete Chat"
                                      >
-                                        <span className="material-symbols-outlined text-[14px]">delete</span>
+                                         <SidebarIcon name="delete" className="h-3.5 w-3.5" />
                                      </button>
                                   </div>
                                ))}
@@ -240,7 +341,7 @@ export function Sidebar({
               className="p-1.5 rounded-none text-[#8a8a8a] hover:text-red-500 hover:bg-red-900/10 transition-all"
               title="Sign out"
             >
-              <span className="material-symbols-outlined text-[18px]">logout</span>
+              <SidebarIcon name="logout" className="h-[18px] w-[18px]" />
             </button>
           </div>
         </div>

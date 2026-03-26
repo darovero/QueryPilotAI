@@ -31,6 +31,12 @@ public class FraudInsightOrchestrator
         if (classification is not null && !string.Equals(classification.Category, "analytical", StringComparison.OrdinalIgnoreCase))
         {
             context.SetCustomStatus(new PipelineStep("conversational", "El Agente respondió directamente", "Completed", context.CurrentUtcDateTime));
+            await PersistConversationExchangeAsync(
+                context,
+                request,
+                classification.FriendlyReply ?? "Hola, ¿en qué puedo ayudarte?",
+                agentResponse: classification.FriendlyReply ?? "Hola, ¿en qué puedo ayudarte?",
+                intentType: "conversational");
             return new InsightResponse(
                 context.InstanceId, "Conversational",
                 classification.FriendlyReply ?? "Hola, ¿en qué puedo ayudarte?",
@@ -54,6 +60,12 @@ public class FraudInsightOrchestrator
             await context.CallActivityAsync(nameof(SaveAuditTrailActivity), new AuditTrailRecord(
                 requestId, request.UserId, request.Role, request.Question,
                 null, null, null, "Blocked", context.CurrentUtcDateTime, context.CurrentUtcDateTime));
+            await PersistConversationExchangeAsync(
+                context,
+                request,
+                "La solicitud fue bloqueada por controles de seguridad.",
+                agentResponse: safety.Reason,
+                intentType: "blocked");
             return new InsightResponse(
                 context.InstanceId, "Blocked",
                 "La solicitud fue bloqueada por controles de seguridad.",
@@ -168,9 +180,28 @@ public class FraudInsightOrchestrator
         // =====================================================
         context.SetCustomStatus(new PipelineStep("sql_planning", "El Agente SQL Planner está analizando la consulta", "Active", context.CurrentUtcDateTime));
 
-        var plannerResponse = await context.CallActivityAsync<SqlPlannerResponse>(
-            nameof(PlanSqlActivity),
-            new SqlPlannerInput(request.Question, dbSchema, conversationContext));
+        SqlPlannerResponse plannerResponse;
+        try
+        {
+            plannerResponse = await context.CallActivityAsync<SqlPlannerResponse>(
+                nameof(PlanSqlActivity),
+                new SqlPlannerInput(request.Question, dbSchema, conversationContext));
+        }
+        catch (TaskFailedException ex)
+        {
+            var plannerError = ex.FailureDetails?.ErrorMessage ?? ex.Message;
+            context.SetCustomStatus(new PipelineStep("sql_planning", "Error al invocar SQL Planner", "Failed", context.CurrentUtcDateTime));
+
+            return new InsightResponse(
+                context.InstanceId,
+                "Error",
+                $"No fue posible invocar el agente SQL Planner en Foundry. Verifica los valores FoundryAgent__SqlPlannerAgentRef/Id y su versión. Detalle: {plannerError}",
+                new[] { "Error de integración con Foundry SQL Planner" },
+                string.Empty,
+                Array.Empty<string>(),
+                new List<Dictionary<string, object?>>(),
+                new AuditMetadata("High", null));
+        }
 
         if (CanRecoverWithPreviousSql(plannerResponse.Status, request.Question, lastSqlFromConversation))
         {
@@ -212,6 +243,13 @@ public class FraudInsightOrchestrator
                 _ => "No fue posible generar una consulta para esta solicitud."
             };
 
+            await PersistConversationExchangeAsync(
+                context,
+                request,
+                statusMessage,
+                agentResponse: JsonSerializer.Serialize(plannerResponse),
+                intentType: plannerResponse.Status);
+
             return new InsightResponse(
                 context.InstanceId, plannerResponse.Status,
                 statusMessage,
@@ -237,6 +275,13 @@ public class FraudInsightOrchestrator
                 requestId, request.UserId, request.Role, request.Question,
                 plannerResponse.Status, sqlQuery, string.Join("; ", validation.Reasons),
                 "PolicyBlocked", context.CurrentUtcDateTime, context.CurrentUtcDateTime));
+            await PersistConversationExchangeAsync(
+                context,
+                request,
+                "La consulta generada no superó la validación de política.",
+                sqlGenerated: sqlQuery,
+                agentResponse: string.Join("; ", validation.Reasons),
+                intentType: "policy_blocked");
             return new InsightResponse(
                 context.InstanceId, "Blocked",
                 "La consulta generada no superó la validación de política.",
@@ -277,6 +322,12 @@ public class FraudInsightOrchestrator
             catch (TaskCanceledException)
             {
                 context.SetCustomStatus(new PipelineStep("approval", "Tiempo de aprobación agotado", "Failed", context.CurrentUtcDateTime));
+                await PersistConversationExchangeAsync(
+                    context,
+                    request,
+                    "La solicitud de aprobación expiró. El SQL no fue ejecutado.",
+                    sqlGenerated: validation.NormalizedSql,
+                    intentType: "approval_timeout");
                 return new InsightResponse(
                     context.InstanceId, "TimedOut",
                     "La solicitud de aprobación expiró. El SQL no fue ejecutado.",
@@ -292,6 +343,13 @@ public class FraudInsightOrchestrator
                     requestId, request.UserId, request.Role, request.Question,
                     plannerResponse.Status, validation.NormalizedSql, $"Rejected: {decision.Comments}",
                     "Rejected", context.CurrentUtcDateTime, context.CurrentUtcDateTime));
+                await PersistConversationExchangeAsync(
+                    context,
+                    request,
+                    $"La consulta fue rechazada. Motivo: {decision.Comments ?? "Sin comentario"}",
+                    sqlGenerated: validation.NormalizedSql,
+                    agentResponse: decision.Comments,
+                    intentType: "approval_rejected");
                 return new InsightResponse(
                     context.InstanceId, "Rejected",
                     $"La consulta fue rechazada. Motivo: {decision.Comments ?? "Sin comentario"}",
@@ -338,23 +396,13 @@ public class FraudInsightOrchestrator
         var summary = BuildUserNarrativeSummary(interpretation, rows.Count);
         var warnings = BuildWarnings(interpretation);
 
-        if (request.SessionId is not null && Guid.TryParse(request.SessionId, out var saveSessionGuid))
-        {
-            try
-            {
-                await context.CallActivityAsync(nameof(SaveConversationTurnActivity),
-                    new ConversationTurnRecord(
-                        Guid.Empty, saveSessionGuid, request.UserId, "assistant",
-                        request.Question, validation.NormalizedSql,
-                        JsonSerializer.Serialize(interpretation),
-                        summary, null, null, DateTimeOffset.UtcNow));
-            }
-            catch (Exception ex)
-            {
-                // Don't crash the orchestration if saving the turn fails (e.g. FK constraint)
-                Console.WriteLine($"[WARNING] SaveConversationTurn failed: {ex.Message}");
-            }
-        }
+        await PersistConversationExchangeAsync(
+            context,
+            request,
+            summary,
+            sqlGenerated: validation.NormalizedSql,
+            agentResponse: JsonSerializer.Serialize(interpretation),
+            intentType: "analytical");
 
         await context.CallActivityAsync(nameof(SaveAuditTrailActivity), new AuditTrailRecord(
             requestId, request.UserId, request.Role, request.Question,
@@ -373,8 +421,7 @@ public class FraudInsightOrchestrator
         var primary = FirstNonEmpty(
             interpretation.ResponseForUser,
             interpretation.ExecutiveSummary,
-            interpretation.QuestionAnswered,
-            interpretation.Reason);
+            interpretation.QuestionAnswered);
 
         if (string.IsNullOrWhiteSpace(primary))
         {
@@ -402,6 +449,56 @@ public class FraudInsightOrchestrator
         return interpretation.Warnings
             ?? interpretation.Limitations
             ?? Array.Empty<string>();
+    }
+
+    private static async Task PersistConversationExchangeAsync(
+        TaskOrchestrationContext context,
+        QueryRequest request,
+        string assistantSummary,
+        string? sqlGenerated = null,
+        string? agentResponse = null,
+        string? intentType = null,
+        string? metric = null)
+    {
+        if (request.SessionId is null || !Guid.TryParse(request.SessionId, out var sessionGuid))
+        {
+            return;
+        }
+
+        try
+        {
+            await context.CallActivityAsync(nameof(SaveConversationTurnActivity),
+                new ConversationTurnRecord(
+                    Guid.Empty,
+                    sessionGuid,
+                    request.UserId,
+                    "user",
+                    request.Question,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    DateTimeOffset.UtcNow));
+
+            await context.CallActivityAsync(nameof(SaveConversationTurnActivity),
+                new ConversationTurnRecord(
+                    Guid.Empty,
+                    sessionGuid,
+                    request.UserId,
+                    "assistant",
+                    request.Question,
+                    sqlGenerated,
+                    agentResponse,
+                    assistantSummary,
+                    intentType,
+                    metric,
+                    DateTimeOffset.UtcNow));
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[WARNING] SaveConversationTurn failed: {ex.Message}");
+        }
     }
 
     private static bool CanRecoverWithPreviousSql(string plannerStatus, string question, string? previousSql)

@@ -21,6 +21,7 @@ import { IDEArea } from "./IDEArea";
 import { TerminalLogs } from "./TerminalLogs";
 import { WelcomeArea } from "./WelcomeArea";
 import { WorkspaceOnboarding } from "./WorkspaceOnboarding";
+import { AppIcon } from "./AppIcon";
 
 export function UnifiedChat() {
   const { fetchWithAuth, userId, account } = useApi();
@@ -127,7 +128,6 @@ export function UnifiedChat() {
       <Head>
         <title>QueryPilot AI - Chat with your Azure SQL Data</title>
         <meta name="description" content="Agentic SQL analyst designed for security and enterprise" />
-        <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
         <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
       </Head>
 
@@ -143,15 +143,13 @@ export function UnifiedChat() {
            createChatSession={createChatSession} deleteChatSession={deleteChatSession}
         />
 
-      <main className={`mosaic-center flex-1 flex overflow-hidden relative transition-all duration-300 ${isFullView && (activeChatSession || activeIdeTab) ? 'bg-[#111111]' : 'bg-transparent'}`}>
+      <main className={`mosaic-center flex-1 min-h-0 h-full flex items-stretch justify-start overflow-hidden relative transition-all duration-300 ${isFullView && (activeChatSession || activeIdeTab) ? 'bg-[#111111]' : 'bg-transparent'}`}>
           {!isSidebarOpen && (
              <button 
                 onClick={() => setIsSidebarOpen(true)} 
                 className={`fixed top-5 left-5 z-[80] w-10 h-8 bg-transparent border border-transparent rounded-lg hover:bg-[#111111]/60 shadow-none text-[#a3a3a3] hover:text-[#f4f0e6] transition-all flex items-center justify-center group`}
                 title="Expand Sidebar">
-                <span className={`material-symbols-outlined text-[60px] leading-none transition-transform duration-300 group-hover:translate-x-0.5`}>
-                   menu
-                </span>
+                <AppIcon name="menu" className="h-[24px] w-[24px] transition-transform duration-300 group-hover:translate-x-0.5" />
              </button>
           )}
 
@@ -184,7 +182,7 @@ export function UnifiedChat() {
                 </div>
                 <div className="bg-[#0a0a0a] border border-[#333333] rounded-none p-6 shadow-sm flex flex-col items-center justify-center py-20">
                   <div className="w-16 h-16 rounded-none bg-[#111111] border border-[#222222] flex items-center justify-center mb-4">
-                     <span className="material-symbols-outlined text-[24px] text-[#8a8a8a]">history</span>
+                     <AppIcon name="history" className="h-[24px] w-[24px] text-[#8a8a8a]" />
                   </div>
                   <p className="text-[14px] text-[#a3a3a3] font-medium">History sync is currently unavailable.</p>
                 </div>
@@ -197,7 +195,7 @@ export function UnifiedChat() {
                   onClick={() => setCurrentView('welcome')}
                   className="mb-6 flex items-center gap-2 text-[13px] font-medium text-[#a3a3a3] hover:text-[#f4f0e6] transition-colors"
                 >
-                  <span className="material-symbols-outlined text-[16px]">arrow_back</span> Back to Home
+                           <AppIcon name="arrow_back" className="h-[16px] w-[16px]" /> Back to Home
                 </button>
                 <div className="mb-8 bg-[#0a0a0a] border border-[#333333] p-8 rounded-none shadow-sm space-y-2">
                   <h1 className="text-3xl font-semibold text-[#f4f0e6] tracking-tight">Settings</h1>
@@ -210,7 +208,7 @@ export function UnifiedChat() {
                     className="text-left bg-[#0a0a0a] border border-[#333333] hover:border-zinc-500 p-6 rounded-none transition-colors"
                   >
                     <div className="flex items-center gap-3 mb-3">
-                      <span className="material-symbols-outlined text-[20px] text-[#a78bfa]">apartment</span>
+                                 <AppIcon name="apartment" className="h-[20px] w-[20px] text-[#a78bfa]" />
                       <h3 className="text-lg font-semibold text-[#f4f0e6]">Manage Workspace</h3>
                     </div>
                     <p className="text-[13px] text-[#a3a3a3] font-medium">Update workspace profile and control critical workspace actions.</p>
@@ -218,7 +216,7 @@ export function UnifiedChat() {
 
                   <div className="bg-[#0a0a0a] border border-[#333333] p-6 rounded-none opacity-70">
                     <div className="flex items-center gap-3 mb-3">
-                      <span className="material-symbols-outlined text-[20px] text-[#8a8a8a]">security</span>
+                                 <AppIcon name="security" className="h-[20px] w-[20px] text-[#8a8a8a]" />
                       <h3 className="text-lg font-semibold text-[#f4f0e6]">Security</h3>
                     </div>
                     <p className="text-[13px] text-[#a3a3a3] font-medium">Coming soon: access policies, session controls, and audit preferences.</p>
@@ -233,7 +231,7 @@ export function UnifiedChat() {
                   onClick={() => setCurrentView('settings')}
                   className="mb-6 flex items-center gap-2 text-[13px] font-medium text-[#a3a3a3] hover:text-[#f4f0e6] transition-colors"
                 >
-                  <span className="material-symbols-outlined text-[16px]">arrow_back</span> Back to Settings
+                           <AppIcon name="arrow_back" className="h-[16px] w-[16px]" /> Back to Settings
                 </button>
                 <div className="space-y-2 mb-8 bg-[#0a0a0a] border border-[#333333] p-8 rounded-none shadow-sm">
                   <h1 className="text-3xl font-semibold text-[#f4f0e6] tracking-tight">Manage Workspace</h1>
@@ -250,7 +248,7 @@ export function UnifiedChat() {
                          <div className="space-y-1.5">
                             <div className="text-lg font-semibold text-[#f4f0e6] tracking-wide">{organization?.name}</div>
                             <div className="text-[13px] text-[#a3a3a3] font-medium flex items-center gap-2">
-                               <span className="material-symbols-outlined text-[15px]">domain</span> {organization?.industry || 'Technology'}
+                               <AppIcon name="domain" className="h-[15px] w-[15px]" /> {organization?.industry || 'Technology'}
                             </div>
                          </div>
                       </div>
@@ -277,13 +275,15 @@ export function UnifiedChat() {
           )}
 
           {activeChatSession && (
-             <ChatArea 
-                activeChatSession={activeChatSession} connections={connections}
-                isFullView={isFullView} setIsFullView={setIsFullView}
-                messagesEndRef={messagesEndRef} addLog={addLog} fetchWithAuth={fetchWithAuth}
-                handleApproval={handleApproval} handleSubmit={handleSubmit}
-                input={input} setInput={setInput} isTyping={isTyping}
-             />
+             <div className="relative flex flex-1 min-h-0 self-stretch">
+                <ChatArea 
+                   activeChatSession={activeChatSession} connections={connections}
+                   isFullView={isFullView} setIsFullView={setIsFullView}
+                   messagesEndRef={messagesEndRef} addLog={addLog} fetchWithAuth={fetchWithAuth}
+                   handleApproval={handleApproval} handleSubmit={handleSubmit}
+                   input={input} setInput={setInput} isTyping={isTyping}
+                />
+             </div>
           )}
 
           <IDEArea 

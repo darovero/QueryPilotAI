@@ -19,11 +19,11 @@ public class ClassifyWithConciergeActivity(IFoundryAgentClient agentClient)
 public class ExtractSchemaActivity(ISchemaExtractorService schemaExtractor)
 {
     [Function(nameof(ExtractSchemaActivity))]
-    public async Task<string> Run([ActivityTrigger] UserConnectionRecord connection) 
+    public async Task<string> Run([ActivityTrigger] DatabaseConfig connection)
     {
         var config = new DatabaseConfig(
-            connection.DbType, connection.Host, connection.Port ?? "",
-            connection.DatabaseName, connection.Username ?? "", connection.EncryptedPassword ?? "", connection.AuthType);
+            connection.Type, connection.Host, connection.Port ?? "",
+            connection.Database, connection.Username ?? "", connection.Password ?? "", connection.AuthType);
         try 
         {
             return await schemaExtractor.ExtractSchemaAsync(config);
