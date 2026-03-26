@@ -37,9 +37,10 @@ No documentar usuarios, contraseñas ni tokens reales en el repositorio.
     "AzureOpenAI__ApiKey": "<api-key>",
     "ContentSafety__Endpoint": "https://<resource>.cognitiveservices.azure.com/",
     "FoundryAgent__ProjectEndpoint": "https://<resource>.services.ai.azure.com/api/projects/<project-name>",
-    "FoundryAgent__SqlPlannerAgentId": "<sql-planner-agent-id>",
-    "FoundryAgent__ResultInterpreterAgentId": "<result-interpreter-agent-id>",
-    "FoundryAgent__ConciergeAgentId": "<concierge-agent-id>"
+    "FoundryAgent__TenantId": "<tenant-id>",
+    "FoundryAgent__SqlPlannerAgentRef": "<sql-planner-agent-ref>",
+    "FoundryAgent__ResultInterpreterAgentRef": "<result-interpreter-agent-ref>",
+    "FoundryAgent__ConciergeAgentRef": "<concierge-agent-ref>"
   }
 }
 ```
@@ -74,9 +75,10 @@ Configurar en App Service / Function App / Pipeline, nunca en archivos versionad
 - `AzureOpenAI__ApiKey`
 - `ContentSafety__Endpoint`
 - `FoundryAgent__ProjectEndpoint`
-- `FoundryAgent__SqlPlannerAgentId`
-- `FoundryAgent__ResultInterpreterAgentId`
-- `FoundryAgent__ConciergeAgentId`
+- `FoundryAgent__TenantId`
+- `FoundryAgent__SqlPlannerAgentRef`
+- `FoundryAgent__ResultInterpreterAgentRef`
+- `FoundryAgent__ConciergeAgentRef`
 
 ---
 
