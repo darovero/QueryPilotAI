@@ -132,12 +132,13 @@ interface SidebarProps {
   createChatSession: (connectionId: string, title?: string) => Promise<ChatSession>;
   deleteChatSession: (sessionId: string) => Promise<void>;
   renameChatSession: (sessionId: string, title: string) => Promise<string>;
+  openPageTab: (id: string, title: string, icon: string) => void;
 }
 
 export function Sidebar({
   isSidebarOpen, setIsSidebarOpen, organization, userName, currentView, setCurrentView,
   connections, chatSessions, openTabs, setOpenTabs, expandedConns, setExpandedConns,
-  openChat, setEditingConnId, setConnForm, addLog, createChatSession, deleteChatSession, renameChatSession
+  openChat, setEditingConnId, setConnForm, addLog, createChatSession, deleteChatSession, renameChatSession, openPageTab
 }: SidebarProps) {
   const { instance } = useMsal();
   const [editingChatId, setEditingChatId] = useState<string | null>(null);
@@ -203,22 +204,22 @@ export function Sidebar({
         <div className="flex-1 overflow-y-auto w-full">
           <div className="px-4 py-4 space-y-1 border-b border-[#333333]">
             <button 
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-none text-[11px] font-mono tracking-wide transition-all duration-200 group active:scale-[0.98] ${currentView === 'welcome' || currentView === 'integrations' || currentView === 'connect_postgres' ? 'bg-[#1a1a1a] text-[#f4f0e6] font-medium' : 'text-[#a3a3a3] hover:text-[#f4f0e6] hover:bg-[#1a1a1a]/50'}`}
-              onClick={() => setCurrentView('welcome')}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-none text-[11px] font-mono tracking-wide transition-all duration-200 group active:scale-[0.98] border-l-2 ${currentView === 'welcome' || currentView === 'integrations' || currentView === 'connect_postgres' ? 'bg-[#1a1a1a] text-[#f4f0e6] border-[#a78bfa] font-medium' : 'border-transparent text-[#a3a3a3] hover:text-[#f4f0e6] hover:bg-[#1a1a1a]/50'}`}
+              onClick={() => openPageTab('welcome', 'Data Sources', 'grid_view')}
             >
-              <SidebarIcon name="grid_view" className="h-5 w-5 transition-transform text-[#8a8a8a] group-hover:text-[#d1cdbd]" />
+              <SidebarIcon name="grid_view" className="h-[22px] w-[22px] transition-transform text-[#8a8a8a] group-hover:text-[#a78bfa] group-hover:drop-shadow-[0_0_8px_rgba(167,139,250,0.5)]" />
               <span className="group-hover:translate-x-1 transition-transform duration-200">Data Sources</span>
             </button>
             <button 
-              onClick={() => setCurrentView('manage_connections')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-none text-[11px] font-mono tracking-wide transition-all duration-200 group active:scale-[0.98] ${currentView === 'manage_connections' ? 'bg-[#1a1a1a] text-[#f4f0e6] font-medium' : 'text-[#a3a3a3] hover:text-[#f4f0e6] hover:bg-[#1a1a1a]/50'}`}>
-              <SidebarIcon name="dns" className="h-5 w-5 transition-transform text-[#8a8a8a] group-hover:text-[#d1cdbd]" />
+              onClick={() => openPageTab('manage_connections', 'Manage Conns', 'dns')}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-none text-[11px] font-mono tracking-wide transition-all duration-200 group active:scale-[0.98] border-l-2 ${currentView === 'manage_connections' ? 'bg-[#1a1a1a] text-[#f4f0e6] border-[#a78bfa] font-medium' : 'border-transparent text-[#a3a3a3] hover:text-[#f4f0e6] hover:bg-[#1a1a1a]/50'}`}>
+              <SidebarIcon name="dns" className="h-[22px] w-[22px] transition-transform text-[#8a8a8a] group-hover:text-[#a78bfa] group-hover:drop-shadow-[0_0_8px_rgba(167,139,250,0.5)]" />
               <span className="group-hover:translate-x-1 transition-transform duration-200">Manage Connections</span>
             </button>
             <button 
-              onClick={() => setCurrentView('settings')}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-none text-[11px] font-mono tracking-wide transition-all duration-200 group active:scale-[0.98] ${currentView.startsWith('settings') ? 'bg-[#1a1a1a] text-[#f4f0e6] font-medium' : 'text-[#a3a3a3] hover:text-[#f4f0e6] hover:bg-[#1a1a1a]/50'}`}>
-              <SidebarIcon name="tune" className="h-5 w-5 transition-transform text-[#8a8a8a] group-hover:text-[#d1cdbd]" />
+              onClick={() => openPageTab('settings', 'Settings', 'tune')}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-none text-[11px] font-mono tracking-wide transition-all duration-200 group active:scale-[0.98] border-l-2 ${currentView.startsWith('settings') ? 'bg-[#1a1a1a] text-[#f4f0e6] border-[#a78bfa] font-medium' : 'border-transparent text-[#a3a3a3] hover:text-[#f4f0e6] hover:bg-[#1a1a1a]/50'}`}>
+              <SidebarIcon name="tune" className="h-[22px] w-[22px] transition-transform text-[#8a8a8a] group-hover:text-[#a78bfa] group-hover:drop-shadow-[0_0_8px_rgba(167,139,250,0.5)]" />
               <span className="group-hover:translate-x-1 transition-transform duration-200">Settings</span>
             </button>
           </div>
@@ -226,11 +227,11 @@ export function Sidebar({
           <div className="px-4 py-4">
              <div className="flex items-center justify-between px-3 text-[11px] uppercase tracking-widest text-[#a3a3a3] font-bold mb-3">
                 <span className="flex items-center gap-2">
-                  <SidebarIcon name="database" className="h-5 w-5 text-[#8a8a8a]" />
+                  <SidebarIcon name="database" className="h-[22px] w-[22px] text-[#8a8a8a]" />
                   Connections
                 </span>
                 <div className="flex gap-1">
-                  <button onClick={() => { setEditingConnId(null); setConnForm({ name: "New Connection", host: "", port: "5432", database: "", username: "", password: "", type: "PostgreSQL" }); setCurrentView('integrations'); }} className="hover:text-[#f4f0e6] transition-colors text-[#8a8a8a]" title="New Connection">
+                  <button onClick={() => { setEditingConnId(null); setConnForm({ name: "New Connection", host: "", port: "5432", database: "", username: "", password: "", type: "PostgreSQL" }); openPageTab('integrations', 'New Connection', 'add'); }} className="hover:text-[#f4f0e6] transition-colors text-[#8a8a8a]" title="New Connection">
                     <SidebarIcon name="add" className="h-4 w-4" />
                   </button>
                 </div>

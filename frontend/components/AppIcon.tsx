@@ -22,6 +22,33 @@ export function AppIcon({ name, className = "" }: AppIconProps) {
           <path d="M18 6L6 18" stroke={stroke} strokeWidth="2" strokeLinecap="round" />
         </svg>
       );
+    case "add":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+          <path d="M12 5V19" stroke={stroke} strokeWidth="2" strokeLinecap="round" />
+          <path d="M5 12H19" stroke={stroke} strokeWidth="2" strokeLinecap="round" />
+        </svg>
+      );
+    case "grid_view":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+          <rect x="4" y="4" width="7" height="7" stroke={stroke} strokeWidth="2" />
+          <rect x="13" y="4" width="7" height="7" stroke={stroke} strokeWidth="2" />
+          <rect x="4" y="13" width="7" height="7" stroke={stroke} strokeWidth="2" />
+          <rect x="13" y="13" width="7" height="7" stroke={stroke} strokeWidth="2" />
+        </svg>
+      );
+    case "tune":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+          <path d="M4 7H20" stroke={stroke} strokeWidth="2" strokeLinecap="round" />
+          <path d="M4 12H20" stroke={stroke} strokeWidth="2" strokeLinecap="round" />
+          <path d="M4 17H20" stroke={stroke} strokeWidth="2" strokeLinecap="round" />
+          <circle cx="9" cy="7" r="2" fill="currentColor" />
+          <circle cx="15" cy="12" r="2" fill="currentColor" />
+          <circle cx="11" cy="17" r="2" fill="currentColor" />
+        </svg>
+      );
     case "arrow_back":
       return (
         <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
@@ -38,12 +65,20 @@ export function AppIcon({ name, className = "" }: AppIconProps) {
         </svg>
       );
     case "database":
-    case "dns":
       return (
         <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
           <ellipse cx="12" cy="6" rx="7" ry="3" stroke={stroke} strokeWidth="2" />
           <path d="M5 6V18C5 19.7 8.1 21 12 21C15.9 21 19 19.7 19 18V6" stroke={stroke} strokeWidth="2" />
           <path d="M5 12C5 13.7 8.1 15 12 15C15.9 15 19 13.7 19 12" stroke={stroke} strokeWidth="2" />
+        </svg>
+      );
+    case "dns":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+          <rect x="3" y="4" width="18" height="4" rx="1" stroke={stroke} strokeWidth="2" />
+          <rect x="3" y="10" width="18" height="4" rx="1" stroke={stroke} strokeWidth="2" />
+          <rect x="3" y="16" width="18" height="4" rx="1" stroke={stroke} strokeWidth="2" />
+          <path d="M7 6h.01M7 12h.01M7 18h.01" stroke={stroke} strokeWidth="3" strokeLinecap="round" />
         </svg>
       );
     case "description":
