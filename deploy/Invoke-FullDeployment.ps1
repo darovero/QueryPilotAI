@@ -436,14 +436,24 @@ function Ensure-SpaRedirectUris {
     } | ConvertTo-Json -Depth 6 -Compress
 
     Write-Info 'Updating SPA redirect URIs in Entra app registration and removing overlapping Web redirect URIs.'
-    Invoke-AzCli -Arguments @(
-        'rest',
-        '--method', 'patch',
-        '--url', "https://graph.microsoft.com/v1.0/applications/$appObjectId",
-        '--headers', 'Content-Type=application/json',
-        '--body', $payload,
-        '-o', 'none'
-    ) | Out-Null
+    $payloadFile = [System.IO.Path]::GetTempFileName()
+
+    try {
+        Set-Content -Path $payloadFile -Value $payload -Encoding UTF8
+        Invoke-AzCli -Arguments @(
+            'rest',
+            '--method', 'patch',
+            '--url', "https://graph.microsoft.com/v1.0/applications/$appObjectId",
+            '--headers', 'Content-Type=application/json',
+            '--body', "@$payloadFile",
+            '-o', 'none'
+        ) | Out-Null
+    }
+    finally {
+        if (Test-Path -LiteralPath $payloadFile) {
+            Remove-Item -LiteralPath $payloadFile -Force -ErrorAction SilentlyContinue
+        }
+    }
 }
 
 function Resolve-TemplateValue {
