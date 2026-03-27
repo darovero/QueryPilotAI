@@ -33,7 +33,7 @@ interface WorkspaceOnboardingProps {
 
 export function WorkspaceOnboarding({ handleOnboardingComplete, isAddingWorkspace }: WorkspaceOnboardingProps) {
   const [step, setStep] = useState(1);
-  const totalSteps = 5;
+  const totalSteps = 4;
 
   // Form State
   const [profile, setProfile] = useState({ name: '', role: '' });
@@ -89,7 +89,7 @@ export function WorkspaceOnboarding({ handleOnboardingComplete, isAddingWorkspac
 
         <div className="w-full max-w-lg space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-500">
            
-           {/* STEP 1: WELCOME & PROFILE */}
+           {/* STEP 1: WORKSPACE & PROFILE (MERGED) */}
            {step === 1 && (
              <div className="space-y-8 animate-in fade-in duration-300">
                  <div className="space-y-3">
@@ -97,88 +97,63 @@ export function WorkspaceOnboarding({ handleOnboardingComplete, isAddingWorkspac
                               <AppIcon name="waving_hand" className="h-[28px] w-[28px] text-[#f4f0e6]" />
                     </div>
                     <h1 className="text-3xl font-bold tracking-tight text-[#f4f0e6]">Welcome to InsightForge AI</h1>
-                    <p className="text-[15px] font-medium text-[#a3a3a3]">Let's set up your account in less than a minute.</p>
+                    <p className="text-[15px] font-medium text-[#a3a3a3]">Set up your workspace and profile in seconds.</p>
                  </div>
                  <div className="bg-[#0a0a0a] border border-[#333333] rounded-none p-8 shadow-sm space-y-6">
                     <div className="space-y-1.5">
-                       <label className="text-[12px] font-bold text-[#a3a3a3] uppercase tracking-widest">Company Name</label>
-                       <input 
-                         type="text" 
-                         value={profile.name}
-                         onChange={e => setProfile(prev => ({ ...prev, name: e.target.value }))}
-                         placeholder="e.g. Acme Corp"
-                         className="w-full bg-[#111111] border border-[#333333] rounded-none px-4 py-3.5 text-[14px] text-[#f4f0e6] focus:outline-none focus:border-zinc-400 focus:bg-[#0a0a0a] transition-colors" 
-                       />
-                    </div>
-                    <div className="space-y-1.5">
-                       <label className="text-[12px] font-bold text-[#a3a3a3] uppercase tracking-widest">Your Role</label>
-                       <select 
-                         value={profile.role}
-                         onChange={e => setProfile(prev => ({ ...prev, role: e.target.value }))}
-                         className="w-full bg-[#111111] border border-[#333333] rounded-none px-4 py-3.5 text-[14px] text-[#f4f0e6] focus:outline-none focus:border-zinc-400 focus:bg-[#0a0a0a] transition-colors appearance-none"
-                       >
-                           <option value="" disabled>Select your role...</option>
-                           <option value="Data Analyst">Data Analyst / Scientist</option>
-                           <option value="Software Engineer">Software Engineer</option>
-                           <option value="Product Manager">Product Manager</option>
-                           <option value="C-Level">Executive / Founder</option>
-                           <option value="Other">Other</option>
-                       </select>
-                    </div>
-                    <button 
-                       onClick={handleNext}
-                       disabled={!profile.name.trim() || !profile.role}
-                       className="w-full bg-[#a78bfa] text-black font-semibold rounded-none py-3.5 text-[14px] hover:bg-[#8b5cf6] transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-4">
-                       Continue
-                    </button>
-                    <div className="text-center text-[12px] font-semibold text-[#8a8a8a]">Step 1 of 5</div>
-                 </div>
-             </div>
-           )}
-
-           {/* STEP 2: WORKSPACE SETUP */}
-           {step === 2 && (
-             <div className="space-y-8 animate-in fade-in duration-300">
-                 <div className="space-y-3">
-                    <h1 className="text-3xl font-bold tracking-tight text-[#f4f0e6]">Create your workspace</h1>
-                    <p className="text-[15px] font-medium text-[#a3a3a3]">This is where you and your team will connect databases.</p>
-                 </div>
-                 <div className="bg-[#0a0a0a] border border-[#333333] rounded-none p-8 shadow-sm space-y-6">
-                    <div className="space-y-1.5">
-                       <label className="text-[12px] font-bold text-[#a3a3a3] uppercase tracking-widest">Workspace Name</label>
+                       <label className="text-[12px] font-bold text-[#a3a3a3] uppercase tracking-widest">Workspace / Company Name</label>
                        <input 
                          type="text" 
                          value={workspace.name}
-                         onChange={e => setWorkspace(prev => ({ ...prev, name: e.target.value }))}
+                         onChange={e => { setWorkspace(prev => ({ ...prev, name: e.target.value })); setProfile(prev => ({ ...prev, name: e.target.value })); }}
                          placeholder="e.g. Acme Corp"
                          className="w-full bg-[#111111] border border-[#333333] rounded-none px-4 py-3.5 text-[14px] text-[#f4f0e6] focus:outline-none focus:border-zinc-400 focus:bg-[#0a0a0a] transition-colors" 
                        />
                     </div>
-                    <div className="space-y-1.5">
-                       <label className="text-[12px] font-bold text-[#a3a3a3] uppercase tracking-widest">Industry</label>
-                       <select 
-                         value={workspace.industry}
-                         onChange={e => setWorkspace(prev => ({ ...prev, industry: e.target.value }))}
-                         className="w-full bg-[#111111] border border-[#333333] rounded-none px-4 py-3.5 text-[14px] text-[#f4f0e6] focus:outline-none focus:border-zinc-400 focus:bg-[#0a0a0a] transition-colors appearance-none">
-                           <option value="Technology">Technology</option>
-                           <option value="Finance">Finance & Banking</option>
-                           <option value="Healthcare">Healthcare</option>
-                           <option value="Retail">Retail & E-commerce</option>
-                           <option value="Manufacturing">Manufacturing</option>
-                           <option value="Other">Other</option>
-                       </select>
+                    <div className="grid grid-cols-2 gap-4">
+                       <div className="space-y-1.5">
+                          <label className="text-[12px] font-bold text-[#a3a3a3] uppercase tracking-widest">Industry</label>
+                          <select 
+                            value={workspace.industry}
+                            onChange={e => setWorkspace(prev => ({ ...prev, industry: e.target.value }))}
+                            className="w-full bg-[#111111] border border-[#333333] rounded-none px-4 py-3.5 text-[14px] text-[#f4f0e6] focus:outline-none focus:border-zinc-400 focus:bg-[#0a0a0a] transition-colors appearance-none">
+                              <option value="Technology">Technology</option>
+                              <option value="Finance">Finance & Banking</option>
+                              <option value="Healthcare">Healthcare</option>
+                              <option value="Retail">Retail & E-commerce</option>
+                              <option value="Manufacturing">Manufacturing</option>
+                              <option value="Other">Other</option>
+                          </select>
+                       </div>
+                       <div className="space-y-1.5">
+                          <label className="text-[12px] font-bold text-[#a3a3a3] uppercase tracking-widest">Your Role</label>
+                          <select 
+                            value={profile.role}
+                            onChange={e => setProfile(prev => ({ ...prev, role: e.target.value }))}
+                            className="w-full bg-[#111111] border border-[#333333] rounded-none px-4 py-3.5 text-[14px] text-[#f4f0e6] focus:outline-none focus:border-zinc-400 focus:bg-[#0a0a0a] transition-colors appearance-none"
+                          >
+                              <option value="" disabled>Select...</option>
+                              <option value="Data Analyst">Data Analyst / Scientist</option>
+                              <option value="Software Engineer">Software Engineer</option>
+                              <option value="Product Manager">Product Manager</option>
+                              <option value="C-Level">Executive / Founder</option>
+                              <option value="Other">Other</option>
+                          </select>
+                       </div>
                     </div>
-                    <div className="flex gap-4 pt-4">
-                       <button onClick={handleBack} className="w-1/3 bg-[#111111] border border-[#333333] text-[#d1cdbd] font-semibold rounded-none py-3.5 text-[14px] hover:bg-[#1a1a1a] transition-colors">Back</button>
-                       <button onClick={handleNext} disabled={!workspace.name.trim()} className="w-2/3 bg-[#a78bfa] text-black font-semibold rounded-none py-3.5 text-[14px] hover:bg-[#8b5cf6] transition-all disabled:opacity-50 disabled:cursor-not-allowed">Continue</button>
-                    </div>
-                    <div className="text-center text-[12px] font-semibold text-[#8a8a8a]">Step 2 of 5</div>
+                    <button 
+                       onClick={handleNext}
+                       disabled={!workspace.name.trim() || !profile.role}
+                       className="w-full bg-[#a78bfa] text-black font-semibold rounded-none py-3.5 text-[14px] hover:bg-[#8b5cf6] transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-4">
+                       Continue
+                    </button>
+                    <div className="text-center text-[12px] font-semibold text-[#8a8a8a]">Step 1 of 4</div>
                  </div>
              </div>
            )}
 
-           {/* STEP 3: USE CASES */}
-           {step === 3 && (
+           {/* STEP 2: USE CASES */}
+           {step === 2 && (
              <div className="space-y-8 animate-in fade-in duration-300">
                  <div className="space-y-3">
                     <h1 className="text-3xl font-bold tracking-tight text-[#f4f0e6]">What's your primary goal?</h1>
@@ -208,13 +183,13 @@ export function WorkspaceOnboarding({ handleOnboardingComplete, isAddingWorkspac
                        <button onClick={handleBack} className="w-1/3 bg-[#111111] border border-[#333333] text-[#d1cdbd] font-semibold rounded-none py-3.5 text-[14px] hover:bg-[#1a1a1a] transition-colors">Back</button>
                        <button onClick={handleNext} disabled={useCases.length === 0} className="w-2/3 bg-[#a78bfa] text-black font-semibold rounded-none py-3.5 text-[14px] hover:bg-[#8b5cf6] transition-all disabled:opacity-50 disabled:cursor-not-allowed">Continue</button>
                     </div>
-                    <div className="text-center text-[12px] font-semibold text-[#8a8a8a]">Step 3 of 5</div>
+                    <div className="text-center text-[12px] font-semibold text-[#8a8a8a]">Step 2 of 4</div>
                  </div>
              </div>
            )}
 
-           {/* STEP 4: TERMS & PRIVACY */}
-           {step === 4 && (
+           {/* STEP 3: TERMS & PRIVACY */}
+           {step === 3 && (
              <div className="space-y-8 animate-in fade-in duration-300">
                  <div className="space-y-3">
                     <h1 className="text-3xl font-bold tracking-tight text-[#f4f0e6]">Privacy & Terms</h1>
@@ -328,13 +303,13 @@ export function WorkspaceOnboarding({ handleOnboardingComplete, isAddingWorkspac
                        <button onClick={handleBack} className="w-1/3 bg-[#111111] border border-[#333333] text-[#d1cdbd] font-semibold rounded-none py-3.5 text-[14px] hover:bg-[#1a1a1a] transition-colors">Back</button>
                        <button onClick={handleNext} disabled={!acceptedTerms} className="w-2/3 bg-[#a78bfa] text-black font-semibold rounded-none py-3.5 text-[14px] hover:bg-[#8b5cf6] transition-all disabled:opacity-50 disabled:cursor-not-allowed">Continue</button>
                     </div>
-                    <div className="text-center text-[12px] font-semibold text-[#8a8a8a]">Step 4 of 5</div>
+                    <div className="text-center text-[12px] font-semibold text-[#8a8a8a]">Step 3 of 4</div>
                  </div>
              </div>
            )}
 
-           {/* STEP 5: CONNECT DB (OPTIONAL) */}
-           {step === 5 && (
+           {/* STEP 4: CONNECT DB (OPTIONAL) */}
+           {step === 4 && (
              <div className="space-y-8 animate-in fade-in duration-300">
                  <div className="space-y-3">
                     <div className="w-14 h-14 bg-emerald-50 border border-emerald-200 rounded-none mx-auto flex items-center justify-center mb-6">
