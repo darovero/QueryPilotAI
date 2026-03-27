@@ -22,6 +22,8 @@ import { TerminalLogs } from "./TerminalLogs";
 import { WelcomeArea } from "./WelcomeArea";
 import { WorkspaceOnboarding } from "./WorkspaceOnboarding";
 import { AppIcon } from "./AppIcon";
+import { InteractiveBackground } from "./InteractiveBackground";
+import { TabBar } from "./TabBar";
 
 export function UnifiedChat() {
   const { fetchWithAuth, userId, account } = useApi();
@@ -81,6 +83,38 @@ export function UnifiedChat() {
     }
   };
 
+  const closeTab = (id: string) => {
+    setOpenTabs(prev => {
+        const newTabs = prev.filter(t => t.id !== id);
+        if (currentView === id) {
+            const currentIndex = prev.findIndex(t => t.id === id);
+            if (newTabs.length > 0) {
+                const nextIndex = Math.min(currentIndex, newTabs.length - 1);
+                setCurrentView(newTabs[nextIndex].id);
+            } else {
+                setCurrentView('welcome');
+            }
+        }
+        return newTabs;
+    });
+  };
+
+  const openNewTab = () => {
+    const newId = `welcome-${Date.now()}`;
+    setOpenTabs(prev => [...prev, { type: 'welcome', id: newId, title: 'Data Sources', icon: 'grid_view' }]);
+    setCurrentView(newId);
+  };
+
+  const openPageTab = (id: string, title: string, icon: string) => {
+    setOpenTabs(prev => {
+      if (prev.find(t => t.id === id)) {
+        return prev;
+      }
+      return [...prev, { type: 'page', id, title, icon }];
+    });
+    setCurrentView(id);
+  };
+
    const handleOnboardingComplete = async (data: { name: string; industry: string; firstConnectionType?: string | null }) => {
       setPendingFirstConnectionType(data.firstConnectionType || null);
       await handleWorkspaceOnboardingComplete({ name: data.name, industry: data.industry });
@@ -131,7 +165,9 @@ export function UnifiedChat() {
         <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
       </Head>
 
-      <div className="flex font-sans h-[100dvh] w-full overflow-hidden bg-transparent">
+      <div className="flex font-sans h-[100dvh] w-full overflow-hidden bg-transparent relative">
+        <InteractiveBackground />
+        
         <Sidebar 
            isSidebarOpen={isSidebarOpen}
            setIsSidebarOpen={setIsSidebarOpen}
@@ -141,19 +177,13 @@ export function UnifiedChat() {
            openTabs={openTabs} setOpenTabs={setOpenTabs} expandedConns={expandedConns} setExpandedConns={setExpandedConns}
            openChat={openChat} setEditingConnId={setEditingConnId} setConnForm={setConnForm} addLog={addLog}
            createChatSession={createChatSession} deleteChatSession={deleteChatSession} renameChatSession={renameChatSession}
+           openPageTab={openPageTab}
         />
 
-      <main className={`mosaic-center flex-1 min-h-0 h-full flex items-stretch justify-start overflow-hidden relative transition-all duration-300 ${isFullView && (activeChatSession || activeIdeTab) ? 'bg-[#111111]' : 'bg-transparent'}`}>
-          {!isSidebarOpen && (
-             <button 
-                onClick={() => setIsSidebarOpen(true)} 
-                className={`fixed top-5 left-5 z-[80] w-10 h-8 bg-transparent border border-transparent rounded-lg hover:bg-[#111111]/60 shadow-none text-[#a3a3a3] hover:text-[#f4f0e6] transition-all flex items-center justify-center group`}
-                title="Expand Sidebar">
-                <AppIcon name="menu" className="h-[24px] w-[24px] transition-transform duration-300 group-hover:translate-x-0.5" />
-             </button>
-          )}
+      <main className={`mosaic-center flex-1 min-h-0 h-full flex flex-col overflow-hidden relative transition-all duration-300 ${isFullView && (activeChatSession || activeIdeTab) ? 'bg-[#111111]' : 'bg-transparent'}`}>
+          <TabBar openTabs={openTabs} currentView={currentView} setCurrentView={setCurrentView} closeTab={closeTab} openNewTab={openNewTab} isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />
 
-          {currentView === 'welcome' && (
+          {currentView.startsWith('welcome') && (
              <WelcomeArea 
                 userName={userName} organization={organization} connections={connections} 
                 setCurrentView={setCurrentView} setEditingConnId={setEditingConnId} setConnForm={setConnForm} 

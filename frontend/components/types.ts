@@ -73,9 +73,10 @@ export type ChatSession = {
 };
 
 export type DashboardTab = {
-  type: "chat" | "ide";
+  type: "welcome" | "chat" | "ide" | "page";
   id: string;
   title: string;
+  icon?: string;
   connectionId?: string;
   sql?: string;
 };
