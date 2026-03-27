@@ -4,12 +4,13 @@ using Infrastructure.Sql;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.DurableTask.Client;
+using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Text.Json;
 
 namespace Functions.Api.Functions;
 
-public class QueryIntakeFunction(IAppDatabaseService appDb)
+public class QueryIntakeFunction(IAppDatabaseService appDb, ILogger<QueryIntakeFunction> logger)
 {
     [Function(nameof(QueryIntakeFunction))]
     public async Task<HttpResponseData> Run(
@@ -17,63 +18,73 @@ public class QueryIntakeFunction(IAppDatabaseService appDb)
         [DurableClient] DurableTaskClient durableClient,
         FunctionContext executionContext)
     {
-        var request = await JsonSerializer.DeserializeAsync<QueryRequest>(req.Body, new JsonSerializerOptions
+        try
         {
-            PropertyNameCaseInsensitive = true
-        });
-
-        var authenticatedUserId = AuthContextHelpers.GetAuthenticatedUserId(req.FunctionContext);
-        var userAliases = AuthContextHelpers.GetAuthenticatedUserAliases(req.FunctionContext);
-        if (string.IsNullOrEmpty(authenticatedUserId) || userAliases.Count == 0)
-        {
-            return req.CreateResponse(HttpStatusCode.Unauthorized);
-        }
-
-        if (request is null || string.IsNullOrWhiteSpace(request.Question))
-        {
-            var bad = req.CreateResponse(HttpStatusCode.BadRequest);
-            await bad.WriteStringAsync("Invalid request payload.");
-            return bad;
-        }
-
-        request = request with { UserId = authenticatedUserId };
-
-        if (request.ConnectionId.HasValue && (request.Connection is null || string.IsNullOrWhiteSpace(request.Connection.Password)))
-        {
-            var savedConnection = await appDb.GetConnectionForUsersAsync(request.ConnectionId.Value, userAliases);
-            if (savedConnection is null)
+            var request = await JsonSerializer.DeserializeAsync<QueryRequest>(req.Body, new JsonSerializerOptions
             {
-                var missingConnection = req.CreateResponse(HttpStatusCode.BadRequest);
-                await missingConnection.WriteAsJsonAsync(new { error = "The selected connection is not available for the authenticated user." });
-                return missingConnection;
+                PropertyNameCaseInsensitive = true
+            });
+
+            var authenticatedUserId = AuthContextHelpers.GetAuthenticatedUserId(req.FunctionContext);
+            var userAliases = AuthContextHelpers.GetAuthenticatedUserAliases(req.FunctionContext);
+            if (string.IsNullOrEmpty(authenticatedUserId) || userAliases.Count == 0)
+            {
+                return req.CreateResponse(HttpStatusCode.Unauthorized);
             }
 
-            request = request with
+            if (request is null || string.IsNullOrWhiteSpace(request.Question))
             {
-                Connection = new DatabaseConfig(
-                    savedConnection.DbType,
-                    savedConnection.Host,
-                    savedConnection.Port ?? string.Empty,
-                    savedConnection.DatabaseName,
-                    savedConnection.Username ?? string.Empty,
-                    savedConnection.EncryptedPassword ?? string.Empty,
-                    savedConnection.AuthType)
-            };
+                var bad = req.CreateResponse(HttpStatusCode.BadRequest);
+                await bad.WriteStringAsync("Invalid request payload.");
+                return bad;
+            }
+
+            request = request with { UserId = authenticatedUserId };
+
+            if (request.ConnectionId.HasValue && (request.Connection is null || string.IsNullOrWhiteSpace(request.Connection.Password)))
+            {
+                var savedConnection = await appDb.GetConnectionForUsersAsync(request.ConnectionId.Value, userAliases);
+                if (savedConnection is null)
+                {
+                    var missingConnection = req.CreateResponse(HttpStatusCode.BadRequest);
+                    await missingConnection.WriteAsJsonAsync(new { error = "The selected connection is not available for the authenticated user." });
+                    return missingConnection;
+                }
+
+                request = request with
+                {
+                    Connection = new DatabaseConfig(
+                        savedConnection.DbType,
+                        savedConnection.Host,
+                        savedConnection.Port ?? string.Empty,
+                        savedConnection.DatabaseName,
+                        savedConnection.Username ?? string.Empty,
+                        savedConnection.EncryptedPassword ?? string.Empty,
+                        savedConnection.AuthType)
+                };
+            }
+
+            var instanceId = await durableClient.ScheduleNewOrchestrationInstanceAsync(
+                nameof(FraudInsightOrchestrator),
+                request);
+
+            var response = req.CreateResponse(HttpStatusCode.Accepted);
+            var statusUrl = $"{req.Url.Scheme}://{req.Url.Authority}/api/orchestrations/{instanceId}";
+            await response.WriteAsJsonAsync(new
+            {
+                instanceId,
+                statusQueryGetUri = statusUrl
+            });
+
+            return response;
         }
-
-        var instanceId = await durableClient.ScheduleNewOrchestrationInstanceAsync(
-            nameof(FraudInsightOrchestrator),
-            request);
-
-        var response = req.CreateResponse(HttpStatusCode.Accepted);
-        var statusUrl = $"{req.Url.Scheme}://{req.Url.Authority}/api/orchestrations/{instanceId}";
-        await response.WriteAsJsonAsync(new
+        catch (Exception ex)
         {
-            instanceId,
-            statusQueryGetUri = statusUrl
-        });
-
-        return response;
+            logger.LogError(ex, "Query intake failed before orchestration scheduling.");
+            var error = req.CreateResponse(HttpStatusCode.InternalServerError);
+            await error.WriteAsJsonAsync(new { error = "Failed to process query request." });
+            return error;
+        }
     }
 }
 

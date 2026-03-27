@@ -1,9 +1,9 @@
 @{
     SubscriptionId = ''
-    ResourceGroupName = 'rg-insightforge-dev'
+    ResourceGroupName = 'rg-insightforge-dev1'
     Location = 'eastus2'
     CreateResourceGroupIfMissing = $true
-    Prefix = 'ifdev2'
+    Prefix = 'ifdev1'
 
     Sql = @{
         AdminLogin = 'sqladminif'
@@ -51,9 +51,10 @@
         ModelSkuCapacity = 10
         ProjectEndpoint = ''
         TenantId = ''
-        SqlPlannerAgentId = ''
-        ResultInterpreterAgentId = ''
-        ConciergeAgentId = ''
+        # Referencias de agente en formato name:version (ej: insightforgesql:5)
+        SqlPlannerAgentRef = ''
+        ResultInterpreterAgentRef = ''
+        ConciergeAgentRef = ''
         ProjectResourceId = ''
         # Rol a asignar a la identidad administrada de la Function para consumir Foundry.
         RoleDefinitionName = 'Azure AI User'

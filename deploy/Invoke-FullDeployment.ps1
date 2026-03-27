@@ -225,9 +225,9 @@ function New-DeploymentConfigSkeleton {
             ModelSkuCapacity = 10
             ProjectEndpoint = ''
             TenantId = ''
-            SqlPlannerAgentId = ''
-            ResultInterpreterAgentId = ''
-            ConciergeAgentId = ''
+            SqlPlannerAgentRef = ''
+            ResultInterpreterAgentRef = ''
+            ConciergeAgentRef = ''
             ProjectResourceId = ''
             RoleDefinitionName = 'Azure AI User'
             AutoConfigureFunctionIdentity = $true
@@ -302,6 +302,7 @@ function Resolve-InfrastructureContext {
     $storageAccountName = Get-OutputValue -Outputs $Outputs -Name 'storageAccountName'
     $openAiName = Get-OutputValue -Outputs $Outputs -Name 'openAiName' -Required
     $contentSafetyName = Get-OutputValue -Outputs $Outputs -Name 'contentSafetyName' -Required
+    $keyVaultName = Get-OutputValue -Outputs $Outputs -Name 'keyVaultName' -Required
 
     $functionAppHostname = Invoke-AzCli -Arguments @('functionapp', 'show', '--resource-group', $ResourceGroupName, '--name', $functionAppName, '--query', 'defaultHostName', '-o', 'tsv')
     $functionAppPrincipalId = Invoke-AzCli -Arguments @('functionapp', 'show', '--resource-group', $ResourceGroupName, '--name', $functionAppName, '--query', 'identity.principalId', '-o', 'tsv')
@@ -352,6 +353,7 @@ function Resolve-InfrastructureContext {
         openAiEndpoint = $openAiEndpoint
         contentSafetyEndpoint = $contentSafetyEndpoint
         appInsightsConnectionString = $appInsightsConnectionString
+        keyVaultName = $keyVaultName
     }
 }
 
@@ -386,26 +388,62 @@ function Ensure-SpaRedirectUris {
         return
     }
 
-    $existingSpaUris = Try-Invoke-AzCli -ExpectJson -Arguments @(
+    $appRegistration = Try-Invoke-AzCli -ExpectJson -Arguments @(
         'ad', 'app', 'show',
         '--id', $ClientId,
-        '--query', 'spa.redirectUris',
         '-o', 'json'
     )
 
-    $existing = @()
-    if ($null -ne $existingSpaUris) {
-        $existing = @($existingSpaUris | ForEach-Object { [string]$_ } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+    if ($null -eq $appRegistration) {
+        throw "Could not read Entra app registration '$ClientId'."
     }
 
-    $merged = @($existing + $normalizedRequired | Select-Object -Unique)
-    if ($merged.Count -eq $existing.Count -and @($merged | Where-Object { $existing -notcontains $_ }).Count -eq 0) {
+    $appObjectId = [string](Get-OptionalPropertyValue -Object $appRegistration -PropertyName 'id')
+    if ([string]::IsNullOrWhiteSpace($appObjectId)) {
+        throw "Could not resolve the object id for Entra app registration '$ClientId'."
+    }
+
+    $existingSpaUris = @(
+        @(Get-NestedOptionalPropertyValue -Object $appRegistration -Path 'spa.redirectUris') |
+        ForEach-Object { [string]$_ } |
+        Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+    )
+
+    $existingWebUris = @(
+        @(Get-NestedOptionalPropertyValue -Object $appRegistration -Path 'web.redirectUris') |
+        ForEach-Object { [string]$_ } |
+        Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+    )
+
+    $mergedSpaUris = @($existingSpaUris + $normalizedRequired | Select-Object -Unique)
+    $filteredWebUris = @($existingWebUris | Where-Object { $normalizedRequired -notcontains $_ } | Select-Object -Unique)
+
+    $spaChanged = $mergedSpaUris.Count -ne $existingSpaUris.Count -or @($mergedSpaUris | Where-Object { $existingSpaUris -notcontains $_ }).Count -gt 0
+    $webChanged = $filteredWebUris.Count -ne $existingWebUris.Count
+
+    if (-not $spaChanged -and -not $webChanged) {
         Write-Info 'SPA redirect URIs already up to date in Entra app registration.'
         return
     }
 
-    Write-Info 'Updating SPA redirect URIs in Entra app registration.'
-    Invoke-AzCli -Arguments (@('ad', 'app', 'update', '--id', $ClientId, '--spa-redirect-uris') + $merged + @('-o', 'none')) | Out-Null
+    $payload = @{
+        spa = @{
+            redirectUris = $mergedSpaUris
+        }
+        web = @{
+            redirectUris = $filteredWebUris
+        }
+    } | ConvertTo-Json -Depth 6 -Compress
+
+    Write-Info 'Updating SPA redirect URIs in Entra app registration and removing overlapping Web redirect URIs.'
+    Invoke-AzCli -Arguments @(
+        'rest',
+        '--method', 'patch',
+        '--url', "https://graph.microsoft.com/v1.0/applications/$appObjectId",
+        '--headers', 'Content-Type=application/json',
+        '--body', $payload,
+        '-o', 'none'
+    ) | Out-Null
 }
 
 function Resolve-TemplateValue {
@@ -489,6 +527,57 @@ function Try-Invoke-AzCli {
     }
 
     return ($output | Out-String).Trim()
+}
+
+function Set-AppServiceAppSettingsViaArm {
+    param(
+        [string]$SubscriptionId,
+        [string]$ResourceGroupName,
+        [string]$SiteName,
+        [hashtable]$Settings
+    )
+
+    if ([string]::IsNullOrWhiteSpace($SubscriptionId) -or
+        [string]::IsNullOrWhiteSpace($ResourceGroupName) -or
+        [string]::IsNullOrWhiteSpace($SiteName)) {
+        throw 'SubscriptionId, ResourceGroupName and SiteName are required to update app settings via ARM.'
+    }
+
+    $listUrl = "https://management.azure.com/subscriptions/$SubscriptionId/resourceGroups/$ResourceGroupName/providers/Microsoft.Web/sites/$SiteName/config/appsettings/list?api-version=2022-03-01"
+    $current = Invoke-AzCli -ExpectJson -Arguments @('rest', '--method', 'post', '--url', $listUrl, '-o', 'json')
+
+    $properties = @{}
+    $currentProperties = Get-OptionalPropertyValue -Object $current -PropertyName 'properties'
+    if ($null -ne $currentProperties) {
+        foreach ($entry in $currentProperties.PSObject.Properties) {
+            $properties[$entry.Name] = [string]$entry.Value
+        }
+    }
+
+    foreach ($entry in $Settings.GetEnumerator()) {
+        $properties[[string]$entry.Key] = [string]$entry.Value
+    }
+
+    $putUrl = "https://management.azure.com/subscriptions/$SubscriptionId/resourceGroups/$ResourceGroupName/providers/Microsoft.Web/sites/$SiteName/config/appsettings?api-version=2022-03-01"
+    $payload = @{ properties = $properties } | ConvertTo-Json -Depth 20 -Compress
+    $payloadFile = [System.IO.Path]::GetTempFileName()
+
+    try {
+        Set-Content -Path $payloadFile -Value $payload -Encoding UTF8
+        Invoke-AzCli -Arguments @(
+            'rest',
+            '--method', 'put',
+            '--url', $putUrl,
+            '--headers', 'Content-Type=application/json',
+            '--body', "@$payloadFile",
+            '-o', 'none'
+        ) | Out-Null
+    }
+    finally {
+        if (Test-Path -LiteralPath $payloadFile) {
+            Remove-Item -LiteralPath $payloadFile -Force -ErrorAction SilentlyContinue
+        }
+    }
 }
 
 function Get-OptionalPropertyValue {
@@ -645,11 +734,24 @@ function Resolve-FoundryRoleScope {
         }
 
         $foundryResourceName = $hostParts[0]
+
+        # First try scoped lookup in the deployment resource group.
         $foundryResourceId = Try-Invoke-AzCli -Arguments @(
             'cognitiveservices', 'account', 'show',
             '--resource-group', $ResourceGroupName,
             '--name', $foundryResourceName,
             '--query', 'id',
+            '-o', 'tsv'
+        )
+
+        if (-not [string]::IsNullOrWhiteSpace($foundryResourceId)) {
+            return $foundryResourceId
+        }
+
+        # Fallback to cross-resource-group lookup by name/custom subdomain across the subscription.
+        $foundryResourceId = Try-Invoke-AzCli -Arguments @(
+            'cognitiveservices', 'account', 'list',
+            '--query', "[?name=='$foundryResourceName' || properties.customSubDomainName=='$foundryResourceName'] | [0].id",
             '-o', 'tsv'
         )
 
@@ -1123,8 +1225,21 @@ function Wait-ForHttp {
         }
         catch {
             $statusCode = $null
-            if ($_.Exception.Response) {
-                $statusCode = $_.Exception.Response.StatusCode.value__
+            $exceptionResponse = Get-OptionalPropertyValue -Object $_.Exception -PropertyName 'Response'
+            if ($null -ne $exceptionResponse) {
+                $rawStatusCode = Get-NestedOptionalPropertyValue -Object $exceptionResponse -Path 'StatusCode.value__'
+                if ($null -eq $rawStatusCode) {
+                    $rawStatusCode = Get-OptionalPropertyValue -Object $exceptionResponse -PropertyName 'StatusCode'
+                }
+
+                if ($null -ne $rawStatusCode) {
+                    try {
+                        $statusCode = [int]$rawStatusCode
+                    }
+                    catch {
+                        $statusCode = $null
+                    }
+                }
             }
 
             if ($null -ne $statusCode -and $statusCode -ge $SuccessStatusFloor -and $statusCode -le $SuccessStatusCeiling) {
@@ -1184,7 +1299,7 @@ $sqlAdminPassword = Resolve-ConfigValue -Value $config.Sql.AdminPassword -Prompt
 $authClientId = Resolve-ConfigValue -Value $config.Auth.ClientId -Prompt 'Existing app registration client id' -PropertyName 'Auth.ClientId' -DefaultValue ''
 $authTenantId = Resolve-ConfigValue -Value $config.Auth.TenantId -Prompt 'Microsoft Entra tenant id' -PropertyName 'Auth.TenantId' -DefaultValue $tenantSuggestion
 $authAuthorityHost = Resolve-ConfigValue -Value $config.Auth.AuthorityHost -Prompt 'Microsoft Entra authority host' -PropertyName 'Auth.AuthorityHost' -DefaultValue 'https://login.microsoftonline.com'
-$authAutoConfigureSpaRedirectUris = if ($null -eq $config.Auth.AutoConfigureSpaRedirectUris) { $true } else { [bool]$config.Auth.AutoConfigureSpaRedirectUris }
+$authAutoConfigureSpaRedirectUris = if ($config.Auth.ContainsKey('AutoConfigureSpaRedirectUris')) { [bool]$config.Auth['AutoConfigureSpaRedirectUris'] } else { $true }
 $frontendAuthorityDefault = Build-AuthorityUrl -AuthorityHost $authAuthorityHost -TenantId $authTenantId
 $frontendAuthority = Resolve-ConfigValue -Value $config.Frontend.Authority -Prompt 'Frontend authority URL' -PropertyName 'Frontend.Authority' -DefaultValue $frontendAuthorityDefault
 
@@ -1210,9 +1325,9 @@ $foundryEnvironmentName = if ([string]::IsNullOrWhiteSpace($config.Foundry.Envir
 $foundryProjectEndpoint = $config.Foundry.ProjectEndpoint
 $foundryProjectResourceId = $config.Foundry.ProjectResourceId
 $foundryTenantId = $config.Foundry.TenantId
-$foundrySqlPlannerAgentId = $config.Foundry.SqlPlannerAgentId
-$foundryResultInterpreterAgentId = $config.Foundry.ResultInterpreterAgentId
-$foundryConciergeAgentId = $config.Foundry.ConciergeAgentId
+$foundrySqlPlannerAgentRef = if ($config.Foundry.ContainsKey('SqlPlannerAgentRef')) { [string]$config.Foundry['SqlPlannerAgentRef'] } else { '' }
+$foundryResultInterpreterAgentRef = if ($config.Foundry.ContainsKey('ResultInterpreterAgentRef')) { [string]$config.Foundry['ResultInterpreterAgentRef'] } else { '' }
+$foundryConciergeAgentRef = if ($config.Foundry.ContainsKey('ConciergeAgentRef')) { [string]$config.Foundry['ConciergeAgentRef'] } else { '' }
 $foundryRoleDefinitionName = if ([string]::IsNullOrWhiteSpace($config.Foundry.RoleDefinitionName)) { 'Azure AI User' } else { $config.Foundry.RoleDefinitionName }
 $foundryAutoConfigureFunctionIdentity = if ($null -eq $config.Foundry.AutoConfigureFunctionIdentity) { $true } else { [bool]$config.Foundry.AutoConfigureFunctionIdentity }
 $foundryAutoAssignFunctionRole = if ($null -eq $config.Foundry.AutoAssignFunctionRole) { $true } else { [bool]$config.Foundry.AutoAssignFunctionRole }
@@ -1233,7 +1348,8 @@ $databaseServiceObjective = if ([string]::IsNullOrWhiteSpace($databaseServiceObj
 $databaseImportPollIntervalSeconds = if ($databaseImportPollIntervalSeconds -lt 5) { 5 } else { $databaseImportPollIntervalSeconds }
 $databaseImportTimeoutMinutes = if ($databaseImportTimeoutMinutes -lt 1) { 1 } else { $databaseImportTimeoutMinutes }
 
-$allowedAudiences = @($config.Auth.AllowedAudiences | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+$allowedAudiencesSource = if ($config.Auth.ContainsKey('AllowedAudiences')) { $config.Auth['AllowedAudiences'] } else { @() }
+$allowedAudiences = @($allowedAudiencesSource | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
 $allowedAudiencesPromptValue = if ($allowedAudiences.Count -gt 0) { $allowedAudiences -join ',' } else { '' }
 $allowedAudiencesInput = Resolve-ConfigValue -Value $allowedAudiencesPromptValue -Prompt 'Allowed audiences (comma-separated)' -PropertyName 'Auth.AllowedAudiences' -DefaultValue $authClientId
 $allowedAudiences = @($allowedAudiencesInput.Split(',') | ForEach-Object { $_.Trim() } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
@@ -1242,6 +1358,15 @@ $config.Auth.AllowedAudiences = $allowedAudiences
 $completedPhases = [System.Collections.Generic.List[string]]::new()
 $resumeIndex = $phaseOrder.IndexOf($ResumeFrom)
 $currentPhase = $ResumeFrom
+
+if ($ResumeFrom -eq 'DeployWeb') {
+    $deployApiIndex = $phaseOrder.IndexOf('DeployApi')
+    if ($deployApiIndex -ge 0 -and $resumeIndex -gt $deployApiIndex) {
+        Write-WarnLine 'ResumeFrom=DeployWeb will also run DeployApi to keep backend functions in sync with the frontend deployment.'
+        $resumeIndex = $deployApiIndex
+        $currentPhase = 'DeployApi'
+    }
+}
 
 try {
     Write-Info 'Validating tools and Azure session'
@@ -1294,9 +1419,9 @@ try {
                 }
 
                 if (-not $foundryManageAgents) {
-                    $foundrySqlPlannerAgentId = Resolve-RequiredValue -Value $foundrySqlPlannerAgentId -Prompt 'Foundry SQL Planner agent id' -PropertyName 'Foundry.SqlPlannerAgentId'
-                    $foundryResultInterpreterAgentId = Resolve-RequiredValue -Value $foundryResultInterpreterAgentId -Prompt 'Foundry Result Interpreter agent id' -PropertyName 'Foundry.ResultInterpreterAgentId'
-                    $foundryConciergeAgentId = Resolve-RequiredValue -Value $foundryConciergeAgentId -Prompt 'Foundry Concierge agent id' -PropertyName 'Foundry.ConciergeAgentId'
+                    $foundrySqlPlannerAgentRef = Resolve-RequiredValue -Value $foundrySqlPlannerAgentRef -Prompt 'Foundry SQL Planner agent ref (name:version)' -PropertyName 'Foundry.SqlPlannerAgentRef'
+                    $foundryResultInterpreterAgentRef = Resolve-RequiredValue -Value $foundryResultInterpreterAgentRef -Prompt 'Foundry Result Interpreter agent ref (name:version)' -PropertyName 'Foundry.ResultInterpreterAgentRef'
+                    $foundryConciergeAgentRef = Resolve-RequiredValue -Value $foundryConciergeAgentRef -Prompt 'Foundry Concierge agent ref (name:version)' -PropertyName 'Foundry.ConciergeAgentRef'
                 }
 
                 $completedPhases.Add($phase)
@@ -1423,9 +1548,18 @@ try {
                     }
 
                     $foundryOutput = Get-Content $generatedFoundryOutput | ConvertFrom-Json
-                    $foundrySqlPlannerAgentId = $foundryOutput.settings.FoundryAgent__SqlPlannerAgentId
-                    $foundryResultInterpreterAgentId = $foundryOutput.settings.FoundryAgent__ResultInterpreterAgentId
-                    $foundryConciergeAgentId = $foundryOutput.settings.FoundryAgent__ConciergeAgentId
+
+                    if ($foundryOutput.settings.PSObject.Properties.Name -contains 'FoundryAgent__SqlPlannerAgentRef' -and -not [string]::IsNullOrWhiteSpace($foundryOutput.settings.FoundryAgent__SqlPlannerAgentRef)) {
+                        $foundrySqlPlannerAgentRef = $foundryOutput.settings.FoundryAgent__SqlPlannerAgentRef
+                    }
+
+                    if ($foundryOutput.settings.PSObject.Properties.Name -contains 'FoundryAgent__ResultInterpreterAgentRef' -and -not [string]::IsNullOrWhiteSpace($foundryOutput.settings.FoundryAgent__ResultInterpreterAgentRef)) {
+                        $foundryResultInterpreterAgentRef = $foundryOutput.settings.FoundryAgent__ResultInterpreterAgentRef
+                    }
+
+                    if ($foundryOutput.settings.PSObject.Properties.Name -contains 'FoundryAgent__ConciergeAgentRef' -and -not [string]::IsNullOrWhiteSpace($foundryOutput.settings.FoundryAgent__ConciergeAgentRef)) {
+                        $foundryConciergeAgentRef = $foundryOutput.settings.FoundryAgent__ConciergeAgentRef
+                    }
 
                     @{
                         projectEndpoint = $foundryProjectEndpoint
@@ -1442,9 +1576,9 @@ try {
                         tenantId = $foundryTenantId
                         settings = @{
                             FoundryAgent__ProjectEndpoint = $foundryProjectEndpoint
-                            FoundryAgent__SqlPlannerAgentId = $foundrySqlPlannerAgentId
-                            FoundryAgent__ResultInterpreterAgentId = $foundryResultInterpreterAgentId
-                            FoundryAgent__ConciergeAgentId = $foundryConciergeAgentId
+                            FoundryAgent__SqlPlannerAgentRef = $foundrySqlPlannerAgentRef
+                            FoundryAgent__ResultInterpreterAgentRef = $foundryResultInterpreterAgentRef
+                            FoundryAgent__ConciergeAgentRef = $foundryConciergeAgentRef
                         }
                         generatedAtUtc = [DateTime]::UtcNow.ToString('o')
                     } | ConvertTo-Json -Depth 10 | Set-Content -Path $foundryOutputsPath
@@ -1469,6 +1603,7 @@ try {
                 $openAiEndpoint = $context.openAiEndpoint
                 $contentSafetyEndpoint = $context.contentSafetyEndpoint
                 $appInsightsConnectionString = $context.appInsightsConnectionString
+                $keyVaultName = $context.keyVaultName
 
                 if ($foundryAutoConfigureFunctionIdentity) {
                     $functionAppPrincipalId = Ensure-FunctionManagedIdentity -ResourceGroupName $resourceGroupName -FunctionAppName $functionAppName
@@ -1477,6 +1612,8 @@ try {
                 $openAiApiKey = Invoke-AzCli -Arguments @('cognitiveservices', 'account', 'keys', 'list', '--resource-group', $resourceGroupName, '--name', $openAiName, '--query', 'key1', '-o', 'tsv')
                 $analyticsConnectionString = "Server=tcp:$sqlServerFqdn,1433;Initial Catalog=$analyticsDbName;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;User ID=$sqlAdminLogin;Password=$sqlAdminPassword;"
                 $appDbConnectionString = "Server=tcp:$sqlServerFqdn,1433;Initial Catalog=$appDbName;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;User ID=$sqlAdminLogin;Password=$sqlAdminPassword;"
+                $appDbConnectionStringKvRef = "@Microsoft.KeyVault(SecretUri=https://$keyVaultName.vault.azure.net/secrets/sql-connection-string)"
+                $appInsightsConnectionStringKvRef = "@Microsoft.KeyVault(SecretUri=https://$keyVaultName.vault.azure.net/secrets/appinsights-connection-string)"
                 $frontendTemplateTokens = @{
                     Prefix = $prefix
                     WebAppHostname = $webAppHostname
@@ -1496,12 +1633,7 @@ try {
                 }
 
                 if ($authAutoConfigureSpaRedirectUris) {
-                    try {
-                        Ensure-SpaRedirectUris -ClientId $authClientId -RequiredUris @($redirectUri, $postLogoutRedirectUri)
-                    }
-                    catch {
-                        Write-WarnLine "Could not update SPA redirect URIs in Entra app registration. Continue after validating manually. Error: $($_.Exception.Message)"
-                    }
+                    Ensure-SpaRedirectUris -ClientId $authClientId -RequiredUris @($redirectUri, $postLogoutRedirectUri)
                 }
                 else {
                     Write-WarnLine 'Automatic SPA redirect URI sync is disabled (Auth.AutoConfigureSpaRedirectUris=false).'
@@ -1512,24 +1644,30 @@ try {
                     $foundryProjectEndpoint = $resolvedFoundry.projectEndpoint
                     $foundryProjectResourceId = $resolvedFoundry.projectResourceId
                     $foundryTenantId = if ([string]::IsNullOrWhiteSpace($resolvedFoundry.tenantId)) { $foundryTenantId } else { $resolvedFoundry.tenantId }
-                    $foundrySqlPlannerAgentId = $resolvedFoundry.settings.FoundryAgent__SqlPlannerAgentId
-                    $foundryResultInterpreterAgentId = $resolvedFoundry.settings.FoundryAgent__ResultInterpreterAgentId
-                    $foundryConciergeAgentId = $resolvedFoundry.settings.FoundryAgent__ConciergeAgentId
+                    if ($resolvedFoundry.settings.PSObject.Properties.Name -contains 'FoundryAgent__SqlPlannerAgentRef') {
+                        $foundrySqlPlannerAgentRef = $resolvedFoundry.settings.FoundryAgent__SqlPlannerAgentRef
+                    }
+                    if ($resolvedFoundry.settings.PSObject.Properties.Name -contains 'FoundryAgent__ResultInterpreterAgentRef') {
+                        $foundryResultInterpreterAgentRef = $resolvedFoundry.settings.FoundryAgent__ResultInterpreterAgentRef
+                    }
+                    if ($resolvedFoundry.settings.PSObject.Properties.Name -contains 'FoundryAgent__ConciergeAgentRef') {
+                        $foundryConciergeAgentRef = $resolvedFoundry.settings.FoundryAgent__ConciergeAgentRef
+                    }
                 }
 
                 if ([string]::IsNullOrWhiteSpace($foundryProjectEndpoint) -or
-                    [string]::IsNullOrWhiteSpace($foundrySqlPlannerAgentId) -or
-                    [string]::IsNullOrWhiteSpace($foundryResultInterpreterAgentId) -or
-                    [string]::IsNullOrWhiteSpace($foundryConciergeAgentId)) {
+                    [string]::IsNullOrWhiteSpace($foundrySqlPlannerAgentRef) -or
+                    [string]::IsNullOrWhiteSpace($foundryResultInterpreterAgentRef) -or
+                    [string]::IsNullOrWhiteSpace($foundryConciergeAgentRef)) {
                     throw 'Foundry configuration is incomplete. Ensure the Foundry phase succeeded or provide manual Foundry settings in Deploy.Configuration.psd1.'
                 }
 
                 $foundrySettings = @(
                     "FoundryAgent__ProjectEndpoint=$foundryProjectEndpoint",
                     "FoundryAgent__TenantId=$foundryTenantId",
-                    "FoundryAgent__SqlPlannerAgentId=$foundrySqlPlannerAgentId",
-                    "FoundryAgent__ResultInterpreterAgentId=$foundryResultInterpreterAgentId",
-                    "FoundryAgent__ConciergeAgentId=$foundryConciergeAgentId"
+                    "FoundryAgent__SqlPlannerAgentRef=$foundrySqlPlannerAgentRef",
+                    "FoundryAgent__ResultInterpreterAgentRef=$foundryResultInterpreterAgentRef",
+                    "FoundryAgent__ConciergeAgentRef=$foundryConciergeAgentRef"
                 )
 
                 if (Test-Path $foundryOutputsPath) {
@@ -1541,7 +1679,8 @@ try {
 
                 $functionSettings = @(
                     "SqlConnectionString=$analyticsConnectionString",
-                    "AppDbConnectionString=$appDbConnectionString",
+                    "DatabaseConnectionString=$appDbConnectionStringKvRef",
+                    "AppDbConnectionString=$appDbConnectionStringKvRef",
                     "AzureOpenAI__Endpoint=$openAiEndpoint",
                     "AzureOpenAI__Deployment=$($config.AzureOpenAI.DeploymentName)",
                     "AzureOpenAI__ApiKey=$openAiApiKey",
@@ -1549,13 +1688,21 @@ try {
                     "Auth__AuthorityHost=$($config.Auth.AuthorityHost)",
                     "Auth__ClientId=$authClientId",
                     "Auth__AllowedAudiences=$($allowedAudiences -join ',')",
-                    "APPLICATIONINSIGHTS_CONNECTION_STRING=$appInsightsConnectionString",
+                    "APPLICATIONINSIGHTS_CONNECTION_STRING=$appInsightsConnectionStringKvRef",
                     'SemanticKernel__EnableDemoEndpoint=false'
                 )
 
                 $functionSettings += $foundrySettings
 
-                Invoke-AzCli -Arguments (@('functionapp', 'config', 'appsettings', 'set', '--resource-group', $resourceGroupName, '--name', $functionAppName, '--settings') + $functionSettings + @('-o', 'none')) | Out-Null
+                $functionSettingsMap = @{}
+                foreach ($setting in $functionSettings) {
+                    $parts = $setting.Split('=', 2)
+                    if ($parts.Count -eq 2) {
+                        $functionSettingsMap[$parts[0]] = $parts[1]
+                    }
+                }
+
+                Set-AppServiceAppSettingsViaArm -SubscriptionId $subscriptionId -ResourceGroupName $resourceGroupName -SiteName $functionAppName -Settings $functionSettingsMap
 
                 $webSettings = @(
                     "API_BASE_URL=https://$functionAppHostname",

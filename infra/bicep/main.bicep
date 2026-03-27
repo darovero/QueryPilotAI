@@ -132,7 +132,9 @@ module ai './modules/ai-services.bicep' = {
 }
 
 var storageConnectionString = storage.outputs.storageConnectionString
-var sqlServerFqdn = '${sql.outputs.sqlServerName}.${environment().suffixes.sqlServerHostname}'
+var sqlServerSuffix = environment().suffixes.sqlServerHostname
+var normalizedSqlServerSuffix = startsWith(sqlServerSuffix, '.') ? sqlServerSuffix : '.${sqlServerSuffix}'
+var sqlServerFqdn = '${sql.outputs.sqlServerName}${normalizedSqlServerSuffix}'
 var sqlConnectionString = 'Server=tcp:${sqlServerFqdn},1433;Initial Catalog=${sql.outputs.sqlDatabaseName};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;User ID=${sqlAdminLogin};Password=${sqlAdminPassword};'
 
 module appSecrets './modules/keyvault-secrets.bicep' = {
