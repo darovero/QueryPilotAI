@@ -63,10 +63,10 @@ export function ChatArea({
   if (!activeChatSession) return null;
 
   return (
-      <div className={`mosaic-center flex flex-col w-full min-h-0 self-stretch h-full bg-zinc-950 transition-all duration-300 ease-in-out relative overflow-hidden ${isFullView ? 'opacity-100 flex-1' : 'opacity-100 flex-1 z-10'}`}>
+      <div className={`mosaic-center flex flex-col w-full min-h-0 self-stretch h-full bg-[#000000] text-[#f4f0e6] transition-all duration-300 ease-in-out relative overflow-hidden ${isFullView ? 'opacity-100 flex-1' : 'opacity-100 flex-1 z-10'}`}>
          <div className="absolute inset-0 flex flex-col min-h-0">
 
-      <div className={`pt-6 pb-4 border-b border-zinc-800/90 bg-zinc-950/95 sticky top-0 z-30 transition-all duration-300 ${isFullView ? 'px-24' : 'px-8 md:px-16 lg:px-24'}`}>
+      <div className={`pt-6 pb-4 border-b border-[#333333] bg-[#000000]/95 sticky top-0 z-30 transition-all duration-300 ${isFullView ? 'px-24' : 'px-8 md:px-16 lg:px-24'}`}>
            <div className="flex items-center justify-between mx-auto max-w-4xl">
               <div className="flex flex-col">
                   <h2 className="text-xl font-semibold tracking-tight text-zinc-100 flex items-center gap-2">
@@ -93,7 +93,7 @@ export function ChatArea({
           <div className="max-w-4xl mx-auto py-8 space-y-8">
             {activeChatSession.messages.length === 0 ? (
                <div className="h-full flex flex-col items-center justify-center text-center space-y-6 pt-20 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                  <div className="w-full max-w-2xl rounded-3xl border border-zinc-800 bg-zinc-900/50 px-8 py-10 shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
+                  <div className="w-full max-w-2xl rounded-3xl border border-[#333333] bg-[#0a0a0a] px-8 py-10 shadow-sm">
                     <div className="mx-auto mb-6 w-20 h-20 surface-base rounded-3xl flex items-center justify-center shadow-sm">
                       <AppIcon name="chat_bubble" className="h-[40px] w-[40px] text-zinc-300" />
                     </div>
@@ -142,11 +142,11 @@ export function ChatArea({
                             {msg.role === 'user' ? 'You' : 'QueryPilot AI'}
                         </div>
                         {msg.role === 'user' ? (
-                        <div className="bg-gradient-to-br from-indigo-500 to-violet-600 text-white rounded-2xl rounded-tr-sm px-5 py-3.5 text-[15px] font-medium leading-relaxed shadow-md ring-1 ring-indigo-300/40">
+                        <div className="bg-[#a78bfa] text-black rounded-2xl rounded-tr-sm px-5 py-3.5 text-[14px] font-mono leading-relaxed shadow-sm">
                                 {msg.content}
                             </div>
                         ) : (
-                        <div className="rounded-2xl p-6 text-[14px] text-zinc-200 leading-relaxed shadow-sm space-y-5 relative overflow-hidden group border border-zinc-700/80 bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-950">
+                        <div className="rounded-2xl p-6 text-[13px] leading-relaxed mono-theme text-[#d1cdbd] shadow-sm space-y-5 relative overflow-hidden group border border-[#333333] bg-[#0a0a0a] mono-enter">
                                 {msg.status === 'Running' && (
                                     <div className="absolute top-0 left-0 w-full h-1 bg-zinc-100 overflow-hidden">
                                         <div className="h-full bg-zinc-900 rounded-full w-1/3 animate-[slide_1.5s_ease-in-out_infinite]"></div>
@@ -154,7 +154,7 @@ export function ChatArea({
                                 )}
 
                                 {msg.content && !msg.insight && !isClarificationQuestionnaire && (
-                                   <div className="text-[15px] text-zinc-100 whitespace-pre-wrap break-words leading-relaxed">
+                                   <div className="text-[14px] text-[#f4f0e6] font-mono leading-relaxed whitespace-pre-wrap break-words mono-type">
                                       {msg.content}
                                    </div>
                                 )}
@@ -279,7 +279,7 @@ export function ChatArea({
                                                <AppIcon name="chevron_right" className="h-[16px] w-[16px] transition-transform group-open/code:rotate-90" />
                                                View Generated SQL
                                             </summary>
-                                            <div className="mt-3 p-4 bg-zinc-900 text-zinc-300 rounded-xl font-mono text-[13px] overflow-auto whitespace-pre-wrap shadow-inner leading-relaxed">
+                                             <div className="mt-3 p-4 bg-[#111111] text-[#f4f0e6] rounded-xl font-mono text-[13px] overflow-auto whitespace-pre-wrap shadow-inner leading-relaxed">
                                                {msg.sql}
                                             </div>
                                          </details>
@@ -340,8 +340,8 @@ export function ChatArea({
           </div>
         </div>
 
-            <div className={`p-6 bg-zinc-950 border-t border-zinc-800 sticky bottom-0 z-30 transition-all duration-300 ${isFullView ? 'px-24' : 'px-8 md:px-16 lg:px-24'}`}>
-               <div className="max-w-4xl mx-auto relative group rounded-2xl border border-zinc-800 bg-zinc-900/65 p-2">
+            <div className={`p-6 bg-[#000000] border-t border-[#333333] sticky bottom-0 z-30 transition-all duration-300 ${isFullView ? 'px-24' : 'px-8 md:px-16 lg:px-24'}`}>
+               <div className="max-w-4xl mx-auto relative group rounded-2xl border border-[#333333] bg-[#0a0a0a] p-2">
               <textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
@@ -360,7 +360,7 @@ export function ChatArea({
               <button 
                  onClick={handleSubmit} 
                  disabled={!input.trim() || isTyping}
-                 className="absolute right-2 top-2 p-2.5 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white disabled:bg-zinc-100 disabled:text-zinc-400 transition-all active:scale-95 disabled:active:scale-100 shadow-sm flex items-center justify-center ring-1 ring-indigo-300/30">
+                 className="absolute right-2 top-2 p-2.5 rounded-xl bg-[#a78bfa] text-black disabled:bg-[#111111] disabled:text-[#8a8a8a] transition-all active:scale-95 disabled:active:scale-100 shadow-sm flex items-center justify-center">
                 {isTyping ? (
                    <div className="w-[18px] h-[18px] border-2 border-zinc-300 border-t-zinc-600 rounded-full animate-spin"></div>
                 ) : (
