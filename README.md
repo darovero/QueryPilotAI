@@ -10,7 +10,7 @@
 
   <p>
     <a href="docs/InsightForge_AI_Governed_Fraud_Analytics%20final.pdf">
-      <img src="https://img.shields.io/badge/📄_VIEW_PITCH_DOCUMENT-00F5B8?style=for-the-badge&logoColor=050608&labelColor=1E222A&color=00F5B8" alt="PDF Pitch">
+      <img src="https://img.shields.io/badge/VIEW_BUSINESS_CASE_&_PITCH-000000?style=for-the-badge&logo=googledocs&logoColor=white" alt="View Business Case">
     </a>
   </p>
 
@@ -22,9 +22,11 @@
   </p>
 
   <p>
-    <img src="https://img.shields.io/badge/Status-Hackathon_Ready-00F5B8?style=flat-square&color=00F5B8&labelColor=1E222A&logoColor=050608" alt="Status">
-    <img src="https://img.shields.io/badge/Core_Model-N2_Forge_Large-9D72FF?style=flat-square&color=9D72FF&labelColor=1E222A" alt="Core Model">
-    <img src="https://img.shields.io/badge/Encryption-Enabled-1E222A?style=flat-square&color=0C0E12&labelColor=1E222A" alt="Encryption">
+    <img src="https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=next.js&logoColor=white" alt="Next.js">
+    <img src="https://img.shields.io/badge/.NET_8-512BD4?style=for-the-badge&logo=.net&logoColor=white" alt=".NET">
+    <img src="https://img.shields.io/badge/Azure_SQL-0089D6?style=for-the-badge&logo=microsoft-azure&logoColor=white" alt="Azure SQL">
+    <img src="https://img.shields.io/badge/Azure_OpenAI-0078D4?style=for-the-badge&logo=openai&logoColor=white" alt="Azure OpenAI">
+    <img src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript">
   </p>
 
   <p>
