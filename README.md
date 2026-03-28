@@ -59,6 +59,20 @@ By enforcing strict governance, safe AI execution, and transparent auditability,
 - 📊 **Executive Translation:** We don't just return rows and columns. Our secondary AI agents interpret the tabular results and draft an executive summary explaining the findings in the context of fraud risk.
 - 👁️ **Total Observability:** Every intent, generated query, execution time, and AI decision is logged securely for compliance parsing.
 
+## 📸 Platform Experience
+
+### 1. Data Source Hub
+<img src="frontend/assets/PITCH/screen%201%20DataSourse.png" alt="Data Source Management" width="100%" style="border-radius: 8px; border: 1px solid #1E222A;" />
+
+> **Insight:** The central command interface where analysts manage their active database connections. The unified workspace allows users to easily toggle between different data environments (e.g., specific Azure SQL nodes or Postgres servers) to interrogate data without ever writing a connection string.
+
+### 2. Seamless Secure Integrations
+<img src="frontend/assets/PITCH/screen%202%20add%20nwe%20integration.png" alt="Add New Integration" width="100%" style="border-radius: 8px; border: 1px solid #1E222A;" />
+
+> **Insight:** Adding a new enterprise database is frictionless. Through the *"Add New Integration"* flow, users securely input host, database, and credential details. In the background, QueryPilot orchestrates the connection validation via the .NET API and securely proxies the credentials to Azure Key Vault, maintaining absolute Zero-Trust compliance.
+
+<br />
+
 ## ⚙️ Architecture & Tech Stack (Powered by Azure)
 
 We built InsightForge AI to be robust, scalable, and inherently secure from day one.
