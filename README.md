@@ -59,6 +59,16 @@ By enforcing strict governance, safe AI execution, and transparent auditability,
 - 📊 **Executive Translation:** We don't just return rows and columns. Our secondary AI agents interpret the tabular results and draft an executive summary explaining the findings in the context of fraud risk.
 - 👁️ **Total Observability:** Every intent, generated query, execution time, and AI decision is logged securely for compliance parsing.
 
+## ⚙️ Enterprise Architecture Blueprint
+
+<div align="center">
+  <img src="docs/architecture/diagrams/insightforge_ai_enterprise_architecture_diagram_v2.png" alt="InsightForge Enterprise Architecture Diagram" width="100%" style="border-radius: 8px; margin: 20px 0;" />
+</div>
+
+> **Diagram Flow:** The architecture illustrates the end-to-end integration of our Tech-Brutalist Next.js UI, the Azure API Gateway, the Durable Functions State Orchestrator handling approvals, and the multi-agent AI framework (Query Planner, Data Executor, Executive Explainer).
+
+---
+
 ## 📸 Platform Experience
 
 ### 1. Data Source Hub
@@ -71,15 +81,14 @@ By enforcing strict governance, safe AI execution, and transparent auditability,
 
 > **Insight:** Adding a new enterprise database is frictionless. Through the *"Add New Integration"* flow, users securely input host, database, and credential details. In the background, QueryPilot orchestrates the connection validation via the .NET API and securely proxies the credentials to Azure Key Vault, maintaining absolute Zero-Trust compliance.
 
-<br />
+### 3. Enterprise Database Configuration
+<img src="frontend/assets/PITCH/Screen%203%20Azure%20sql%20Connect.png" alt="Azure SQL Configuration" width="100%" style="border-radius: 8px; border: 1px solid #1E222A;" />
 
+> **Insight:** While Azure SQL is our flagship integration showcasing high-security standards, the architecture is highly extensible by design. We support configuring multiple connection modalities depending on the enterprise's topology. Additional configurations such as PostgreSQL, MySQL, and other primary databases are easily integrated via the same secure gateway protocol.
+
+<br />
 ## ⚙️ Architecture & Tech Stack (Powered by Azure)
 
-<div align="center">
-  <img src="docs/architecture/diagrams/insightforge_ai_enterprise_architecture_diagram_v2.png" alt="InsightForge Enterprise Architecture Diagram" width="100%" style="border-radius: 8px; margin: 20px 0;" />
-</div>
-
-> **Diagram Flow:** The architecture illustrates the end-to-end integration of our Tech-Brutalist Next.js UI, the Azure API Gateway, the Durable Functions State Orchestrator handling approvals, and the multi-agent AI framework (Query Planner, Data Executor, Executive Explainer).
 
 We built InsightForge AI to be robust, scalable, and inherently secure from day one.
 
