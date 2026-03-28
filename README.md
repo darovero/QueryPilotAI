@@ -86,7 +86,33 @@ By enforcing strict governance, safe AI execution, and transparent auditability,
 
 > **Insight:** While Azure SQL is our flagship integration showcasing high-security standards, the architecture is highly extensible by design. We support configuring multiple connection modalities depending on the enterprise's topology. Additional configurations such as PostgreSQL, MySQL, and other primary databases are easily integrated via the same secure gateway protocol.
 
+### 4. Active Connection State
+<img src="frontend/assets/PITCH/Screen%204%20Azure%20sql%20Connect%20on.png" alt="Connected DB Status" width="100%" style="border-radius: 8px; border: 1px solid #1E222A;" />
+
+> **Insight:** Once validated via our secure API pathway, the data source shifts to an active, connected state providing live feedback. Analysts are immediately ready to query schemas securely, accelerating time-to-insight without technical friction.
+
+### 5. Conversational Analytics Interface
+<img src="frontend/assets/PITCH/Screen%205%20talk%20whit%20database%20agent.png" alt="Conversational AI Database Agent" width="100%" style="border-radius: 8px; border: 1px solid #1E222A;" />
+
+> **Insight:** Once connected, analysts can interrogate the database using natural language. The intelligent Engine securely translates questions into highly optimized SQL, executes them against the database, and returns both the raw data and an executive-level summary of the findings—completely abstracting the technical barrier.
+
+### 6. Transparent Audit & Execution Logs
+<img src="frontend/assets/PITCH/Screen%206%20this%20terminal%20informatión.png" alt="Terminal Execution Logs" width="100%" style="border-radius: 8px; border: 1px solid #1E222A;" />
+
+> **Insight:** Trust is paramount in enterprise fraud analytics. Every natural language query is accompanied by a transparent "terminal" view showing exactly what SQL was generated, what backend logic executed, and exactly how long the operations took. This deterministic observability is crucial for compliance and IT auditability.
+
+### 7. Natural Language Interaction
+<img src="frontend/assets/PITCH/screen%207%20Chat%20ijteracti%C3%B3n.png" alt="NLP Chat Interface" width="100%" style="border-radius: 8px; border: 1px solid #1E222A;" />
+
+> **Insight:** The unified chat interface empowering analysts to ask plain-English (or Spanish) questions like *"Show me the accounts with the highest transaction volumes"*. The minimalist, Tech-Brutalist design removes cognitive overload, letting the user focus purely on the objective while the multi-agent system runs securely in the background.
+
+### 8. Executive Insight Generation
+<img src="frontend/assets/PITCH/screen%208%20output%20chat.png" alt="Executive Summary Output" width="100%" style="border-radius: 8px; border: 1px solid #1E222A;" />
+
+> **Insight:** Going beyond traditional outputs. Instead of merely returning a sterile table of rows and columns, InsightForge AI provides a rich, executive-style markdown summary interpreting the findings. This instantly contextualizes the data, eliminating hours of manual reporting for Fraud Analysts.
+
 <br />
+
 ## ⚙️ Architecture & Tech Stack (Powered by Azure)
 
 
