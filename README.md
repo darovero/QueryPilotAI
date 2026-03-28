@@ -1,156 +1,161 @@
-# InsightForge AI
+<div align="center">
+  <img src="frontend/assets/PITCH/01_primary_lockup_dark.png" alt="QueryPilotAI Banner" />
 
-Agente de ingeniería analítica orientado a fraude que transforma preguntas en lenguaje natural en planes analíticos estructurados, genera SQL validado, ejecuta consultas seguras sobre Azure SQL y entrega explicaciones ejecutivas con trazabilidad, aprobación humana y observabilidad.
+  <br />
+  <br />
 
-## Objetivos
-- Traducir preguntas de negocio a intención analítica estructurada.
-- Generar SQL gobernado y seguro.
-- Aplicar reglas de validación, transparencia y aprobación.
-- Explicar resultados en lenguaje empresarial.
-- Demostrar IA responsable, amplitud de servicios Azure y reproducibilidad end-to-end.
+  <h3>Fraud-Oriented Analytical Engineering Agent</h3>
 
-## Stack objetivo
-- Frontend: Next.js / React / TypeScript
-- Backend: Azure Functions Isolated Worker (.NET 8)
-- Orquestación: Durable Functions
-- IA: Azure OpenAI
-- Seguridad: Azure AI Content Safety
-- Datos: Azure SQL Database
-- Observabilidad: Application Insights + Azure Monitor
-- Secretos: Azure Key Vault
-- Identidad: Microsoft Entra ID
+  <p>
+    <a href="#quick-start"><b>Quick Start</b></a> •
+    <a href="#configuration"><b>Configuration</b></a> •
+    <a href="#operations-guide"><b>Operations Guide</b></a>
+  </p>
 
-## Estructura
-- `docs/`: arquitectura, decisiones, roadmap y demo.
-- `frontend/`: UI moderna y paneles de transparencia.
-- `backend/`: Functions, orquestación, dominio y reglas.
-- `database/`: esquema SQL, seguridad, vistas y semillas.
-- `infra/`: Bicep y scripts de despliegue.
-- `test-assets/`: prompts de prueba y datasets para validación.
+  <p>
+    <a href="https://github.com/darovero/QueryPilotAI/issues"><img src="https://img.shields.io/github/issues/darovero/QueryPilotAI?color=yellow&style=flat-square" alt="Issues" /></a>
+    <a href="https://github.com/darovero/QueryPilotAI/pulls"><img src="https://img.shields.io/github/issues-pr/darovero/QueryPilotAI?color=orange&style=flat-square" alt="Pull Requests" /></a>
+    <img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="License" />
+  </p>
 
-## Flujos demo sugeridos
-1. Consulta segura y autoejecución.
-2. Consulta sensible que requiere aprobación.
-3. Prompt abusivo o consulta insegura bloqueada.
+  <p>
+    ⭐ <b>Like what we're doing? Give us a star!</b> ⭐
+  </p>
+</div>
 
-## Puesta en marcha rápida
-1. Provisionar Azure con `infra/deploy.ps1` o `infra/deploy.sh`.
-2. Ejecutar scripts SQL en `database/`.
-3. Configurar las variables de entorno para cada entorno (Backend y Frontend) basándose en las plantillas a continuación.
-4. Levantar backend y frontend en local.
-5. Probar prompts desde `test-assets/`.
+---
 
-## Configuración y Variables de Entorno
+**QueryPilotAI (InsightForge AI)** is an end-to-end analytical engineering platform focused on fraud detection. It transforms natural language questions into structured analytical plans, generates validated and governed SQL, executes secure queries over Azure SQL, and delivers executive explanations with full traceability, human approval workflows, and deep observability.
 
-Para ejecutar este proyecto, las credenciales reales se encuentran en el archivo `docs/CLAVES_Y_CREDENCIALES.md` (Solo para uso interno del equipo durante el hackathon). **IMPORTANTE: Nunca subas claves API reales o secretos al repositorio.**
+## 🎯 Objectives
+- **Translate** business questions into structured analytical intent.
+- **Generate** governed and secure SQL queries.
+- **Enforce** validation rules, transparency, and human-in-the-loop approvals.
+- **Explain** results in clear, enterprise-ready language.
+- **Demonstrate** responsible AI, broad integration of Azure services, and reproducibility.
+
+## 🛠 Tech Stack
+- **Frontend:** Next.js / React / TypeScript
+- **Backend:** Azure Functions Isolated Worker (.NET 8)
+- **Orchestration:** Durable Functions
+- **AI Engine:** Azure OpenAI
+- **Security:** Azure AI Content Safety
+- **Data Layer:** Azure SQL Database
+- **Observability:** Application Insights + Azure Monitor
+- **Secrets:** Azure Key Vault
+- **Identity:** Microsoft Entra ID
+
+## 📂 Project Structure
+- `docs/`: Architecture, technical decisions, roadmap, and demo context.
+- `frontend/`: Modern UI, chat interface, and transparency dashboards.
+- `backend/`: Azure Functions, workflow orchestration, domain logic, and rules.
+- `database/`: SQL schema, security, views, and seed data.
+- `infra/`: IaC (Bicep) and deployment scripts.
+- `test-assets/`: Testing prompts and validation datasets.
+
+## 💡 Suggested Demo Flows
+1. **Secure Query & Auto-Execution:** Normal analytical queries that run safely.
+2. **Sensitive Query:** Triggers a manual human approval flow before execution.
+3. **Abusive Prompt or Unsafe Query:** Immediately blocked by safety classifiers.
+
+<br />
+
+## 🚀 Quick Start <a id="quick-start"></a>
+
+1. **Provision Azure Resources** by running `infra/deploy.ps1` or `infra/deploy.sh`.
+2. **Initialize Database** by executing the SQL scripts within the `database/` directory.
+3. **Configure Environment Variables** for your Backend and Frontend (see details below).
+4. **Start Services** locally.
+5. **Run Tests** using the sample queries in `test-assets/`.
+
+<br />
+
+## ⚙️ Configuration & Environment Variables <a id="configuration"></a>
+
+*For this project, actual credentials can be found in `docs/CLAVES_Y_CREDENCIALES.md` (internal hackathon use only).* 
+> ⚠️ **IMPORTANT:** Never upload real API keys or embedded secrets to the source code repository.
 
 ### Backend (`backend/src/Functions.Api/local.settings.json`)
 
-Crea o actualiza el archivo `local.settings.json` en la carpeta de la API con la siguiente estructura y reemplaza los valores por los que se indican en el documento de credenciales:
+Create or update your `local.settings.json` in the API folder with the following structure, replacing `<VALUES>` with actual credentials from the secure document:
 
 ```json
 {
   "IsEncrypted": false,
   "Values": {
-    "AzureWebJobsStorage": "<TU_CADENA_DE_CONEXION_STORAGE_ACCOUNT>",
+    "AzureWebJobsStorage": "<YOUR_STORAGE_ACCOUNT_CONNECTION_STRING>",
     "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
-    "SqlConnectionString": "Server=tcp:<TU_SERVIDOR>.database.windows.net,1433;Initial Catalog=<TU_DB_DE_USUARIO>;Encrypt=True;TrustServerCertificate=True;Authentication=Active Directory Default;",
-    "AppDbConnectionString": "Server=tcp:<TU_SERVIDOR>.database.windows.net,1433;Initial Catalog=<TU_DB_APP>;Encrypt=True;TrustServerCertificate=True;Authentication=Active Directory Default;",
-    "AzureOpenAI__Endpoint": "https://<TU_RECURSO_OPENAI>.openai.azure.com/openai/v1",
+    "SqlConnectionString": "Server=tcp:<YOUR_SERVER>.database.windows.net,1433;Initial Catalog=<USER_DB>;Encrypt=True;TrustServerCertificate=True;Authentication=Active Directory Default;",
+    "AppDbConnectionString": "Server=tcp:<YOUR_SERVER>.database.windows.net,1433;Initial Catalog=<APP_DB>;Encrypt=True;TrustServerCertificate=True;Authentication=Active Directory Default;",
+    "AzureOpenAI__Endpoint": "https://<YOUR_OPENAI_RESOURCE>.openai.azure.com/openai/v1",
     "AzureOpenAI__Deployment": "gpt-4o-mini",
-    "AzureOpenAI__ApiKey": "<TU_API_KEY_OPENAI>",
-    "ContentSafety__Endpoint": "https://<TU_RECURSO_SAFETY>.api.cognitive.microsoft.com/",
-    "FoundryAgent__ProjectEndpoint": "https://<TU_RECURSO_FOUNDRY>.services.ai.azure.com/api/projects/<TU_PROYECTO>",
-    "FoundryAgent__SqlPlannerAgentId": "<ID_AGENTE_SQL_PLANNER_ASST_...>",
-    "FoundryAgent__ResultInterpreterAgentId": "<ID_AGENTE_RESULT_INTERPRETER_ASST_...>",
-    "FoundryAgent__ConciergeAgentId": "<ID_AGENTE_CONCIERGE_ASST_...>"
+    "AzureOpenAI__ApiKey": "<YOUR_OPENAI_API_KEY>",
+    "ContentSafety__Endpoint": "https://<YOUR_SAFETY_RESOURCE>.api.cognitive.microsoft.com/",
+    "FoundryAgent__ProjectEndpoint": "https://<YOUR_FOUNDRY_RESOURCE>.services.ai.azure.com/api/projects/<YOUR_PROJECT>",
+    "FoundryAgent__SqlPlannerAgentId": "<SQL_PLANNER_ASST_ID>",
+    "FoundryAgent__ResultInterpreterAgentId": "<RESULT_INTERPRETER_ASST_ID>",
+    "FoundryAgent__ConciergeAgentId": "<CONCIERGE_ASST_ID>"
   }
 }
 ```
 
 ### Frontend (`frontend/.env.local`)
 
-Crea un archivo `.env.local` en la carpeta `frontend/` usando las credenciales maestras:
+Create a `.env.local` file in the `frontend/` directory with your Entra ID details:
 
 ```env
-NEXT_PUBLIC_AZURE_AD_CLIENT_ID=<TU_CLIENT_ID_DE_AZURE_AD>
+NEXT_PUBLIC_AZURE_AD_CLIENT_ID=<YOUR_AZURE_AD_CLIENT_ID>
 NEXT_PUBLIC_AZURE_AD_TENANT_ID=common
 NEXT_PUBLIC_AZURE_AD_AUTHORITY=https://login.microsoftonline.com/common
 NEXT_PUBLIC_REDIRECT_URI=http://localhost:3000/
 NEXT_PUBLIC_POST_LOGOUT_REDIRECT_URI=http://localhost:3000/
 ```
 
-### Requisito de App Registration
+### Entra ID App Registration Requirements
 
-Antes de intentar iniciar sesion, configura en el App Registration de Microsoft Entra ID el tipo de plataforma `Single-page application` o `Web` segun tu estrategia de autenticacion y agrega las URIs de redireccion que realmente va a usar el frontend.
+Before authenticating, configure your App Registration in Microsoft Entra ID. Set the platform type to `Single-page application` or `Web` based on your identity strategy, and ensure you add the exact Redirect URIs used by the frontend:
 
-Valores minimos recomendados para este proyecto:
+- **Local:** `http://localhost:3000/`
+- **Azure App Service:** `https://ifdev2-web.azurewebsites.net`
 
-- Local: `http://localhost:3000/`
-- Azure App Service: `https://ifdev2-web.azurewebsites.net`
+> *Note: If deploying with a custom hostname, ensure it's registered exactly as an authorized Redirect URI to avoid the `AADSTS50011` error.*
 
-Si despliegas con otro hostname, agrega tambien esa URL exacta como Redirect URI y, si aplica, como Post Logout Redirect URI. Si la URI enviada por el frontend no coincide exactamente con la registrada en Entra ID, aparecera el error `AADSTS50011`.
+For Azure deployments, the frontend authority URL is composed of: `https://login.microsoftonline.com/<tenant-id>`
 
-Para despliegues en Azure, la authority del frontend debe componerse con:
+<br />
 
-- `Auth.AuthorityHost`
-- `Auth.TenantId`
+## 💻 Operations Guide (PowerShell) <a id="operations-guide"></a>
 
-Ejemplo:
+Quick command reference optimized for **PowerShell** to help manage your local development lifecycle.
 
-- `https://login.microsoftonline.com/<tenant-id>`
-
-## Estado
-Este repositorio contiene la arquitectura, seguridad, base de datos, infraestructura, agentes Foundry AI y lineamientos de desarrollo para comenzar en VS Code.
-
----
-
-# QueryPilot AI — Guía de Operaciones (PowerShell)
-
-Referencia rápida de comandos para copiar y pegar en **PowerShell**.
-
----
-
-## 1. Matar Todos los Procesos
-
+### 1. Kill All Running Processes
+Kill Node.js (frontend) and .NET/func (backend) streams with a single command:
 ```powershell
-# Matar Node (frontend), dotnet y func (backend) de un solo golpe
 taskkill /F /IM node.exe /T 2>$null; taskkill /F /IM dotnet.exe /T 2>$null; taskkill /F /IM func.exe /T 2>$null
 ```
 
----
+### 2. Start Project Services
 
-## 2. Iniciar el Proyecto
-
-### Backend (Azure Functions — puerto 7071)
-
+**Backend (Azure Functions - Port 7071):**
 ```powershell
 cd C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Functions.Api
 func start
 ```
 
-### Frontend (Next.js — puerto 3000)
-
-Abrir **otra terminal** PowerShell:
-
+**Frontend (Next.js - Port 3000):** *(Run in a separate PowerShell window)*
 ```powershell
 cd C:\Users\Jessy\Documents\GitHub\QueryPilotAI\frontend
 npm run dev
 ```
 
-### Verificar que ambos estén corriendo
-
+**Verify Processes Are Running:**
 ```powershell
-# Debe mostrar el puerto 7071 (backend) y 3000 (frontend)
 Get-NetTCPConnection -LocalPort 7071,3000 -ErrorAction SilentlyContinue | Select LocalPort, State
 ```
 
----
+### 3. Test Azure SQL Connection (API: `/api/test-connection`)
 
-## 3. Probar Conexión a Azure SQL (API `test-connection`)
-
-### Directo al Backend (puerto 7071)
-
+**Directly via Backend:**
 ```powershell
 $body = @{
     type     = "Azure SQL"
@@ -163,37 +168,30 @@ $body = @{
 Invoke-RestMethod -Method Post -Uri "http://localhost:7071/api/test-connection" -Body $body -ContentType "application/json"
 ```
 
-### A través del Frontend (puerto 3000, como lo hace la UI)
-
+**Via Frontend (Proxy configuration):**
 ```powershell
 Invoke-RestMethod -Method Post -Uri "http://localhost:3000/api/test-connection" -Body $body -ContentType "application/json"
 ```
 
-> Si el backend **no** está corriendo, la llamada al frontend dará **"fetch failed"**.
-
----
-
-## 4. Probar Conexión Directa a la Base de Datos (sin APIs)
+### 4. Direct Database Connection Test (No API)
 
 ```powershell
 $connString = "Server=tcp:insightforge-sql3-86253.database.windows.net,1433;Initial Catalog=insightforge-sqldb;Persist Security Info=False;User ID=sqladminif;Password=QueryPilot@2026!;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
 $conn = New-Object System.Data.SqlClient.SqlConnection($connString)
 try {
     $conn.Open()
-    Write-Host "✅ Conexión directa exitosa"
+    Write-Host "✅ Direct connection successful"
     $conn.Close()
 } catch {
-    Write-Host "❌ Falló: $($_.Exception.Message)"
+    Write-Host "❌ Failed: $($_.Exception.Message)"
 }
 ```
 
----
-
-## 5. Enviar una Consulta NLP (API `query`)
+### 5. Send an NLP Query (API: `/api/query`)
 
 ```powershell
 $query = @{
-    question      = "Muéstrame las 10 transacciones más recientes"
+    question      = "Show me the top 10 most recent transactions"
     userId        = "user@agent.com"
     role          = "FraudAnalyst"
     correlationId = "test-$(Get-Date -Format 'yyyyMMddHHmmss')"
@@ -210,81 +208,41 @@ $query = @{
 $result = Invoke-RestMethod -Method Post -Uri "http://localhost:7071/api/query" -Body $query -ContentType "application/json"
 $result | ConvertTo-Json -Depth 5
 ```
+> Make a note of the returned `instanceId` to query the orchestration workflow status.
 
-> Guarda el `instanceId` que devuelve para consultar el estado.
-
----
-
-## 6. Consultar Estado de una Orquestación
+### 6. Query Orchestration Status
 
 ```powershell
-# Reemplaza <INSTANCE_ID> con el valor real
+# Replace <INSTANCE_ID> with the actual ID returned from your query
 Invoke-RestMethod -Uri "http://localhost:7071/api/orchestrations/<INSTANCE_ID>" | ConvertTo-Json -Depth 5
 ```
 
----
+### 7. Approve / Reject a Pending Query Workflow
 
-## 7. Aprobar / Rechazar una Consulta Pendiente
-
+**Approve:**
 ```powershell
-# Aprobar
-$approval = @{
-    decision       = "Approved"
-    approverUserId = "user@agent.com"
-    comments       = ""
-} | ConvertTo-Json
-
+$approval = @{ decision = "Approved"; approverUserId = "user@agent.com"; comments = "" } | ConvertTo-Json
 Invoke-RestMethod -Method Post -Uri "http://localhost:7071/api/orchestrations/<INSTANCE_ID>/approve" -Body $approval -ContentType "application/json"
 ```
 
+**Reject:**
 ```powershell
-# Rechazar
-$rejection = @{
-    decision       = "Rejected"
-    approverUserId = "user@agent.com"
-    comments       = "Consulta no autorizada"
-} | ConvertTo-Json
-
+$rejection = @{ decision = "Rejected"; approverUserId = "user@agent.com"; comments = "Unauthorized access attempt" } | ConvertTo-Json
 Invoke-RestMethod -Method Post -Uri "http://localhost:7071/api/orchestrations/<INSTANCE_ID>/approve" -Body $rejection -ContentType "application/json"
 ```
 
----
-
-## 8. Ver Historial de Auditoría
+### 8. View Audit History
 
 ```powershell
 Invoke-RestMethod -Uri "http://localhost:7071/api/history" | ConvertTo-Json -Depth 5
 ```
 
----
+### 9. Endpoint Summary Maps
 
-## 9. Resumen de Endpoints
-
-| Endpoint | Método | Puerto Backend | Puerto Frontend (proxy) |
+| Endpoint | Method | Backend Port | Frontend Proxy Port |
 |---|---|---|---|
 | `/api/test-connection` | `POST` | `7071` | `3000` |
 | `/api/query` | `POST` | `7071` | `3000` |
-| `/api/orchestrations/{id}` | `GET` | `7071` | `3000` (como `/api/query/{id}`) |
-| `/api/orchestrations/{id}/approve` | `POST` | `7071` | `3000` (como `/api/query/{id}/approve`) |
+| `/api/orchestrations/{id}` | `GET` | `7071` | `3000` *(as `/api/query/{id}`)* |
+| `/api/orchestrations/{id}/approve` | `POST` | `7071` | `3000` *(as `/api/query/{id}/approve`)* |
 | `/api/history` | `GET` | `7071` | `3000` |
-
----
-
-## 10. Workflow Rápido Completo
-
-```powershell
-# 1. Matar todo
-taskkill /F /IM node.exe /T 2>$null; taskkill /F /IM dotnet.exe /T 2>$null; taskkill /F /IM func.exe /T 2>$null
-
-# 2. Terminal 1 — Backend
-cd C:\Users\Jessy\Documents\GitHub\QueryPilotAI\backend\src\Functions.Api
-func start
-
-# 3. Terminal 2 — Frontend
-cd C:\Users\Jessy\Documents\GitHub\QueryPilotAI\frontend
-npm run dev
-
-# 4. Terminal 3 — Probar conexión
-$body = @{ type="Azure SQL"; host="tcp:insightforge-sql3-86253.database.windows.net"; database="insightforge-sqldb"; username="sqladminif"; password="QueryPilot@2026!" } | ConvertTo-Json
-Invoke-RestMethod -Method Post -Uri "http://localhost:7071/api/test-connection" -Body $body -ContentType "application/json"
-```
