@@ -134,6 +134,17 @@ We built InsightForge AI to be robust, scalable, and inherently secure from day 
 
 ---
 
+## 🏆 Hackathon Evaluation Criteria
+
+| Criteria | Weight | Description |
+| :--- | :---: | :--- |
+| **Performance** | 25% | How optimal, efficient, and functional the solution is natively. |
+| **Innovation** | 25% | How novel the proposal is compared to current market text-to-SQL solutions. |
+| **Azure Services Usage** | 25% | Deep integration evidenced through our architecture and utilized cloud components (OpenAI, SQL, Durable Functions, Monitor). |
+| **Responsible AI** | 25% | Strict compliance with the 6 core principles: Fairness, Reliability & Safety, Privacy & Security, Inclusiveness, Transparency, and Accountability via our Human-in-the-loop and Content Safety implementations. |
+
+---
+
 ## 🚀 What's Next (Roadmap)
 InsightForge AI is built as a foundation for enterprise analytics. Our immediate roadmap includes:
 - **Expanded BI Integrations:** Seamless export layer connecting directly to PowerBI and Tableau.
@@ -175,10 +186,14 @@ Invoke-RestMethod -Method Post -Uri "http://localhost:3000/api/test-connection" 
 <br />
 
 <div align="center">
-  <h2>👥 Meet Team Darovero</h2>
-  <p>We are a team of data engineers, AI specialists, and full-stack developers passionate about securing enterprise intelligence.</p>
-
-  <b>Built with ❤️ for the Hackathon</b><br/><br/>
+  <h3>👥 Authors</h3>
+  <p>
+    <b>Team Microsoft Hackathon 2026</b><br/>
+    Project: Cognitive Multi-agent Orchestrator<br/>
+    Date: March 27, 2026
+  </p>
+  
+  <i>Developed with passion, ethics, and future vision 💙</i><br/><br/>
   
   <a href="https://github.com/darovero/QueryPilotAI">Return to top</a>
 </div>
