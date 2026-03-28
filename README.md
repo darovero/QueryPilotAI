@@ -9,6 +9,12 @@
   </p>
 
   <p>
+    <a href="docs/InsightForge_AI_Governed_Fraud_Analytics%20final.pdf">
+      <img src="https://img.shields.io/badge/📄_VIEW_PITCH_DOCUMENT-00F5B8?style=for-the-badge&logoColor=050608&labelColor=1E222A&color=00F5B8" alt="PDF Pitch">
+    </a>
+  </p>
+
+  <p>
     <a href="#-the-solution"><b>Platform Overview</b></a> |
     <a href="#-key-features"><b>Key Features</b></a> |
     <a href="#-architecture--tech-stack"><b>Architecture</b></a> |
