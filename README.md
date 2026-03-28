@@ -12,6 +12,9 @@
     <a href="docs/InsightForge_AI_Governed_Fraud_Analytics%20final.pdf">
       <img src="https://img.shields.io/badge/VIEW_BUSINESS_CASE_&_PITCH-000000?style=for-the-badge&logo=googledocs&logoColor=white" alt="View Business Case">
     </a>
+    <a href="#-watch-demo">
+      <img src="https://img.shields.io/badge/WATCH_2--MIN_DEMO-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="Watch Demo Video">
+    </a>
   </p>
 
   <p>
@@ -58,6 +61,11 @@ By enforcing strict governance, safe AI execution, and transparent auditability,
 - 🔒 **Responsible AI Security:** Integrated seamlessly with **Azure AI Content Safety**, instantly blocking prompt injections, abusive language, or unauthorized data exfiltration attempts.
 - 📊 **Executive Translation:** We don't just return rows and columns. Our secondary AI agents interpret the tabular results and draft an executive summary explaining the findings in the context of fraud risk.
 - 👁️ **Total Observability:** Every intent, generated query, execution time, and AI decision is logged securely for compliance parsing.
+
+### 📈 Business Impact (Expected ROI)
+* ⏳ **Time-to-Insight:** Drastically reduced from 3-5 days (waiting on Data Engineering bottlenecks) to under **30 segundos**.
+* 💰 **Operational Savings:** Eliminates the SQL technical bottleneck, saving organizations hundreds of expensive Data Engineering hours monthly.
+* 🛡️ **Risk Mitigation:** Immediate, on-demand insights enable faster reactions to emerging fraud patterns, directly reducing financial exposure.
 
 ## ⚙️ Enterprise Architecture Blueprint
 
@@ -126,7 +134,15 @@ We built InsightForge AI to be robust, scalable, and inherently secure from day 
 
 ---
 
-## 🚀 Quick Start (Judge's Corner) <a id="quick-start"></a>
+## 🚀 What's Next (Roadmap)
+InsightForge AI is built as a foundation for enterprise analytics. Our immediate roadmap includes:
+- **Expanded BI Integrations:** Seamless export layer connecting directly to PowerBI and Tableau.
+- **Voice-to-SQL Agents:** Enabling native speech-to-query capabilities for executives on the go.
+- **Predictive Fraud Templates:** Pre-built agent macros to auto-detect emerging fraud rings based on historical variance analysis.
+
+---
+
+## 🛠️ Quick Start (Judge's Corner) <a id="quick-start"></a>
 
 <details>
 <summary><b>🛠️ Click to expand instructions for local execution</b></summary>
@@ -159,7 +175,10 @@ Invoke-RestMethod -Method Post -Uri "http://localhost:3000/api/test-connection" 
 <br />
 
 <div align="center">
-  <b>Built with ❤️ by Team Darovero for the Hackathon</b>
-  <br/><br/>
+  <h2>👥 Meet Team Darovero</h2>
+  <p>We are a team of data engineers, AI specialists, and full-stack developers passionate about securing enterprise intelligence.</p>
+
+  <b>Built with ❤️ for the Hackathon</b><br/><br/>
+  
   <a href="https://github.com/darovero/QueryPilotAI">Return to top</a>
 </div>
