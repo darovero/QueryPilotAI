@@ -75,6 +75,12 @@ By enforcing strict governance, safe AI execution, and transparent auditability,
 
 ## ⚙️ Architecture & Tech Stack (Powered by Azure)
 
+<div align="center">
+  <img src="docs/architecture/diagrams/insightforge_ai_enterprise_architecture_diagram_v2.png" alt="InsightForge Enterprise Architecture Diagram" width="100%" style="border-radius: 8px; margin: 20px 0;" />
+</div>
+
+> **Diagram Flow:** The architecture illustrates the end-to-end integration of our Tech-Brutalist Next.js UI, the Azure API Gateway, the Durable Functions State Orchestrator handling approvals, and the multi-agent AI framework (Query Planner, Data Executor, Executive Explainer).
+
 We built InsightForge AI to be robust, scalable, and inherently secure from day one.
 
 - **Intelligence:** Azure OpenAI (GPT-4o-mini) distributed through intelligent agents.
