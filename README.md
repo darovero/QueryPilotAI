@@ -12,7 +12,7 @@
     <a href="docs/InsightForge_AI_Governed_Fraud_Analytics%20final.pdf">
       <img src="https://img.shields.io/badge/VIEW_BUSINESS_CASE_&_PITCH-000000?style=for-the-badge&logo=googledocs&logoColor=white" alt="View Business Case">
     </a>
-    <a href="#-watch-demo">
+    <a href="https://drive.google.com/file/d/13gjSoslyX_HqGxrytA1JkD9LUGc-wL3j/view?usp=sharing">
       <img src="https://img.shields.io/badge/WATCH_2--MIN_DEMO-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="Watch Demo Video">
     </a>
   </p>

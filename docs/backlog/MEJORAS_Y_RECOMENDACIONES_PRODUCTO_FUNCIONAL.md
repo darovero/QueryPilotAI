@@ -1,212 +1,212 @@
-# Mejoras y Recomendaciones para Convertir InsightForge AI en un Producto Funcional
+# Improvements and Recommendations to Transform InsightForge AI into a Functional Product
 
-## Objetivo
-Este documento consolida las mejoras prioritarias identificadas para llevar el proyecto desde un MVP técnico o demo avanzada a un producto funcional, estable, seguro y operable.
+## Objective
+This document consolidates the prioritized improvements identified to take the project from a technical MVP or advanced demo to a functional, stable, secure, and operable product.
 
-## Estado Actual Resumido
-- Existe un flujo end-to-end funcional: pregunta en lenguaje natural, generación de SQL, validación, ejecución, interpretación y auditoría.
-- El backend ya implementa orquestación con Azure Functions y Durable Functions.
-- El frontend ya ofrece una experiencia operativa usable con chat, sesiones, conexiones y seguimiento de estado.
-- La solución todavía presenta brechas relevantes en seguridad, endurecimiento operativo, mantenibilidad, alineación de infraestructura y calidad de producto.
+## Summary of Current State
+- A functional end-to-end flow exists: natural language question, SQL generation, validation, execution, interpretation, and auditing.
+- The backend already implements orchestration using Azure Functions and Durable Functions.
+- The frontend provides a usable operational experience with chat, sessions, connections, and state tracking.
+- The solution still presents significant gaps in security, operational hardening, maintainability, infrastructure alignment, and product quality.
 
-## Criterio de Producto Funcional
-Para considerar el producto funcional, como mínimo debe cumplir lo siguiente:
-- Autenticación y autorización reales, no solo extracción parcial de claims.
-- Gestión de secretos fuera del repositorio.
-- Validación SQL robusta con allowlists y controles auditables.
-- Infraestructura desplegable y alineada con la arquitectura real.
-- Persistencia consistente de sesiones, auditoría y aprobaciones.
-- Experiencia de usuario estable con manejo explícito de errores y estados.
-- Observabilidad suficiente para operar, diagnosticar y auditar.
-- Pruebas automáticas mínimas sobre flujos críticos y escenarios de abuso.
+## Functional Product Criteria
+To consider the product functional, it must at least meet the following:
+- Real authentication and authorization, not just partial claim extraction.
+- Secrets management outside the repository.
+- Robust SQL validation with allowlists and auditable controls.
+- Deployable infrastructure aligned with the actual architecture.
+- Consistent persistence of sessions, audits, and approvals.
+- Stable user experience with explicit error and state handling.
+- Sufficient observability to operate, diagnose, and audit.
+- Minimal automated testing on critical flows and abuse scenarios.
 
-## Prioridad 1 - Seguridad y Gobierno
+## Priority 1 - Security and Governance
 
-### 1. Corregir exposición de secretos
-- Remover credenciales, API keys y valores sensibles del repositorio, documentación y archivos de configuración local.
-- Rotar inmediatamente todas las credenciales expuestas.
-- Mover secretos a Azure Key Vault y variables de entorno seguras por entorno.
-- Agregar validaciones para impedir que se vuelvan a commitear secretos.
+### 1. Fix secrets exposure
+- Remove credentials, API keys, and sensitive values from the repository, documentation, and local configuration files.
+- Immediately rotate all exposed credentials.
+- Move secrets to Azure Key Vault and secure environment variables per environment.
+- Add validations to prevent secrets from being committed again.
 
-### 2. Implementar validación real de JWT
-- Validar firma, issuer, audience y expiración del token en backend.
-- Rechazar cualquier request con token inválido o no confiable.
-- Mapear roles de Entra ID a roles internos del producto.
-- Auditar usuario autenticado, rol y origen de la solicitud.
+### 2. Implement real JWT validation
+- Validate token signature, issuer, audience, and expiration in the backend.
+- Reject any request with an invalid or untrustworthy token.
+- Map Entra ID roles to internal product roles.
+- Audit authenticated user, role, and request origin.
 
-### 3. Endurecer el policy engine SQL
-- Implementar allowlist explícita de tablas, vistas y columnas autorizadas.
-- Prohibir cualquier objeto fuera del catálogo certificado.
-- Detectar consultas costosas o riesgosas por joins, scans amplios y ausencia de límites.
-- Aplicar `TOP` o paginación obligatoria donde corresponda.
-- Separar validaciones de seguridad, cumplimiento y performance.
+### 3. Harden the SQL policy engine
+- Implement explicit allowlists for authorized tables, views, and columns.
+- Prohibit any object outside the certified catalog.
+- Detect costly or risky queries due to wide joins, broad scans, and lack of limits.
+- Apply mandatory `TOP` or pagination where appropriate.
+- Separate security, compliance, and performance validations.
 
-### 4. Endurecer aprobación humana
-- Persistir solicitudes de aprobación con estado completo y trazabilidad.
-- Validar que solo roles autorizados puedan aprobar o rechazar.
-- Registrar motivo, timestamp y usuario aprobador.
-- Manejar expiración, reintentos y auditoría del ciclo de aprobación.
+### 4. Harden human approval
+- Persist approval requests with complete state and traceability.
+- Validate that only authorized roles can approve or reject.
+- Log reason, timestamp, and approving user.
+- Handle expiration, retries, and auditing of the approval cycle.
 
-## Prioridad 2 - Estabilidad Backend
+## Priority 2 - Backend Stability
 
-### 5. Consolidar la arquitectura de IA
-- Elegir oficialmente entre Azure AI Foundry como ruta principal y los servicios heredados de Azure OpenAI.
-- Eliminar o aislar código legado que ya no participa del flujo principal.
-- Versionar prompts, contratos JSON y respuestas esperadas por agente.
-- Definir fallback cuando un agente responda texto no estructurado o devuelva JSON inválido.
+### 5. Consolidate the AI architecture
+- Officially choose between Azure AI Foundry as the primary route and legacy Azure OpenAI services.
+- Remove or isolate legacy code that no longer participates in the main flow.
+- Version prompts, JSON contracts, and expected responses per agent.
+- Define fallback when an agent responds with unstructured text or invalid JSON.
 
-### 6. Fortalecer manejo de errores y contratos
-- Normalizar respuestas de error del backend con DTOs consistentes.
-- Evitar mensajes ambiguos al frontend.
-- Distinguir claramente errores de autenticación, validación, conexión, policy, ejecución y orquestación.
-- Registrar contexto útil sin filtrar información sensible.
+### 6. Strengthen error handling and contracts
+- Normalize backend error responses with consistent DTOs.
+- Avoid sending ambiguous messages to the frontend.
+- Clearly distinguish authentication, validation, connection, policy, execution, and orchestration errors.
+- Log useful context without filtering sensitive information.
 
-### 7. Estabilizar conexiones a bases de datos del usuario
-- Soportar de forma explícita los motores realmente permitidos por producto.
-- Validar mejor configuración de conexión, conectividad y permisos antes de ejecutar consultas.
-- Revisar la lógica de fallback de conexiones para evitar ejecuciones en una base distinta a la esperada.
-- Añadir timeouts, retry policy y clasificación de errores transitorios.
+### 7. Stabilize user database connections
+- Explicitly support the engines genuinely permitted by the product.
+- Better validate connection configuration, connectivity, and permissions before executing queries.
+- Review the connection fallback logic to prevent executions in an unexpected database.
+- Add timeouts, retry policies, and transient error classification.
 
-### 8. Fortalecer persistencia de aplicación
-- Completar el esquema de base de aplicación para sesiones, organizaciones, turnos y conexiones.
-- Revisar claves foráneas, borrado lógico y consistencia transaccional.
-- Asegurar integridad entre sesión, auditoría, aprobación y conversación.
-- Definir política de retención para historial y auditoría.
+### 8. Strengthen application persistence
+- Complete the application database schema for sessions, organizations, turns, and connections.
+- Review foreign keys, soft deletes, and transactional consistency.
+- Ensure integrity between session, audit, approval, and conversation.
+- Define a retention policy for history and auditing.
 
-## Prioridad 3 - Infraestructura y Despliegue
+## Priority 3 - Infrastructure and Deployment
 
-### 9. Alinear Bicep con la implementación real
-- Incorporar todos los recursos y settings necesarios para la versión actual del backend.
-- Incluir configuración de `AppDbConnectionString`, Foundry y cualquier dependencia obligatoria real.
-- Separar claramente recursos de datos operativos y datos analíticos.
-- Parametrizar adecuadamente dev, test y prod.
+### 9. Align Bicep with the actual implementation
+- Incorporate all resources and settings necessary for the current backend version.
+- Include `AppDbConnectionString` configuration, Foundry, and any real mandatory dependency.
+- Clearly separate operational data resources from analytical data.
+- Properly parameterize dev, test, and prod.
 
-### 10. Preparar despliegue reproducible
-- Asegurar que una persona pueda desplegar el sistema sin pasos manuales ocultos.
-- Documentar prerequisitos, permisos, orden de despliegue y post-configuración.
-- Añadir validaciones post-deploy para comprobar salud del sistema.
-- Incluir scripts de bootstrap de base de datos y datos de prueba controlados.
+### 10. Prepare reproducible deployment
+- Ensure one person can deploy the system without hidden manual steps.
+- Document prerequisites, permissions, deployment order, and post-configuration.
+- Add post-deploy validations to check system health.
+- Include database bootstrap scripts and controlled test data.
 
-### 11. Endurecer configuración por entorno
-- Separar configuración local, desarrollo, QA y producción.
-- Eliminar dependencias implícitas de archivos locales no versionables.
-- Definir naming conventions, tagging y convención de recursos Azure.
-- Agregar smoke checks para detectar configuración incompleta al iniciar la Function App.
+### 11. Harden configuration per environment
+- Separate local configuration from dev, QA, and production.
+- Remove implicit dependencies on non-versionable local files.
+- Define naming conventions, tagging, and Azure resource conventions.
+- Add smoke checks to detect incomplete configuration when starting the Function App.
 
-## Prioridad 4 - Frontend y Experiencia de Usuario
+## Priority 4 - Frontend and User Experience
 
-### 12. Refactorizar el componente principal de chat
-- Dividir el componente grande actual en módulos de dominio: chat, approval, resultados, conexiones, sesiones y paneles.
-- Separar estado de UI, lógica de negocio, polling y rendering.
-- Añadir tipos más estrictos para los estados y contratos del backend.
-- Reducir dependencia en `localStorage` como fuente principal de verdad.
+### 12. Refactor the main chat component
+- Split the current large component into domain modules: chat, approval, results, connections, sessions, and panels.
+- Separate UI state, business logic, polling, and rendering.
+- Add stricter types for backend states and contracts.
+- Reduce dependency on `localStorage` as the primary source of truth.
 
-### 13. Mejorar UX operativa
-- Mostrar errores accionables al usuario final.
-- Diferenciar claramente estados: procesando, esperando aprobación, bloqueado, error, completado.
-- Presentar SQL, riesgo, justificación y resultados de forma consistente.
-- Mejorar el flujo de reconexión, expiración de sesión y reintentos.
+### 13. Improve operational UX
+- Show actionable errors to the end-user.
+- Clearly differentiate states: processing, waiting for approval, blocked, error, completed.
+- Present SQL, risk, justification, and results consistently.
+- Improve the reconnection flow, session expiration, and retries.
 
-### 14. Consolidar autenticación cliente
-- Revisar scopes, uso de tokens y compatibilidad con el backend.
-- Alinear el tipo de token usado con la validación real del servidor.
-- Evitar depender de tokens no pensados para autorización de APIs propias.
-- Definir experiencia clara de login, logout y sesión expirada.
+### 14. Consolidate client authentication
+- Review scopes, token usage, and compatibility with the backend.
+- Align the used token type with actual server validation.
+- Avoid relying on tokens not intended for first-party API authorization.
+- Define a clear login, logout, and expired session experience.
 
-## Prioridad 5 - Observabilidad y Operación
+## Priority 5 - Observability and Operation
 
-### 15. Implementar telemetría útil para operación
-- Medir duración por etapa del pipeline.
-- Medir bloqueos por safety, rechazos por policy y aprobaciones requeridas.
-- Medir fallas por tipo de error y por integración externa.
-- Correlacionar frontend, backend, orquestación y ejecución SQL con un mismo identificador.
+### 15. Implement useful operational telemetry
+- Measure duration per pipeline stage.
+- Measure safety blocks, policy rejections, and required approvals.
+- Measure failures by error type and external integration.
+- Correlate frontend, backend, orchestration, and SQL execution with a single identifier.
 
-### 16. Estandarizar logs estructurados
-- Registrar `requestId`, `userId`, `sessionId`, `role`, `riskLevel`, `status` y duración.
-- Evitar logs con secretos, tokens o payloads sensibles completos.
-- Incluir trazas suficientes para diagnosticar fallas de agentes, SQL y aprobaciones.
+### 16. Standardize structured logs
+- Log `requestId`, `userId`, `sessionId`, `role`, `riskLevel`, `status`, and duration.
+- Avoid logs containing full sensitive payloads, secrets, or tokens.
+- Include sufficient traces to diagnose agent, SQL, and approval failures.
 
-### 17. Crear tablero operativo mínimo
-- Monitorear throughput, errores, latencia, aprobaciones pendientes y bloqueos.
-- Agregar alertas para caídas de dependencias o errores repetidos.
-- Definir métricas de salud de negocio y salud técnica.
+### 17. Create a minimal operational dashboard
+- Monitor throughput, errors, latency, pending approvals, and blocks.
+- Add alerts for dependency drops or repeated errors.
+- Define business health and technical health metrics.
 
-## Prioridad 6 - Calidad, Testing y Release
+## Priority 6 - Quality, Testing, and Release
 
-### 18. Añadir pruebas automatizadas del backend
-- Casos felices de consulta analítica.
-- Casos ambiguos que requieran aclaración.
-- Casos bloqueados por prompt safety.
-- Casos bloqueados por policy SQL.
-- Casos con aprobación requerida, aprobada y rechazada.
+### 18. Add automated backend tests
+- Happy paths for analytical queries.
+- Ambiguous cases requiring clarification.
+- Cases blocked by prompt safety.
+- Cases blocked by SQL policy.
+- Cases with required, approved, and rejected approvals.
 
-### 19. Añadir pruebas del frontend y contratos
-- Tests de estados principales de la UI.
-- Tests de integración para polling y renderizado de resultados.
-- Contract tests entre frontend y backend para evitar drift de DTOs.
+### 19. Add frontend and contract tests
+- UI primary state tests.
+- Integration tests for polling and rendering results.
+- Contract tests between frontend and backend to prevent DTO drift.
 
-### 20. Preparar checklist de salida a producción
-- Seguridad validada.
-- Infraestructura alineada.
-- Logs y métricas activas.
-- Pruebas críticas pasando.
-- Manual operativo disponible.
-- Runbook de incidentes y fallback documentado.
+### 20. Prepare production release checklist
+- Security validated.
+- Infrastructure aligned.
+- Active logs and metrics.
+- Critical tests passing.
+- Operational manual available.
+- Documented incident runbook and fallback.
 
-## Recomendaciones Técnicas Concretas
+## Concrete Technical Recommendations
 
 ### Backend
-- Reemplazar el middleware JWT actual por validación real con librerías estándar de autenticación.
-- Convertir el policy engine en un componente más rico y testeable, con reglas explícitas por tipo.
-- Aislar el cliente de Foundry detrás de contratos estables y versionados.
-- Revisar puntos donde hoy se atrapan excepciones silenciosamente para no perder trazabilidad.
+- Replace current JWT middleware with real validation using standard auth libraries.
+- Convert the policy engine into a richer, more testable component, with explicit rules by type.
+- Isolate the Foundry client behind stable, versioned contracts.
+- Review places where exceptions are currently caught silently to avoid losing traceability.
 
 ### Frontend
-- Extraer hooks especializados para sesiones, polling, approvals y conexiones.
-- Crear componentes de presentación pequeños y reutilizables.
-- Establecer un modelo de estado más predecible para mensajes y pipeline.
-- Preparar un diseño de errores y estados vacíos consistente.
+- Extract specialized hooks for sessions, polling, approvals, and connections.
+- Create small, reusable presentation components.
+- Establish a more predictable state model for messages and pipelines.
+- Prepare a consistent error and empty state design.
 
-### Base de Datos
-- Usar vistas certificadas como superficie principal para el generador SQL.
-- Limitar exposición de columnas sensibles desde la capa analítica.
-- Revisar si la auditoría debe residir en la base operativa en lugar de la base analítica.
+### Database
+- Use certified views as the primary surface for the SQL generator.
+- Limit exposure of sensitive columns from the analytical layer.
+- Review whether auditing should reside in the operational database instead of the analytical one.
 
-### Infraestructura
-- Versionar entornos y parámetros.
-- Preparar despliegue completo de aplicación, datos, configuración y observabilidad.
-- Añadir comprobaciones automatizadas tras aprovisionamiento.
+### Infrastructure
+- Version environments and parameters.
+- Prepare a complete deployment of application, data, configuration, and observability.
+- Add automated checks post-provisioning.
 
-## Propuesta de Roadmap Ejecutable
+## Executable Roadmap Proposal
 
-### Fase 1 - Bloqueadores de seguridad y despliegue
-- Remediación de secretos.
-- Validación JWT real.
-- Alineación de Bicep y configuración obligatoria.
-- Checklist mínimo de arranque reproducible.
+### Phase 1 - Security and deployment blockers
+- Secrets remediation.
+- Real JWT validation.
+- Bicep alignment and mandatory configuration.
+- Minimal reproducible startup checklist.
 
-### Fase 2 - Endurecimiento del pipeline analítico
-- Policy engine robusto.
-- Aprobaciones persistentes.
-- Manejo de errores uniforme.
-- Contratos estables con Foundry.
+### Phase 2 - Analytical pipeline hardening
+- Robust policy engine.
+- Persistent approvals.
+- Uniform error handling.
+- Stable contracts with Foundry.
 
-### Fase 3 - Calidad de producto y UX
-- Refactor del frontend.
-- Estados operativos claros.
-- Observabilidad transversal.
-- Pruebas automáticas esenciales.
+### Phase 3 - Product quality and UX
+- Frontend refactor.
+- Clear operational states.
+- Cross-cutting observability.
+- Essential automated tests.
 
-### Fase 4 - Preparación productiva
-- Hardening final.
+### Phase 4 - Production readiness
+- Final hardening.
 - Runbooks.
-- Métricas y alertas.
-- Validación integral de release.
+- Metrics and alerts.
+- End-to-end release validation.
 
-## Definición de Hecho Recomendada
-Una mejora de este backlog debe considerarse terminada solo si:
-- Tiene código implementado.
-- Tiene validación o prueba asociada.
-- Tiene impacto observable en logs, UI o comportamiento.
-- Tiene documentación mínima de operación si afecta despliegue o soporte.
-- No introduce secretos ni atajos incompatibles con producción.
+## Recommended Definition of Done
+A backlog improvement should only be considered finished if:
+- It has implemented code.
+- It has associated validation or tests.
+- It has an observable impact on logs, UI, or behavior.
+- It has minimal operations documentation if it affects deployment or support.
+- It does not introduce secrets or shortcuts incompatible with production.
